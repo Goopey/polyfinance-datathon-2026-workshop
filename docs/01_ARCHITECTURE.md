@@ -85,12 +85,17 @@ Champs transverses, présents partout :
 |---|---|---|
 | GET | `/personas` | Les 3 personas du case |
 | POST | `/profiles` | Créer un profil fictif |
+| GET | `/profiles/{id}` | `ProfileWeights` d'un profil (persona ou fictif) — ajout P5 |
 | POST | `/runs` | Lancer une analyse (asynchrone) |
 | GET | `/runs/{id}` | État, étape courante, résultat |
 | GET | `/runs/{id}/trace` | Trace d'exécution observable |
-| GET | `/assets/{ticker}` | Fiche : métriques, signaux |
+| GET | `/assets` | Univers d'actifs (liste de « Tester une idée ») — ajout P5 |
+| GET | `/assets/{ticker}?profile_id=` | Fiche : métriques situées dans l'univers et comparées au profil, signaux |
 | GET | `/assets/{ticker}/graph` | Graphe de dépendances sourcé |
 | GET | `/evidence/{id}` | Une preuve : source, dates, traitement |
+| GET | `/data` | Sources et contrôles qualité (écran « Données ») — ajout P5 |
+
+Les formes exactes des réponses attendues par le mobile sont dans `mobile/src/types/contracts.ts` ; les champs proposés par le front sont listés dans `mobile/README.md`, section Contrats.
 
 ## Choix structurants
 

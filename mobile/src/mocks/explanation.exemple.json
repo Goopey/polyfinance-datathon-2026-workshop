@@ -1,34 +1,208 @@
 {
-  "_avertissement": "DONNÉES ENTIÈREMENT FICTIVES pour le développement de l'interface. Aucun actif réel, aucun chiffre réel.",
-  "run_id": "run_exemple",
+  "_avertissement": "DONNÉES ENTIÈREMENT FICTIVES, générées par src/mocks/server.ts. Exemple conforme à src/types/contracts.ts, pour le backend (P2, P3).",
+  "run_id": "run_exemple_amira",
   "as_of": "2026-11-12",
   "profile_id": "amira",
-  "headline": "2 pistes cohérentes avec votre profil, 1 écartée",
+  "headline": "4 pistes cohérentes avec votre profil, 4 écartées",
+  "no_recommendation": false,
+  "missing": [],
   "items": [
     {
-      "ticker": "ACTIF_A",
-      "name": "Société fictive A",
-      "asset_class": "equity",
+      "ticker": "FNB_E",
+      "name": "FNB mondial fictif E",
+      "asset_class": "etf_equity",
+      "sector": "Diversifié mondial",
       "fit": "élevée",
-      "confidence": "moyenne",
+      "confidence": "élevée",
+      "to_review": false,
       "why": [
         {
-          "text": "Profil de croissance observé supérieur à la médiane de l'univers.",
+          "text": "Secteur « Diversifié mondial » distinct de la plupart des autres pistes : apport à la diversification.",
           "evidence_ids": [
-            "EV-EX-001"
+            "EV-EX-PROFIL-amira-weights.diversification"
+          ],
+          "claim_kind": "HYPOTHESE"
+        },
+        {
+          "text": "Rendement annualisé observé de 8,5 % sur 5 ans (passé, pas une prévision).",
+          "evidence_ids": [
+            "EV-EX-FNB_E-rendement_annualise"
+          ],
+          "claim_kind": "FAIT"
+        },
+        {
+          "text": "Pire période de 3 ans observée : 0,5 % par an.",
+          "evidence_ids": [
+            "EV-EX-FNB_E-pire_periode"
           ],
           "claim_kind": "FAIT"
         }
       ],
       "contributions": {
-        "croissance": 0.24,
-        "stabilite": 0.03,
-        "diversification": 0.12,
-        "esg": 0.02,
-        "qualite": 0.06,
-        "horizon": 0.05,
-        "preferences": 0.12
+        "croissance": 0.165,
+        "stabilite": 0.07,
+        "diversification": 0.17,
+        "esg": 0.025,
+        "qualite": 0.075,
+        "horizon": 0.075,
+        "preferences": 0.075
       },
+      "debate": [
+        {
+          "agent": "bull",
+          "stance": "appui",
+          "confidence": "moyenne",
+          "arguments": [
+            {
+              "text": "Rendement annualisé observé de 8,5 % sur la fenêtre.",
+              "evidence_ids": [
+                "EV-EX-FNB_E-rendement_annualise"
+              ],
+              "claim_kind": "FAIT"
+            }
+          ],
+          "open_questions": []
+        },
+        {
+          "agent": "realist",
+          "stance": "appui",
+          "confidence": "moyenne",
+          "arguments": [
+            {
+              "text": "Secteur « Diversifié mondial » distinct de la plupart des autres pistes : apport à la diversification.",
+              "evidence_ids": [
+                "EV-EX-PROFIL-amira-weights.diversification"
+              ],
+              "claim_kind": "HYPOTHESE"
+            }
+          ],
+          "open_questions": [
+            "La fenêtre de 5 ans ne couvre pas l'horizon du profil."
+          ]
+        },
+        {
+          "agent": "bear",
+          "stance": "appui",
+          "confidence": "moyenne",
+          "arguments": [
+            {
+              "text": "Perte maximale observée de -24,0 % sur 5 ans.",
+              "evidence_ids": [
+                "EV-EX-FNB_E-perte_max"
+              ],
+              "claim_kind": "FAIT"
+            }
+          ],
+          "open_questions": []
+        }
+      ],
+      "debate_summary": {
+        "bull": "Appui",
+        "realist": "Appui",
+        "bear": "Appui",
+        "dissent": false
+      },
+      "risks": [],
+      "limits": [
+        "Valeurs fictives (mode développement).",
+        "Fenêtre de 5 ans ; biais du survivant de l'univers."
+      ],
+      "unknowns": [
+        "Aucune donnée fondamentale pour le critère « qualité ».",
+        "La fenêtre de 5 ans ne couvre pas l'horizon du profil."
+      ]
+    },
+    {
+      "ticker": "ACTIF_A",
+      "name": "Société fictive A",
+      "asset_class": "equity",
+      "sector": "Technologie",
+      "fit": "partielle",
+      "confidence": "moyenne",
+      "to_review": false,
+      "why": [
+        {
+          "text": "Rendement annualisé observé de 22,0 % sur 5 ans (passé, pas une prévision).",
+          "evidence_ids": [
+            "EV-EX-ACTIF_A-rendement_annualise"
+          ],
+          "claim_kind": "FAIT"
+        },
+        {
+          "text": "Correspond à une préférence déclarée dans le profil.",
+          "evidence_ids": [
+            "EV-EX-PROFIL-amira-weights.preferences"
+          ],
+          "claim_kind": "HYPOTHESE"
+        },
+        {
+          "text": "Secteur « Technologie » distinct de la plupart des autres pistes : apport à la diversification.",
+          "evidence_ids": [
+            "EV-EX-PROFIL-amira-weights.diversification"
+          ],
+          "claim_kind": "HYPOTHESE"
+        }
+      ],
+      "contributions": {
+        "croissance": 0.255,
+        "stabilite": 0.025,
+        "diversification": 0.08,
+        "esg": 0.015,
+        "qualite": 0.08,
+        "horizon": 0.035,
+        "preferences": 0.143
+      },
+      "debate": [
+        {
+          "agent": "bull",
+          "stance": "appui",
+          "confidence": "moyenne",
+          "arguments": [
+            {
+              "text": "Rendement annualisé observé de 22,0 % sur la fenêtre.",
+              "evidence_ids": [
+                "EV-EX-ACTIF_A-rendement_annualise"
+              ],
+              "claim_kind": "FAIT"
+            }
+          ],
+          "open_questions": []
+        },
+        {
+          "agent": "realist",
+          "stance": "appui_reserve",
+          "confidence": "moyenne",
+          "arguments": [
+            {
+              "text": "Rendement annualisé observé de 22,0 % sur 5 ans (passé, pas une prévision).",
+              "evidence_ids": [
+                "EV-EX-ACTIF_A-rendement_annualise"
+              ],
+              "claim_kind": "FAIT"
+            }
+          ],
+          "open_questions": [
+            "La fenêtre de 5 ans ne couvre pas l'horizon du profil."
+          ]
+        },
+        {
+          "agent": "bear",
+          "stance": "opposition",
+          "confidence": "moyenne",
+          "arguments": [
+            {
+              "text": "Perte maximale observée de -45,0 % sur 5 ans.",
+              "evidence_ids": [
+                "EV-EX-ACTIF_A-perte_max"
+              ],
+              "claim_kind": "FAIT"
+            }
+          ],
+          "open_questions": [
+            "Aucune preuve ESG datée disponible."
+          ]
+        }
+      ],
       "debate_summary": {
         "bull": "Appui",
         "realist": "Appui avec réserve",
@@ -36,59 +210,276 @@
         "dissent": true
       },
       "risks": [
-        "Perte maximale importante sur la fenêtre observée."
+        "Fortes variations de prix observées sur la fenêtre.",
+        "Dépendance à un fournisseur partagé avec une autre société de l'univers (voir le graphe).",
+        "Exposition au dollar américain : les indicateurs sont convertis en CAD."
       ],
       "limits": [
-        "Fenêtre de 5 ans.",
-        "Biais du survivant de l'univers."
+        "Valeurs fictives (mode développement).",
+        "Fenêtre de 5 ans ; biais du survivant de l'univers."
+      ],
+      "unknowns": [
+        "Aucune preuve ESG datée.",
+        "Aucune donnée fondamentale pour le critère « qualité ».",
+        "La fenêtre de 5 ans ne couvre pas l'horizon du profil.",
+        "Aucune preuve ESG datée disponible."
       ]
     },
     {
-      "ticker": "FNB_B",
-      "name": "FNB fictif B",
-      "asset_class": "etf_bond",
+      "ticker": "FNB_H",
+      "name": "FNB ESG fictif H",
+      "asset_class": "etf_equity",
+      "sector": "Diversifié ESG",
       "fit": "partielle",
-      "confidence": "élevée",
+      "confidence": "moyenne",
+      "to_review": false,
       "why": [
         {
-          "text": "Apporte de la diversification par rapport aux autres pistes.",
+          "text": "Rendement annualisé observé de 7,0 % sur 5 ans (passé, pas une prévision).",
           "evidence_ids": [
-            "EV-EX-002"
+            "EV-EX-FNB_H-rendement_annualise"
+          ],
+          "claim_kind": "FAIT"
+        },
+        {
+          "text": "Secteur « Diversifié ESG » distinct de la plupart des autres pistes : apport à la diversification.",
+          "evidence_ids": [
+            "EV-EX-PROFIL-amira-weights.diversification"
+          ],
+          "claim_kind": "HYPOTHESE"
+        },
+        {
+          "text": "Volatilité observée de 16,0 %, parmi les plus basses de l'univers fictif.",
+          "evidence_ids": [
+            "EV-EX-FNB_H-volatilite"
           ],
           "claim_kind": "FAIT"
         }
       ],
       "contributions": {
-        "croissance": 0.06,
-        "stabilite": 0.09,
-        "diversification": 0.18,
-        "esg": 0.02,
+        "croissance": 0.15,
+        "stabilite": 0.065,
+        "diversification": 0.15,
+        "esg": 0.048,
         "qualite": 0.07,
-        "horizon": 0.07,
-        "preferences": 0.03
+        "horizon": 0.065,
+        "preferences": 0.06
       },
+      "debate": [
+        {
+          "agent": "bull",
+          "stance": "appui",
+          "confidence": "moyenne",
+          "arguments": [
+            {
+              "text": "Rendement annualisé observé de 7,0 % sur la fenêtre.",
+              "evidence_ids": [
+                "EV-EX-FNB_H-rendement_annualise"
+              ],
+              "claim_kind": "FAIT"
+            }
+          ],
+          "open_questions": []
+        },
+        {
+          "agent": "realist",
+          "stance": "appui_reserve",
+          "confidence": "moyenne",
+          "arguments": [
+            {
+              "text": "Rendement annualisé observé de 7,0 % sur 5 ans (passé, pas une prévision).",
+              "evidence_ids": [
+                "EV-EX-FNB_H-rendement_annualise"
+              ],
+              "claim_kind": "FAIT"
+            }
+          ],
+          "open_questions": [
+            "La fenêtre de 5 ans ne couvre pas l'horizon du profil."
+          ]
+        },
+        {
+          "agent": "bear",
+          "stance": "appui_reserve",
+          "confidence": "moyenne",
+          "arguments": [
+            {
+              "text": "Perte maximale observée de -26,0 % sur 5 ans.",
+              "evidence_ids": [
+                "EV-EX-FNB_H-perte_max"
+              ],
+              "claim_kind": "FAIT"
+            }
+          ],
+          "open_questions": []
+        }
+      ],
       "debate_summary": {
-        "bull": "Appui avec réserve",
-        "realist": "Appui",
+        "bull": "Appui",
+        "realist": "Appui avec réserve",
         "bear": "Appui avec réserve",
         "dissent": false
       },
       "risks": [
-        "Sensibilité aux taux d'intérêt."
+        "Exposition au dollar américain : les indicateurs sont convertis en CAD."
       ],
       "limits": [
-        "Fenêtre de 5 ans."
+        "Valeurs fictives (mode développement).",
+        "Fenêtre de 5 ans ; biais du survivant de l'univers."
+      ],
+      "unknowns": [
+        "Aucune donnée fondamentale pour le critère « qualité ».",
+        "La fenêtre de 5 ans ne couvre pas l'horizon du profil."
+      ]
+    },
+    {
+      "ticker": "CRYPTO_C",
+      "name": "Cryptoactif fictif C",
+      "asset_class": "crypto",
+      "sector": "Cryptoactifs",
+      "fit": "partielle",
+      "confidence": "moyenne",
+      "to_review": true,
+      "why": [
+        {
+          "text": "Rendement annualisé observé de 30,0 % sur 5 ans (passé, pas une prévision).",
+          "evidence_ids": [
+            "EV-EX-CRYPTO_C-rendement_annualise"
+          ],
+          "claim_kind": "FAIT"
+        },
+        {
+          "text": "Secteur « Cryptoactifs » distinct de la plupart des autres pistes : apport à la diversification.",
+          "evidence_ids": [
+            "EV-EX-PROFIL-amira-weights.diversification"
+          ],
+          "claim_kind": "HYPOTHESE"
+        },
+        {
+          "text": "Correspond à une préférence déclarée dans le profil.",
+          "evidence_ids": [
+            "EV-EX-PROFIL-amira-weights.preferences"
+          ],
+          "claim_kind": "HYPOTHESE"
+        }
+      ],
+      "contributions": {
+        "croissance": 0.27,
+        "stabilite": 0.005,
+        "diversification": 0.13,
+        "esg": 0.008,
+        "qualite": 0.02,
+        "horizon": 0.005,
+        "preferences": 0.128
+      },
+      "debate": [
+        {
+          "agent": "bull",
+          "stance": "appui",
+          "confidence": "moyenne",
+          "arguments": [
+            {
+              "text": "Rendement annualisé observé de 30,0 % sur la fenêtre.",
+              "evidence_ids": [
+                "EV-EX-CRYPTO_C-rendement_annualise"
+              ],
+              "claim_kind": "FAIT"
+            }
+          ],
+          "open_questions": []
+        },
+        {
+          "agent": "realist",
+          "stance": "appui_reserve",
+          "confidence": "moyenne",
+          "arguments": [
+            {
+              "text": "Rendement annualisé observé de 30,0 % sur 5 ans (passé, pas une prévision).",
+              "evidence_ids": [
+                "EV-EX-CRYPTO_C-rendement_annualise"
+              ],
+              "claim_kind": "FAIT"
+            }
+          ],
+          "open_questions": [
+            "La fenêtre de 5 ans ne couvre pas l'horizon du profil."
+          ]
+        },
+        {
+          "agent": "bear",
+          "stance": "opposition",
+          "confidence": "élevée",
+          "arguments": [
+            {
+              "text": "Perte maximale observée de -75,0 % sur 5 ans.",
+              "evidence_ids": [
+                "EV-EX-CRYPTO_C-perte_max"
+              ],
+              "claim_kind": "FAIT"
+            },
+            {
+              "text": "Volatilité observée de 70,0 %, au-dessus du seuil indicatif de 45 % du profil.",
+              "evidence_ids": [
+                "EV-EX-CRYPTO_C-volatilite",
+                "EV-EX-PROFIL-amira-limite_volatilite"
+              ],
+              "claim_kind": "FAIT"
+            }
+          ],
+          "open_questions": []
+        }
+      ],
+      "debate_summary": {
+        "bull": "Appui",
+        "realist": "Appui avec réserve",
+        "bear": "Opposition",
+        "dissent": true
+      },
+      "risks": [
+        "Fortes variations de prix observées sur la fenêtre.",
+        "Exposition au dollar américain : les indicateurs sont convertis en CAD."
+      ],
+      "limits": [
+        "Valeurs fictives (mode développement).",
+        "Fenêtre de 5 ans ; biais du survivant de l'univers."
+      ],
+      "unknowns": [
+        "Aucune donnée fondamentale pour le critère « qualité ».",
+        "La fenêtre de 5 ans ne couvre pas l'horizon du profil."
       ]
     }
   ],
   "rejected": [
     {
-      "ticker": "CRYPTO_C",
-      "reason": "Règle de votre profil : part maximale en crypto atteinte."
+      "ticker": "ACTIF_G",
+      "kind": "classement",
+      "reason": "Déclassé pour concentration : deux pistes technologie ou crypto sont déjà retenues, et le profil souhaite éviter de miser exclusivement sur les technologies.",
+      "evidence_ids": [
+        "EV-EX-PROFIL-amira-weights.diversification"
+      ]
+    },
+    {
+      "ticker": "ACTIF_F",
+      "kind": "classement",
+      "reason": "Moins bien classé : adéquation calculée plus faible que les pistes retenues (critère le plus pénalisant : Croissance observée)."
+    },
+    {
+      "ticker": "ACTIF_D",
+      "kind": "classement",
+      "reason": "Moins bien classé : adéquation calculée plus faible que les pistes retenues (critère le plus pénalisant : Croissance observée)."
+    },
+    {
+      "ticker": "FNB_B",
+      "kind": "classement",
+      "reason": "Moins bien classé : adéquation calculée plus faible que les pistes retenues (critère le plus pénalisant : Croissance observée)."
     }
   ],
+  "coherence": null,
   "unknowns": [
-    "Aucune preuve ESG datée pour ACTIF_A."
+    "Aucune preuve ESG datée pour Société fictive A.",
+    "Aucune donnée fondamentale (critère « qualité ») : SEC EDGAR et SEDAR+ sont prévus, pas encore intégrés.",
+    "Les indicateurs décrivent 5 ans de passé : ils ne couvrent pas l'horizon du profil.",
+    "Poids et seuils : hypothèses de l'équipe, à calibrer."
   ],
   "disclaimer": "Simulation à des fins pédagogiques. Ceci n'est pas un conseil financier."
 }

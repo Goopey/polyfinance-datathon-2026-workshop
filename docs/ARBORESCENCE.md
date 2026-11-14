@@ -1,6 +1,6 @@
 # Arborescence complète
 
-Générée à la fin de l'étape 0. À régénérer quand la structure change.
+Générée à la fin de l'étape 0, mise à jour à la fin de l'étape 5 (P5, `mobile/`). À régénérer quand la structure change.
 
 ```
 easytrade/
@@ -220,7 +220,13 @@ easytrade/
 │   │   ├── donnees.tsx
 │   │   └── index.tsx
 │   ├── assets/
-│   │   └── .gitkeep
+│   │   ├── .gitkeep
+│   │   ├── android-icon-background.png
+│   │   ├── android-icon-foreground.png
+│   │   ├── android-icon-monochrome.png
+│   │   ├── favicon.png
+│   │   ├── icon.png
+│   │   └── splash-icon.png
 │   ├── src/
 │   │   ├── api/
 │   │   │   ├── assets.ts
@@ -240,23 +246,35 @@ easytrade/
 │   │   │   ├── SentimentGauge.tsx
 │   │   │   ├── SimulationBanner.tsx
 │   │   │   ├── SupplyChainGraph.tsx
+│   │   │   ├── ui.tsx
 │   │   │   └── UnknownsBlock.tsx
+│   │   ├── hooks/
+│   │   │   └── useBaseRun.ts
 │   │   ├── i18n/
 │   │   │   ├── fr.ts
 │   │   │   └── glossaire.ts
 │   │   ├── mocks/
 │   │   │   ├── evidence.exemple.json
 │   │   │   ├── explanation.exemple.json
-│   │   │   └── graph.exemple.json
+│   │   │   ├── fixtures.ts
+│   │   │   ├── graph.exemple.json
+│   │   │   └── server.ts
 │   │   ├── store/
 │   │   │   ├── profile.ts
-│   │   │   └── settings.ts
+│   │   │   ├── settings.ts
+│   │   │   └── storage.ts
 │   │   ├── theme/
 │   │   │   ├── tokens.ts
 │   │   │   └── typography.ts
-│   │   └── types/
-│   │       └── contracts.ts
-│   └── README.md
+│   │   ├── types/
+│   │   │   └── contracts.ts
+│   │   └── format.ts
+│   ├── app.json
+│   ├── metro.config.js
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── README.md
+│   └── tsconfig.json
 ├── notebooks/
 │   └── README.md
 ├── scripts/

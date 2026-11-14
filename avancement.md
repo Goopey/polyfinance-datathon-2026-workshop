@@ -4,7 +4,7 @@
 > En cas d'interruption : joindre ce fichier dans une nouvelle conversation et reprendre à la **première tâche non cochée** de la section 4.
 > **Règle : ne jamais recommencer une étape marquée ✅.**
 
-Dernière mise à jour : 2026-11-14 — étape 2 (P2) en cours : contraintes, scoring, décision, cohérence ; S4 et S12 au vert (restent C6 pipeline et C7 calibrage)
+Dernière mise à jour : 2026-11-14 — étape 2 (P2) en cours : contraintes, scoring, décision, cohérence ; S4 et S12 au vert (restent C6 pipeline et C7 calibrage). Étape 5 (P5) réalisée sur données fictives (F1 à F8) ; F9, branchement de l'API réelle, en attente de P3 et P4
 
 ---
 
@@ -17,11 +17,35 @@ Dernière mise à jour : 2026-11-14 — étape 2 (P2) en cours : contraintes, sc
 | 2 | Moteur de décision (P2) | 🟦 en cours | S4, S12 verts ; restent C6 (pipeline sans LLM) et C7 (calibrage) |
 | 3 | Agents et explicabilité (P3) | ⬜ à faire | S1, S3, S6 en local |
 | 4 | AWS (P4) | ⬜ à faire | Un run complet sur AWS |
-| 5 | Mobile (P5) | ⬜ à faire | Parcours complet sur téléphone |
+| 5 | Mobile (P5) | 🟨 partielle : F1 à F8 ✅ sur données fictives ; F9 (API réelle) bloquée par P2 à P4 | Parcours complet vérifié de bout en bout (export web, clics réels) ; reste : téléphone + API réelle |
 | 6 | Mateo / ESG + extras (P6) | ⬜ à faire | S2 |
 | 7 | Livrables (P7) | ⬜ à faire | Vidéo, documentation, one-pager, README |
 
 ## 2. Fichiers créés ou modifiés
+
+### Étape 5 — P5 Mobile (2026-11-14), sur données fictives
+
+Fait en parallèle de P2, comme prévu par `docs/10_PLAN.md` (« P5 avec données simulées démarre en parallèle »). Détail : `mobile/README.md`. Aucun fichier `backend/` modifié.
+
+**Projet Expo (créé)** : `mobile/package.json`, `package-lock.json`, `app.json`, `tsconfig.json`, `metro.config.js` (import de `data/reference/personas.json`), `assets/*.png` (icônes du gabarit Expo). Expo SDK 58, `expo-router`, TanStack Query, Zustand + AsyncStorage, `react-native-svg`, `react-native-gesture-handler`.
+
+| Fichiers | Contenu |
+|---|---|
+| `src/types/contracts.ts` | Miroir TS des contrats de réponse de l'API ; `Evidence` identique à `schemas/evidence.py` ; champs proposés listés dans `mobile/README.md` |
+| `src/api/*` | Bascule `EXPO_PUBLIC_USE_MOCKS` ; routes de `01_ARCHITECTURE.md` + `GET /profiles/{id}`, `GET /assets`, `GET /data` |
+| `src/mocks/fixtures.ts`, `server.ts` | Univers fictif de 8 actifs, registre de preuves fictif, serveur fictif reproduisant la forme du moteur (contraintes, score, concentration, aucune recommandation, cohérence) |
+| `src/mocks/*.exemple.json` | Régénérés depuis le serveur fictif : exemples conformes aux contrats de réponse |
+| `src/components/*` (12 composants + `ui.tsx`) | Tous ceux de `07_UX_UI.md` sauf `SentimentGauge` (extra n° 8, squelette conservé) |
+| `src/store/*`, `src/hooks/useBaseRun.ts`, `src/theme/*`, `src/i18n/*`, `src/format.ts` | État persisté, lancement / reprise d'un run, thème, textes, glossaire, formats français |
+| `app/*` (14 écrans) | Tous les écrans de `07_UX_UI.md`, y compris Comparer (extra n° 2, réalisé côté interface) et Données |
+
+**Documentation modifiée** : `mobile/README.md` (réécrit), `docs/01_ARCHITECTURE.md` (table d'API : 3 routes ajoutées), `docs/ARBORESCENCE.md`, ce fichier.
+
+**Vérifications** : `tsc --noEmit` sans erreur ; `npx expo-doctor` 20/20 ; export web réussi ; parcours de bout en bout dans Chrome sans tête, avec clics réels (persona Robert → pistes → écartées → fiche → débat → preuve → parcours de l'analyse → Tester une idée `ACTIF_G` « Incohérent » → mode Avancé → questionnaire → « Aucune piste ») : 14 étapes sur 14, aucune erreur console. Sorties fictives des 3 personas et de « Tester une idée » : 0 terme de `forbidden_wording.txt`, toutes les preuves citées existent, aucune publiée après `as_of`.
+
+**Non vérifié** : affichage sur un vrai téléphone (Expo Go) ; branchement à l'API réelle (inexistante).
+
+**Écarts avec les schémas P2** (à résoudre en F9, de préférence dans la couche API / `Explanation`, qui produit le contrat de présentation) : `ProfileWeights` (`persona_id`/`constraints`/`rationale: str` contre `profile_id`/`hard_constraints`/liste) ; `Confidence` au masculin (`élevé`, `moyen`) contre le féminin de `docs/02_AGENTS.md` et du mobile (`élevée`, `moyenne`) ; `Rejection.rule` contre `RejectedItem.kind` ; `ScoredCandidate.criteria[]` contre `contributions` ; `CoherenceReport` (`Tension{dimension, detail, severe, evidence_id}`, `context: str`, `alternatives: tickers`) contre des `Claim` sourcés et des alternatives justifiées.
 
 ### Étape 2 — P2 Moteur de décision (2026-11-14)
 
@@ -222,15 +246,16 @@ Cocher au fur et à mesure. Les blocs A et F peuvent avancer en parallèle des a
 
 ### F. Mobile — P5 (démarre tout de suite avec les données fictives)
 
-- [ ] F1. Initialiser le projet Expo (`mobile/README.md`) ; thème ; `SimulationBanner`.
-- [ ] F2. `src/types/contracts.ts`, `src/api/*` avec bascule données fictives / API.
-- [ ] F3. Profil : personas, questionnaire, résumé.
-- [ ] F4. Pistes à explorer : `MoveCard`, `FitBadge`, `RunProgress`, écartées, « aucune recommandation ».
-- [ ] F5. Fiche d'une piste : risque, débat, contributions, « ce que nous ne savons pas ».
-- [ ] F6. « Pourquoi ? » : `EvidenceChip`, écran preuve, parcours de l'analyse.
-- [ ] F7. Tester une idée.
-- [ ] F8. Graphe de dépendances, version radiale.
-- [ ] F9. Brancher l'API réelle.
+- [x] F1. Initialiser le projet Expo (`mobile/README.md`) ; thème ; `SimulationBanner`.
+- [x] F2. `src/types/contracts.ts`, `src/api/*` avec bascule données fictives / API.
+- [x] F3. Profil : personas, questionnaire, résumé.
+- [x] F4. Pistes à explorer : `MoveCard`, `FitBadge`, `RunProgress`, écartées, « aucune recommandation ».
+- [x] F5. Fiche d'une piste : risque, débat, contributions, « ce que nous ne savons pas ».
+- [x] F6. « Pourquoi ? » : `EvidenceChip`, écran preuve, parcours de l'analyse.
+- [x] F7. Tester une idée.
+- [x] F8. Graphe de dépendances, version radiale.
+- [ ] F9. Brancher l'API réelle. Côté mobile, le client HTTP est prêt (`EXPO_PUBLIC_USE_MOCKS=false`). Bloqué par C (schémas Pydantic alignés sur `contracts.ts`), E3 (routes). Puis : test sur téléphone avec Expo Go.
+- [ ] F10. Remplacer les données fictives de la vidéo par des runs réels (aucun chiffre fictif à l'écran).
 
 ### G. Graphe et ESG — P1 / P6
 
@@ -272,3 +297,13 @@ Détail et valeurs : `docs/04_DONNEES.md` section 9, `backend/easytrade/config.p
 7. Concentration sectorielle : renvoyée à P2 (dépend d'un portefeuille).
 8. Le test S9 relit les CSV avec `csv`/`statistics` (sans pandas) pour le calcul indépendant : seule exception aux accès via `easytrade/data/`, limitée aux tests.
 9. Décision de l'équipe : pas d'intégration continue (CI) pour le moment. Aucun `.github/workflows/` ; les tests se lancent à la main (`cd backend && pytest`). Références à `ci.yml` retirées de `avancement.md` et de `docs/ARBORESCENCE.md`.
+
+## 7. Hypothèses prises à l'étape 5 (à valider par l'équipe)
+
+1. Données fictives par défaut (`EXPO_PUBLIC_USE_MOCKS=true`), signalées par un second bandeau ; aucun chiffre fictif dans la vidéo.
+2. Champs de réponse proposés par le front (`mobile/README.md`, section Contrats) et 3 routes ajoutées : `GET /profiles/{id}`, `GET /assets`, `GET /data`.
+3. Seuils indicatifs de risque par tolérance, affichés comme `HYPOTHESE` sur la fiche et dans « Tester une idée » : volatilité 18 / 25 / 45 %, perte maximale −20 / −30 / −50 % (faible / modérée / élevée). Valeurs du serveur fictif seulement ; à fixer dans le moteur (C7).
+4. Effet sur le panier simulé : moyenne pondérée des volatilités sans corrélations (approximation signalée dans la preuve `SCENARIO`) ; à remplacer par le calcul du moteur.
+5. Graphe : version radiale fixe, profondeur 1 ; la liste des relations sous le graphe donne le même contenu (accessibilité).
+6. Poids modifiables sur l'écran de résumé par pas de 5 points, renormalisés ; la modification crée un nouveau profil (`POST /profiles` avec `base_persona` et `weights_override`).
+7. Questionnaire : 3 gabarits (faible → Robert, modérée → Mateo, élevée → Amira) ajustés par les préférences et exclusions ; à reprendre par l'agent de pondération (D2).

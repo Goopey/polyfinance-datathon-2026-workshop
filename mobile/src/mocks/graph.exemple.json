@@ -1,5 +1,5 @@
 {
-  "_avertissement": "DONNÉES ENTIÈREMENT FICTIVES pour le développement de l'interface.",
+  "_avertissement": "DONNÉES ENTIÈREMENT FICTIVES, générées par src/mocks/server.ts. Exemple conforme à src/types/contracts.ts, pour le backend (P2, P3).",
   "center": "ACTIF_A",
   "nodes": [
     {
@@ -13,14 +13,24 @@
       "in_universe": false
     },
     {
+      "id": "FOURN_2",
+      "label": "Fournisseur fictif 2",
+      "in_universe": false
+    },
+    {
       "id": "CLIENT_1",
       "label": "Client fictif 1",
+      "in_universe": false
+    },
+    {
+      "id": "ACTIF_G",
+      "label": "Société médiatisée fictive G",
       "in_universe": true
     },
     {
-      "id": "CONC_1",
-      "label": "Concurrent fictif 1",
-      "in_universe": true
+      "id": "PART_1",
+      "label": "Partenaire fictif 1",
+      "in_universe": false
     }
   ],
   "edges": [
@@ -29,21 +39,35 @@
       "target": "ACTIF_A",
       "relation": "FOURNISSEUR",
       "claim_kind": "FAIT",
-      "evidence_id": "EV-EX-010"
+      "evidence_id": "EV-EX-REL-01"
+    },
+    {
+      "source": "FOURN_2",
+      "target": "ACTIF_A",
+      "relation": "FOURNISSEUR",
+      "claim_kind": "FAIT",
+      "evidence_id": "EV-EX-REL-02"
     },
     {
       "source": "ACTIF_A",
       "target": "CLIENT_1",
       "relation": "CLIENT",
       "claim_kind": "FAIT",
-      "evidence_id": "EV-EX-011"
+      "evidence_id": "EV-EX-REL-03"
     },
     {
       "source": "ACTIF_A",
-      "target": "CONC_1",
+      "target": "ACTIF_G",
       "relation": "CONCURRENT",
       "claim_kind": "HYPOTHESE",
       "evidence_id": null
+    },
+    {
+      "source": "ACTIF_A",
+      "target": "PART_1",
+      "relation": "PARTENAIRE",
+      "claim_kind": "FAIT",
+      "evidence_id": "EV-EX-REL-04"
     }
   ]
 }

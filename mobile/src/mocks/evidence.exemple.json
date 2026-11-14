@@ -1,27 +1,27 @@
 {
-  "_avertissement": "DONNÉES ENTIÈREMENT FICTIVES pour le développement de l'interface.",
-  "evidence_id": "EV-EX-001",
+  "_avertissement": "DONNÉES ENTIÈREMENT FICTIVES, générées par src/mocks/server.ts. Exemple conforme à src/types/contracts.ts, pour le backend (P2, P3).",
+  "evidence_id": "EV-EX-ACTIF_A-volatilite",
   "type": "metric",
   "claim_kind": "FAIT",
   "subject": "ACTIF_A",
-  "statement": "Rendement annualisé observé sur la fenêtre",
-  "value": 0.0,
+  "statement": "Volatilité annualisée observée sur la fenêtre",
+  "value": 38,
   "unit": "%",
   "currency": "CAD",
   "window": {
     "start": "2021-11-12",
     "end": "2026-11-12",
-    "observations": 0
+    "observations": 1255
   },
   "observed_at": "2026-11-12",
   "published_at": "2026-11-12",
   "retrieved_at": "2026-11-13",
   "source": {
-    "source_id": "exemple",
-    "name": "Source fictive",
+    "source_id": "exemple_prix",
+    "name": "Source de prix fictive",
     "url": null
   },
-  "processing": "adj_close ; rendements quotidiens ; annualisation",
-  "produced_by": "exemple",
-  "limits": "Décrit le passé ; ne prédit rien."
+  "processing": "adj_close ; conversion en CAD ; écart-type des rendements quotidiens × racine du nombre de périodes par an",
+  "produced_by": "validation.metrics.volatilite@v1",
+  "limits": "Valeur fictive. Décrit le passé sur 5 ans ; ne prédit rien ; biais du survivant de l'univers. Annualisation sur 252 séances."
 }
