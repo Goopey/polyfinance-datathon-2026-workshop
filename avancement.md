@@ -4,7 +4,7 @@
 > En cas d'interruption : joindre ce fichier dans une nouvelle conversation et reprendre à la **première tâche non cochée** de la section 4.
 > **Règle : ne jamais recommencer une étape marquée ✅.**
 
-Dernière mise à jour : 2026-11-14 — fin de l'étape 1 (P1)
+Dernière mise à jour : 2026-11-14 — étape 2 (P2) en cours : contraintes, scoring, décision, cohérence ; S4 et S12 au vert (restent C6 pipeline et C7 calibrage)
 
 ---
 
@@ -14,7 +14,7 @@ Dernière mise à jour : 2026-11-14 — fin de l'étape 1 (P1)
 |---|---|---|---|
 | 0 | Cadrage, arborescence du dépôt, documents de conception, scénarios | ✅ terminée | Dépôt `easytrade/` ; `pytest` : 5 réussis, 20 en attente |
 | 1 | Socle données (P1) | ✅ terminée | S5, S7, S9 verts ; `pytest` : 42 réussis, 14 en attente (P2 et suivantes) |
-| 2 | Moteur de décision (P2) | ⬜ à faire | S4, S12 |
+| 2 | Moteur de décision (P2) | 🟦 en cours | S4, S12 verts ; restent C6 (pipeline sans LLM) et C7 (calibrage) |
 | 3 | Agents et explicabilité (P3) | ⬜ à faire | S1, S3, S6 en local |
 | 4 | AWS (P4) | ⬜ à faire | Un run complet sur AWS |
 | 5 | Mobile (P5) | ⬜ à faire | Parcours complet sur téléphone |
@@ -22,6 +22,35 @@ Dernière mise à jour : 2026-11-14 — fin de l'étape 1 (P1)
 | 7 | Livrables (P7) | ⬜ à faire | Vidéo, documentation, one-pager, README |
 
 ## 2. Fichiers créés ou modifiés
+
+### Étape 2 — P2 Moteur de décision (2026-11-14)
+
+**Schémas (squelettes remplacés par des contrats Pydantic — C1)**
+
+| Fichier | Contenu |
+|---|---|
+| `schemas/weights.py` | `CRITERIA`, `HardConstraints` (bornes validées), `ProfileWeights` (somme des poids = 1, `from_persona`) |
+| `schemas/profile.py` | `Profile`, `HorizonYears`, `from_persona` |
+| `schemas/candidate.py` | `Asset`, `CriterionScore`, `ScoredCandidate` (contributions conservées), `Rejection` |
+| `schemas/decision.py` | `Decision` (classement, rejets, « aucune recommandation », confiance) |
+| `schemas/coherence.py` | `CoherenceReport`, `Tension`, `Verdict` |
+| `schemas/__init__.py` | Point d'import unique des contrats stables |
+
+**Moteur (déterministe, sans LLM)**
+
+| Fichier | Contenu |
+|---|---|
+| `engine/signals.py` | Signaux orientés par critère depuis la table d'indicateurs ; diversification = proxy de rareté sectorielle (à remplacer par la corrélation, bloc G) ; esg/qualite/preferences manquants |
+| `engine/constraints.py` | `screen_assets` : admissibles / rejetés motivés (crypto, spéculatif, exclusion ESG) ; `basket_caps` (garde-fous de panier) — C2 |
+| `engine/scoring.py` | `percentile_rank`, `score_candidates` : rang centile, contributions, critères manquants, classement déterministe — C3 |
+| `engine/decision.py` | `decide` : assemblage, « aucune recommandation » (3 cas), confiance selon la couverture — C4 |
+| `engine/coherence.py` | `evaluate_idea` (« Tester une idée ») : tensions chiffrées, verdict, alternatives — C5 |
+
+**Tests (squelettes remplacés par des tests réels)**
+
+`unit/test_constraints.py` (4), `unit/test_scoring.py` (6), `scenarios/test_s04` (2), `scenarios/test_s12` (3, sur les vraies données P1). Bilan `pytest` : 57 réussis, 10 en attente (D et G).
+
+**Reste de P2** : C6 `orchestration/pipeline.py` sans LLM (débat simulé) + `scripts/run_local.py` ; C7 calibrage des poids/contraintes de `personas.json`. S12 est déjà vert au niveau du moteur (`decide` par persona).
 
 ### Étape 1 — P1 Socle données (2026-11-14)
 
@@ -119,7 +148,7 @@ Définitions : `docs/09_SCENARIOS_TEST.md`. Commande : `cd backend && pytest tes
 | S1 | Amira : le risque élevé garde une diversification | ⏳ non exécuté | Test en attente : pipeline non implémenté |
 | S2 | Mateo : l'ESG change le résultat | ⏳ non exécuté | Test en attente ; données ESG absentes |
 | S3 | Robert : la demande incohérente est remise en question | ⏳ non exécuté | Test en attente : pipeline non implémenté |
-| S4 | « Aucune recommandation » | ⏳ non exécuté | Test en attente : moteur non implémenté |
+| S4 | « Aucune recommandation » | ✅ passe | `test_s04` : univers crypto-only exclu (Mateo) → aucun admissible ; et signaux manquants → preuves insuffisantes |
 | S5 | Aucune fuite du futur | ✅ passe | `test_s05_aucune_fuite_du_futur.py` ; analyse à 2023-06-30 identique sur un jeu amputé du futur |
 | S6 | Fidélité de l'explication | ⏳ non exécuté | Test en attente : vérificateur non implémenté |
 | S7 | Comparabilité (devises, calendriers, ajustements) | ✅ passe | 4 tests : CAD et dernier taux connu, adj_close, 7 fractionnements non réappliqués, 252 contre 365 |
@@ -127,9 +156,9 @@ Définitions : `docs/09_SCENARIOS_TEST.md`. Commande : `cd backend && pytest tes
 | S9 | Exactitude et déterminisme des calculs | ✅ passe | Exécutions identiques ; XIU.TO, AAPL, BTC-USD recoupés par calcul sans pandas (tolérance relative 1e-9) |
 | S10 | Graphe sourcé | ⏳ non exécuté | Test en attente ; aucune arête saisie |
 | S11 | Désaccord conservé | ⏳ non exécuté | Test en attente : débat non implémenté |
-| S12 | Adaptation au profil | ⏳ non exécuté | Test en attente : moteur non implémenté |
+| S12 | Adaptation au profil | ✅ passe | `test_s12` : même univers (8 actifs réels), classements différents pour Amira et Robert, contributions alignées sur les poids, déterministe |
 
-**Bilan : 3 passent (S5, S7, S9), 0 échoue, 9 non exécutés.**
+**Bilan : 5 passent (S4, S5, S7, S9, S12), 0 échoue, 7 non exécutés.**
 
 ### Tests techniques
 
@@ -137,7 +166,8 @@ Définitions : `docs/09_SCENARIOS_TEST.md`. Commande : `cd backend && pytest tes
 |---|---|---|
 | `unit/test_reference_data.py` (5 tests : personas, poids normalisés, contraintes bornées, registre des sources, univers de 31 actifs) | ✅ 5 / 5 | — |
 | Tests unitaires P1 : `test_fx_calendar`, `test_point_in_time`, `test_metrics`, `test_evidence_ledger`, `test_data_quality` | ✅ | — |
-| 5 autres tests unitaires (P2 et suivantes) | ⏳ en attente | Squelettes |
+| Tests unitaires P2 : `test_constraints` (4), `test_scoring` (6) | ✅ | — |
+| 3 autres tests unitaires (D et G) : `test_fidelity`, `test_wording`, `test_graph_edges` | ⏳ en attente | Squelettes |
 | Validité de tous les fichiers JSON et Python du dépôt | ✅ | — |
 
 ## 4. Tâches restantes, dans l'ordre
@@ -164,12 +194,12 @@ Cocher au fur et à mesure. Les blocs A et F peuvent avancer en parallèle des a
 
 ### C. Moteur de décision — P2
 
-- [ ] C1. `schemas/` restants (profile, weights, candidate, metrics, debate, decision, explanation, trace).
-- [ ] C2. `engine/constraints.py`. → `test_constraints`
-- [ ] C3. `engine/scoring.py` avec contributions. → `test_scoring`
-- [ ] C4. `engine/decision.py` + « aucune recommandation ». → **S4**
-- [ ] C5. `engine/coherence.py` (« Tester une idée »).
-- [ ] C6. `orchestration/pipeline.py` sans LLM (débat simulé) ; `scripts/run_local.py`. → **S12**
+- [x] C1. `schemas/` du moteur (profile, weights, candidate, decision, coherence ; metrics/evidence faits en P1). `debate`, `explanation`, `trace` restent à P3 (bloc D).
+- [x] C2. `engine/constraints.py` + `engine/signals.py`. → `test_constraints`
+- [x] C3. `engine/scoring.py` avec contributions. → `test_scoring`
+- [x] C4. `engine/decision.py` + « aucune recommandation ». → **S4**
+- [x] C5. `engine/coherence.py` (« Tester une idée »).
+- [ ] C6. `orchestration/pipeline.py` sans LLM (débat simulé) ; `scripts/run_local.py`. **S12 déjà vert au niveau du moteur**, reste le câblage pipeline + CLI.
 - [ ] C7. Calibrer poids et contraintes de `personas.json` sur les résultats.
 
 ### D. Agents et explicabilité — P3
