@@ -4,7 +4,7 @@
 > En cas d'interruption : joindre ce fichier dans une nouvelle conversation et reprendre à la **première tâche non cochée** de la section 4.
 > **Règle : ne jamais recommencer une étape marquée ✅.**
 
-Dernière mise à jour : 2026-11-14 — fin de l'étape 0
+Dernière mise à jour : 2026-11-14 — fin de l'étape 1 (P1)
 
 ---
 
@@ -13,7 +13,7 @@ Dernière mise à jour : 2026-11-14 — fin de l'étape 0
 | # | Étape | État | Sortie vérifiable |
 |---|---|---|---|
 | 0 | Cadrage, arborescence du dépôt, documents de conception, scénarios | ✅ terminée | Dépôt `easytrade/` ; `pytest` : 5 réussis, 20 en attente |
-| 1 | Socle données (P1) | ⬜ à faire | S7, S9 |
+| 1 | Socle données (P1) | ✅ terminée | S5, S7, S9 verts ; `pytest` : 42 réussis, 14 en attente (P2 et suivantes) |
 | 2 | Moteur de décision (P2) | ⬜ à faire | S4, S12 |
 | 3 | Agents et explicabilité (P3) | ⬜ à faire | S1, S3, S6 en local |
 | 4 | AWS (P4) | ⬜ à faire | Un run complet sur AWS |
@@ -22,6 +22,35 @@ Dernière mise à jour : 2026-11-14 — fin de l'étape 0
 | 7 | Livrables (P7) | ⬜ à faire | Vidéo, documentation, one-pager, README |
 
 ## 2. Fichiers créés ou modifiés
+
+### Étape 1 — P1 Socle données (2026-11-14)
+
+**Code (squelettes remplacés par des implémentations)**
+
+| Fichier | Contenu |
+|---|---|
+| `backend/easytrade/config.py` | Chemins, `as_of`, délais de publication macro, seuils qualité (hypothèses) |
+| `backend/easytrade/schemas/evidence.py`, `schemas/metrics.py` | Modèles `Evidence`, `EvidenceDraft`, `MetricResult` |
+| `backend/easytrade/explain/evidence_ledger.py` | Registre de preuves : identifiants `EV-nnnnnn`, déduplication, refus des preuves futures |
+| `backend/easytrade/data/loaders.py` | Lecture typée du jeu de départ, trois dates par enregistrement |
+| `backend/easytrade/data/sources_registry.py` | Lecture de `sources_registry.csv` ; refus d'une source non « utilisé » |
+| `backend/easytrade/data/calendar.py`, `data/fx.py` | Calendriers, annualisation 252/365, alignement ; conversion CAD, report du dernier taux |
+| `backend/easytrade/data/point_in_time.py` | `PointInTimeStore`, `filter_published`, délais macro |
+| `backend/easytrade/validation/metrics.py`, `validation/risk.py` | Indicateurs, corrélations, une preuve par valeur |
+| `backend/easytrade/validation/data_quality.py` | 8 contrôles, anomalie CNQ.TO, `quality_report.json` |
+| `backend/easytrade/ingestion/starter_kit.py`, `scripts/bootstrap_data.py` | Tables préparées dans `data/curated/` (Parquet, `evidence.jsonl`, rapport) |
+
+**Tests**
+
+Réels : `unit/test_fx_calendar.py`, `test_point_in_time.py`, `test_metrics.py`, et nouveaux `test_evidence_ledger.py`, `test_data_quality.py` ; `scenarios/test_s05`, `test_s07`, `test_s09`. Fixtures `settings`, `store`, `registry` ajoutées à `tests/conftest.py`.
+
+**Documentation modifiée**
+
+`docs/04_DONNEES.md` (section 9, hypothèses de la couche données), `backend/README.md` (version de Python, commande `bootstrap_data.py`), ce fichier.
+
+**Environnement**
+
+Python système 3.9 (< 3.11 exigé) : `backend/.venv` créé avec `uv` (Python 3.12), ignoré par git. Aucune source nouvelle : `sources_registry.csv` inchangé. Rien n'est commité.
 
 ### Étape 0 (2026-11-14) — tout est créé, rien n'est modifié
 
@@ -65,14 +94,14 @@ Arborescence complète fichier par fichier : `docs/ARBORESCENCE.md`.
 | `data/reference/forbidden_wording.txt` | Formulations refusées |
 | `infra/statemachine/pipeline.asl.json` | Squelette de la machine d'états (ARN à injecter) |
 | `mobile/src/mocks/*.exemple.json` | Données entièrement fictives conformes aux contrats |
-| `.env.example`, `.gitignore`, `.github/workflows/ci.yml`, `backend/pyproject.toml`, `backend/requirements.txt`, `infra/cdk.json`, `infra/requirements.txt` | Configuration |
+| `.env.example`, `.gitignore`, `backend/pyproject.toml`, `backend/requirements.txt`, `infra/cdk.json`, `infra/requirements.txt` | Configuration |
 
-**Squelettes de code (en-tête décrivant le rôle, aucune logique)**
+**Squelettes de code (en-tête décrivant le rôle, aucune logique)** — état à la fin de l'étape 0 ; les modules de P1 listés plus haut ont depuis été implémentés.
 
 | Dossier | Fichiers |
 |---|---:|
 | `backend/easytrade/` (schemas, data, ingestion, validation, graph, agents, engine, explain, orchestration, api) | 74 `.py` |
-| `backend/tests/unit/` | 8 tests en attente + `test_reference_data.py` (réel) |
+| `backend/tests/unit/` | Tests réels pour P1 et `test_reference_data.py` ; 5 squelettes restants (P2 et suivantes) |
 | `backend/tests/scenarios/` | 12 tests en attente (S1 à S12) |
 | `infra/` | 7 `.py` |
 | `mobile/app/` | 14 écrans |
@@ -91,23 +120,24 @@ Définitions : `docs/09_SCENARIOS_TEST.md`. Commande : `cd backend && pytest tes
 | S2 | Mateo : l'ESG change le résultat | ⏳ non exécuté | Test en attente ; données ESG absentes |
 | S3 | Robert : la demande incohérente est remise en question | ⏳ non exécuté | Test en attente : pipeline non implémenté |
 | S4 | « Aucune recommandation » | ⏳ non exécuté | Test en attente : moteur non implémenté |
-| S5 | Aucune fuite du futur | ⏳ non exécuté | Test en attente : filtre point-in-time non implémenté |
+| S5 | Aucune fuite du futur | ✅ passe | `test_s05_aucune_fuite_du_futur.py` ; analyse à 2023-06-30 identique sur un jeu amputé du futur |
 | S6 | Fidélité de l'explication | ⏳ non exécuté | Test en attente : vérificateur non implémenté |
-| S7 | Comparabilité (devises, calendriers, ajustements) | ⏳ non exécuté | Test en attente : couche données non implémentée |
+| S7 | Comparabilité (devises, calendriers, ajustements) | ✅ passe | 4 tests : CAD et dernier taux connu, adj_close, 7 fractionnements non réappliqués, 252 contre 365 |
 | S8 | Formulation et cadre de simulation | ⏳ non exécuté | Test en attente : filtre non implémenté |
-| S9 | Exactitude et déterminisme des calculs | ⏳ non exécuté | Test en attente : métriques non implémentées |
+| S9 | Exactitude et déterminisme des calculs | ✅ passe | Exécutions identiques ; XIU.TO, AAPL, BTC-USD recoupés par calcul sans pandas (tolérance relative 1e-9) |
 | S10 | Graphe sourcé | ⏳ non exécuté | Test en attente ; aucune arête saisie |
 | S11 | Désaccord conservé | ⏳ non exécuté | Test en attente : débat non implémenté |
 | S12 | Adaptation au profil | ⏳ non exécuté | Test en attente : moteur non implémenté |
 
-**Bilan : 0 passe, 0 échoue, 12 non exécutés.**
+**Bilan : 3 passent (S5, S7, S9), 0 échoue, 9 non exécutés.**
 
 ### Tests techniques
 
 | Test | État | Écart |
 |---|---|---|
 | `unit/test_reference_data.py` (5 tests : personas, poids normalisés, contraintes bornées, registre des sources, univers de 31 actifs) | ✅ 5 / 5 | — |
-| 8 autres tests unitaires | ⏳ en attente | Squelettes |
+| Tests unitaires P1 : `test_fx_calendar`, `test_point_in_time`, `test_metrics`, `test_evidence_ledger`, `test_data_quality` | ✅ | — |
+| 5 autres tests unitaires (P2 et suivantes) | ⏳ en attente | Squelettes |
 | Validité de tous les fichiers JSON et Python du dépôt | ✅ | — |
 
 ## 4. Tâches restantes, dans l'ordre
@@ -124,13 +154,13 @@ Cocher au fur et à mesure. Les blocs A et F peuvent avancer en parallèle des a
 
 ### B. Socle données — P1
 
-- [ ] B1. `schemas/evidence.py`, `explain/evidence_ledger.py` : modèle et registre de preuves.
-- [ ] B2. `data/loaders.py`, `ingestion/starter_kit.py` : charger le jeu de départ, tables préparées.
-- [ ] B3. `data/calendar.py`, `data/fx.py` : calendriers, conversion CAD. → `test_fx_calendar`
-- [ ] B4. `data/point_in_time.py` : filtre `published_at ≤ as_of`, délais macro. → `test_point_in_time`, **S5**
-- [ ] B5. `validation/metrics.py`, `validation/risk.py` : indicateurs + preuves. → `test_metrics`, **S9**
-- [ ] B6. `validation/data_quality.py` : rapport de qualité ; traiter l'anomalie CNQ.TO.
-- [ ] B7. Scénario **S7** au vert.
+- [x] B1. `schemas/evidence.py`, `explain/evidence_ledger.py` : modèle et registre de preuves.
+- [x] B2. `data/loaders.py`, `ingestion/starter_kit.py` : charger le jeu de départ, tables préparées.
+- [x] B3. `data/calendar.py`, `data/fx.py` : calendriers, conversion CAD. → `test_fx_calendar`
+- [x] B4. `data/point_in_time.py` : filtre `published_at ≤ as_of`, délais macro. → `test_point_in_time`, **S5**
+- [x] B5. `validation/metrics.py`, `validation/risk.py` : indicateurs + preuves. → `test_metrics`, **S9**
+- [x] B6. `validation/data_quality.py` : rapport de qualité ; traiter l'anomalie CNQ.TO.
+- [x] B7. Scénario **S7** au vert.
 
 ### C. Moteur de décision — P2
 
@@ -198,3 +228,17 @@ Cocher au fur et à mesure. Les blocs A et F peuvent avancer en parallèle des a
 4. Poids et contraintes par persona : valeurs de départ, à calibrer.
 5. Step Functions + Lambda + Bedrock ; CDK en Python ; Expo pour le mobile.
 6. « Prochains accords potentiels » du graphe : hors MVP, sinon étiquetés hypothèse.
+
+## 6. Hypothèses prises à l'étape 1 (à valider par l'équipe)
+
+Détail et valeurs : `docs/04_DONNEES.md` section 9, `backend/easytrade/config.py`.
+
+1. Délais de publication macro prudents : IPC américain 1 mois + 15 j, chômage 1 mois + 7 j, IPC canadien 1 mois + 25 j ; série inconnue refusée.
+2. Seuils qualité : trou > 5 séances, variation > 25 % en un jour, minimum 252 observations, fractionnement suspect si ratio < 1,5.
+3. Indicateurs en CAD ; annualisation 252 (actions, FNB) et 365 (crypto) ; fenêtres : toute la période, 3 ans, 1 an, plus 2022 et pires périodes glissantes de 1 et 3 ans.
+4. Corrélation sur les dates communes, sans remplissage ; week-ends crypto : dernier taux de change connu.
+5. CNQ.TO : « fractionnement » 1,021 non appliqué, signalé dans les limites de chaque preuve ; vérification auprès des relations investisseurs toujours à faire.
+6. S5 rattaché à P1 (bloc B4 de ce fichier), bien que `docs/10_PLAN.md` ne liste que S7 et S9 pour cette phase.
+7. Concentration sectorielle : renvoyée à P2 (dépend d'un portefeuille).
+8. Le test S9 relit les CSV avec `csv`/`statistics` (sans pandas) pour le calcul indépendant : seule exception aux accès via `easytrade/data/`, limitée aux tests.
+9. Décision de l'équipe : pas d'intégration continue (CI) pour le moment. Aucun `.github/workflows/` ; les tests se lancent à la main (`cd backend && pytest`). Références à `ci.yml` retirées de `avancement.md` et de `docs/ARBORESCENCE.md`.

@@ -4,9 +4,6 @@ Générée à la fin de l'étape 0. À régénérer quand la structure change.
 
 ```
 easytrade/
-├── .github/
-│   └── workflows/
-│       └── ci.yml
 ├── backend/
 │   ├── easytrade/
 │   │   ├── agents/

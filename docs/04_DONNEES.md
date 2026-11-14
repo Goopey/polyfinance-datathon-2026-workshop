@@ -131,3 +131,30 @@ Exécutés à l'ingestion ; résultats écrits dans `data/curated/quality_report
 - Contribution des critères au score.
 - Graphe de dépendances.
 - Chronologie des preuves (date de publication) pour montrer le respect du point-in-time.
+
+## 9. Hypothèses de la couche données (P1)
+
+Valeurs dans `backend/easytrade/config.py`. Ce sont des choix de l'équipe (`HYPOTHESE`), à réviser si une source officielle les contredit.
+
+| Sujet | Valeur retenue | Raison |
+|---|---|---|
+| Délai de publication, IPC américain (`CPIAUCSL`) | 1 mois + 15 jours après le mois de référence | Publication habituelle vers le 10-15 du mois suivant ; délai prudent |
+| Délai de publication, chômage américain (`UNRATE`) | 1 mois + 7 jours | Publié le premier vendredi du mois suivant |
+| Délai de publication, IPC canadien (`STATIC_TOTALCPICHANGE`) | 1 mois + 25 jours | Publié vers la troisième semaine du mois suivant |
+| Délai de publication, séries quotidiennes | 0 jour (Banque du Canada), 1 jour (FRED : `DFF`, `DGS2`, `DGS10`) | Publication le jour même ou le jour ouvrable suivant |
+| Série macro sans délai connu | Refusée (erreur) | Ne jamais supposer une publication le jour même |
+| Séances d'un calendrier | Union des dates observées pour les actifs du même marché (TSX, US, crypto) | Pas de liste de jours fériés codée en dur |
+| Comparaison de deux actifs (corrélation) | Dates communes, rendements calculés après alignement, sans remplissage | Même intervalle de temps pour les deux actifs |
+| Devise des indicateurs | CAD (`adj_close` × taux USD/CAD du jour, dernier taux connu sinon) | Agrégations en CAD ; devise indiquée sur chaque preuve |
+| Week-ends crypto | Dernier taux de change connu (vendredi) | Pas de taux publié le week-end |
+| Annualisation | 252 périodes (actions, FNB), 365 (crypto) | Calendrier propre à l'actif |
+| Rendement annualisé | `(P_fin / P_début)^(périodes par an / nombre de rendements) − 1` | Géométrique, sur `adj_close` |
+| Fenêtres d'indicateurs | Toute la période, 3 dernières années, dernière année ; pire période glissante de 1 et 3 ans ; année 2022 | 2022 : actions et obligations ont reculé ensemble |
+| Indicateur « non calculé » | Moins de 30 rendements, ou historique plus court que la fenêtre glissante | Aucune preuve n'est créée pour une valeur absente |
+| Trou de données | Plus de 5 séances consécutives manquantes | Seuil de contrôle |
+| Variation journalière à signaler | Plus de 25 % en valeur absolue | Seuil de contrôle |
+| Nombre minimal d'observations par actif | 252 | Une année de séances |
+| Fractionnement suspect | Ratio inférieur à 1,5 (ou à l'inverse) | CNQ.TO 1,021 ; jamais appliqué, signalé dans les limites de chaque preuve du ticker |
+| Concentration sectorielle | Hors P1 | Dépend d'un portefeuille, donc du moteur (P2) |
+
+Rapport généré : `data/curated/quality_report.json` (commande `python scripts/bootstrap_data.py`). Résultat sur le jeu de départ : 6 contrôles sans remarque, 2 avertissements (volume nul de ZST.TO le 2022-07-06 ; anomalie CNQ.TO du 2022-08-22).

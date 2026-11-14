@@ -3,9 +3,11 @@
 Paquet Python `easytrade` : données, validation déterministe, agents, moteur de décision, explicabilité, API.
 
 ```bash
+# Python 3.11 ou plus requis (pyproject.toml). Avec uv : uv venv --python 3.12 .venv
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 pytest
+python ../scripts/bootstrap_data.py                                 # tables préparées et rapport de qualité dans data/curated/
 python ../scripts/run_local.py --persona amira --as-of 2026-11-12   # pipeline local (à implémenter)
 uvicorn easytrade.api.app:app --reload                             # API locale (à implémenter)
 ```
