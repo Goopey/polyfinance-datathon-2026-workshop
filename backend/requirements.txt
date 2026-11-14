@@ -1,0 +1,10 @@
+# Versions à figer au premier `pip freeze` qui fonctionne
+pandas
+numpy
+pyarrow
+pydantic
+boto3
+fastapi
+uvicorn
+mangum
+pytest

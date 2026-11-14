@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Node / Expo
+node_modules/
+.expo/
+dist/
+web-build/
+
+# Secrets et configuration locale
+.env
+.env.*
+!.env.example
+
+# AWS CDK
+cdk.out/
+cdk.context.json
+
+# Données : rien de brut provenant d'APIs tierces dans le dépôt
+data/raw/external/*
+!data/raw/external/.gitkeep
+data/curated/*
+!data/curated/.gitkeep
+
+# Divers
+.DS_Store
+*.log

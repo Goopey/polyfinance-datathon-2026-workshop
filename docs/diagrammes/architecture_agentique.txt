@@ -1,0 +1,107 @@
+                 +-----------------------------+
+                    |       INVESTOR PROFILE      |
+                    |-----------------------------|
+                    | - Investment objectives     |
+                    | - Risk tolerance            |
+                    | - Investment horizon        |
+                    | - Financial constraints     |
+                    | - Investor preferences      |
+                    +--------------+--------------+
+                                   |
+                                   v
+                    +-----------------------------+
+                    |   1. PROFILE WEIGHTING      |
+                    |           AGENT             |
+                    |-----------------------------|
+                    | - Analyze investor          |
+                    | - Define hard constraints   |
+                    | - Assign suitability weights|
+                    | - Generate structured JSON  |
+                    +--------------+--------------+
+                                   |
+                     +-------------+-------------+
+                     |                           |
+                     v                           v
+        +-------------------------+  +-------------------------+
+        |  2. INVESTMENT RESEARCH |  |   FINANCIAL VALIDATION  |
+        |          AGENT          |  |          LAYER          |
+        |-------------------------|  |-------------------------|
+        | - Discover stocks       |  | - Historical returns    |
+        | - Analyze ETFs/indices  |  | - Volatility/drawdown   |
+        | - Find opportunities    |  | - Risk calculations     |
+        | - Gather evidence       |  | - Verify data quality   |
+        | - Rank initial matches  |  | - Deterministic Python  |
+        +------------+------------+  +------------+------------+
+                     |                            |
+                     +-------------+--------------+
+                                   |
+                                   v
+                 +-----------------------------------+
+                 |       3. DEBATE COUNCIL           |
+                 |-----------------------------------|
+                 | Receives identical verified      |
+                 | evidence and investor constraints|
+                 +-----------------+-----------------+
+                                   |
+                  +----------------+----------------+
+                  |                |                |
+                  v                v                v
+        +----------------+ +----------------+ +----------------+
+        |   BULL AGENT   | | REALIST AGENT  | |   BEAR AGENT   |
+        |----------------| |----------------| |----------------|
+        | Optimistic     | | Balanced       | | Pessimistic    |
+        | perspective    | | perspective    | | perspective    |
+        |                | |                | |                |
+        | - Upside       | | - Base case    | | - Downside     |
+        | - Growth       | | - Probability  | | - Risk         |
+        | - Catalysts    | | - Tradeoffs    | | - Weaknesses   |
+        +--------+-------+ +--------+-------+ +--------+-------+
+                 |                  |                  |
+                 +------------------+------------------+
+                                    |
+                                    v
+                   +----------------------------------+
+                   |       DEBATE PROTOCOL            |
+                   |----------------------------------|
+                   | Round 1: Independent analysis    |
+                   | Round 2: Cross-examination       |
+                   | Round 3: Final assessments       |
+                   |                                  |
+                   | Preserve dissent and uncertainty |
+                   +-----------------+----------------+
+                                     |
+                                     v
+                   +----------------------------------+
+                   |        4. DECISION ENGINE        |
+                   |----------------------------------|
+                   | - Enforce investor constraints   |
+                   | - Assess supporting evidence     |
+                   | - Compare investment candidates  |
+                   | - Rank or reject opportunities   |
+                   | - Preserve disagreements         |
+                   | - Allow "no recommendation"      |
+                   +-----------------+----------------+
+                                     |
+                                     v
+                   +----------------------------------+
+                   |       5. EXPLANATION AGENT       |
+                   |----------------------------------|
+                   | - Explain the final decision     |
+                   | - Relate it to investor profile  |
+                   | - Summarize Bull/Bear/Realist    |
+                   | - Cite verified financial data   |
+                   | - Highlight risks and limitations|
+                   | - Explain rejected opportunities |
+                   +-----------------+----------------+
+                                     |
+                                     v
+                   +----------------------------------+
+                   |          FINAL OUTPUT            |
+                   |----------------------------------|
+                   | Personalized investment analysis |
+                   | Ranked investment opportunities  |
+                   | Risk and suitability assessments |
+                   | Evidence and source citations    |
+                   | Debate summary and disagreements |
+                   | Transparent decision rationale   |
+                   +----------------------------------+

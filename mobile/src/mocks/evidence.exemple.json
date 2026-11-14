@@ -1,0 +1,27 @@
+{
+  "_avertissement": "DONNÉES ENTIÈREMENT FICTIVES pour le développement de l'interface.",
+  "evidence_id": "EV-EX-001",
+  "type": "metric",
+  "claim_kind": "FAIT",
+  "subject": "ACTIF_A",
+  "statement": "Rendement annualisé observé sur la fenêtre",
+  "value": 0.0,
+  "unit": "%",
+  "currency": "CAD",
+  "window": {
+    "start": "2021-11-12",
+    "end": "2026-11-12",
+    "observations": 0
+  },
+  "observed_at": "2026-11-12",
+  "published_at": "2026-11-12",
+  "retrieved_at": "2026-11-13",
+  "source": {
+    "source_id": "exemple",
+    "name": "Source fictive",
+    "url": null
+  },
+  "processing": "adj_close ; rendements quotidiens ; annualisation",
+  "produced_by": "exemple",
+  "limits": "Décrit le passé ; ne prédit rien."
+}

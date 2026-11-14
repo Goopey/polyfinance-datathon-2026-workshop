@@ -1,0 +1,12 @@
+# Formulations refusées dans les sorties (une par ligne, insensible à la casse)
+achetez
+vendez
+vous devriez
+nous recommandons d'acheter
+nous recommandons de vendre
+garanti
+sans risque
+rendement attendu
+prix cible
+va monter
+va baisser

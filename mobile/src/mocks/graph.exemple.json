@@ -1,0 +1,49 @@
+{
+  "_avertissement": "DONNÉES ENTIÈREMENT FICTIVES pour le développement de l'interface.",
+  "center": "ACTIF_A",
+  "nodes": [
+    {
+      "id": "ACTIF_A",
+      "label": "Société fictive A",
+      "in_universe": true
+    },
+    {
+      "id": "FOURN_1",
+      "label": "Fournisseur fictif 1",
+      "in_universe": false
+    },
+    {
+      "id": "CLIENT_1",
+      "label": "Client fictif 1",
+      "in_universe": true
+    },
+    {
+      "id": "CONC_1",
+      "label": "Concurrent fictif 1",
+      "in_universe": true
+    }
+  ],
+  "edges": [
+    {
+      "source": "FOURN_1",
+      "target": "ACTIF_A",
+      "relation": "FOURNISSEUR",
+      "claim_kind": "FAIT",
+      "evidence_id": "EV-EX-010"
+    },
+    {
+      "source": "ACTIF_A",
+      "target": "CLIENT_1",
+      "relation": "CLIENT",
+      "claim_kind": "FAIT",
+      "evidence_id": "EV-EX-011"
+    },
+    {
+      "source": "ACTIF_A",
+      "target": "CONC_1",
+      "relation": "CONCURRENT",
+      "claim_kind": "HYPOTHESE",
+      "evidence_id": null
+    }
+  ]
+}

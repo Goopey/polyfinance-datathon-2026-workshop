@@ -1,0 +1,86 @@
+{
+  "Comment": "EasyTrade — pipeline d'analyse. Squelette : les ARN sont injectés par CDK. Voir docs/01_ARCHITECTURE.md.",
+  "StartAt": "PonderationDuProfil",
+  "States": {
+    "PonderationDuProfil": {
+      "Type": "Task",
+      "Resource": "${ProfileFunctionArn}",
+      "ResultPath": "$.weights",
+      "Next": "RechercheEtValidation"
+    },
+    "RechercheEtValidation": {
+      "Type": "Parallel",
+      "ResultPath": "$.parallel",
+      "Branches": [
+        {
+          "StartAt": "Recherche",
+          "States": {
+            "Recherche": {
+              "Type": "Task",
+              "Resource": "${ResearchFunctionArn}",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "ValidationFinanciere",
+          "States": {
+            "ValidationFinanciere": {
+              "Type": "Task",
+              "Resource": "${ValidationFunctionArn}",
+              "End": true
+            }
+          }
+        }
+      ],
+      "Next": "DossiersDePreuves"
+    },
+    "DossiersDePreuves": {
+      "Type": "Task",
+      "Resource": "${EvidencePacksFunctionArn}",
+      "ResultPath": "$.packs",
+      "Next": "ConseilDeDebat"
+    },
+    "ConseilDeDebat": {
+      "Type": "Map",
+      "ItemsPath": "$.packs.debate_jobs",
+      "MaxConcurrency": 6,
+      "ResultPath": "$.debate",
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "AgentDeDebat",
+        "States": {
+          "AgentDeDebat": {
+            "Type": "Task",
+            "Resource": "${DebateFunctionArn}",
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "States.TaskFailed"
+                ],
+                "MaxAttempts": 1,
+                "IntervalSeconds": 2
+              }
+            ],
+            "End": true
+          }
+        }
+      },
+      "Next": "MoteurDeDecision"
+    },
+    "MoteurDeDecision": {
+      "Type": "Task",
+      "Resource": "${DecisionFunctionArn}",
+      "ResultPath": "$.decision",
+      "Next": "Explication"
+    },
+    "Explication": {
+      "Type": "Task",
+      "Resource": "${ExplanationFunctionArn}",
+      "ResultPath": "$.explanation",
+      "End": true
+    }
+  }
+}

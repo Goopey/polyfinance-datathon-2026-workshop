@@ -1,0 +1,10 @@
+[project]
+name = "easytrade"
+version = "0.1.0"
+description = "EasyTrade — simulateur agentique d'aide à la décision d'investissement (Datathon Polyfinances 2026)"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = ["scenario(id): scénario d'acceptation de docs/09_SCENARIOS_TEST.md"]

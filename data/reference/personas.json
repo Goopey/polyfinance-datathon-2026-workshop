@@ -1,0 +1,136 @@
+{
+  "_meta": {
+    "source": "Énoncé officiel du Datathon Polyfinances 2026 (personas fictifs).",
+    "note": "Les blocs 'profil' reprennent l'énoncé. Les blocs 'poids' et 'contraintes' sont des HYPOTHESES de l'équipe, à calibrer avec docs/09_SCENARIOS_TEST.md.",
+    "criteres": [
+      "croissance",
+      "stabilite",
+      "diversification",
+      "esg",
+      "qualite",
+      "horizon",
+      "preferences"
+    ]
+  },
+  "personas": [
+    {
+      "id": "amira",
+      "profil": {
+        "nom": "Amira",
+        "age": 26,
+        "profession": "Ingénieure logicielle",
+        "situation": "Célibataire, sans enfant",
+        "experience": "intermédiaire",
+        "tolerance_risque": "élevé",
+        "horizon_annees": {
+          "min": 15,
+          "max": null
+        },
+        "objectif": "Faire croître son capital à long terme.",
+        "preferences": [
+          "Très intéressée par l'intelligence artificielle et les technologies émergentes",
+          "Ouverte aux entreprises en forte croissance et à une volatilité importante",
+          "Intéressée par les cryptoactifs",
+          "Souhaite maintenir une certaine diversification et éviter de miser exclusivement sur les technologies"
+        ],
+        "test": "« Risque élevé » ne signifie pas « tout est acceptable » : garder une diversification cohérente."
+      },
+      "poids": {
+        "croissance": 0.3,
+        "stabilite": 0.1,
+        "diversification": 0.2,
+        "esg": 0.05,
+        "qualite": 0.1,
+        "horizon": 0.1,
+        "preferences": 0.15
+      },
+      "contraintes": {
+        "max_weight_per_asset": 0.15,
+        "max_weight_per_sector": 0.4,
+        "max_weight_crypto": 0.15,
+        "esg_exclusion": false,
+        "speculatif": "permis"
+      }
+    },
+    {
+      "id": "mateo",
+      "profil": {
+        "nom": "Mateo",
+        "age": 41,
+        "profession": "Gestionnaire des opérations",
+        "situation": "En couple, père de deux enfants",
+        "experience": "intermédiaire",
+        "tolerance_risque": "modéré",
+        "horizon_annees": {
+          "min": 8,
+          "max": 12
+        },
+        "objectif": "Faire croître son capital de façon équilibrée à moyen et à long terme.",
+        "preferences": [
+          "Accorde une grande importance aux facteurs ESG",
+          "Souhaite éviter les entreprises liées à des controverses environnementales ou sociales importantes",
+          "Recherche un équilibre entre potentiel de croissance et stabilité",
+          "Ouvert aux technologies émergentes si elles correspondent à son profil de risque",
+          "Peu intéressé par les placements hautement spéculatifs"
+        ],
+        "test": "Intégrer les critères non financiers, pas seulement le rendement et le risque."
+      },
+      "poids": {
+        "croissance": 0.15,
+        "stabilite": 0.2,
+        "diversification": 0.15,
+        "esg": 0.25,
+        "qualite": 0.15,
+        "horizon": 0.05,
+        "preferences": 0.05
+      },
+      "contraintes": {
+        "max_weight_per_asset": 0.1,
+        "max_weight_per_sector": 0.3,
+        "max_weight_crypto": 0.0,
+        "esg_exclusion": true,
+        "speculatif": "exclu"
+      }
+    },
+    {
+      "id": "robert",
+      "profil": {
+        "nom": "Robert",
+        "age": 59,
+        "profession": "Professionnel de la santé",
+        "situation": "Marié, père d'enfants adultes ; envisage la retraite dans les prochaines années",
+        "experience": "avancée",
+        "tolerance_risque": "faible à modéré",
+        "horizon_annees": {
+          "min": 3,
+          "max": 5
+        },
+        "objectif": "Préserver son capital tout en maintenant un potentiel de croissance.",
+        "preferences": [
+          "Préfère les entreprises établies et les placements dont il comprend bien le modèle d'affaires",
+          "Accorde de l'importance à la stabilité et à la qualité des entreprises",
+          "Peu intéressé par les cryptoactifs",
+          "Suit activement les marchés et s'intéresse aux nouvelles occasions d'investissement",
+          "Peut être tenté par une entreprise très médiatisée, même si elle est plus risquée que ce qu'il recherche habituellement"
+        ],
+        "test": "Remettre en question une demande incohérente avec le profil, expliquer les risques, ne pas acquiescer automatiquement."
+      },
+      "poids": {
+        "croissance": 0.1,
+        "stabilite": 0.3,
+        "diversification": 0.15,
+        "esg": 0.05,
+        "qualite": 0.25,
+        "horizon": 0.1,
+        "preferences": 0.05
+      },
+      "contraintes": {
+        "max_weight_per_asset": 0.1,
+        "max_weight_per_sector": 0.3,
+        "max_weight_crypto": 0.0,
+        "esg_exclusion": false,
+        "speculatif": "signalé"
+      }
+    }
+  ]
+}

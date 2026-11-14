@@ -1,0 +1,94 @@
+{
+  "_avertissement": "DONNÉES ENTIÈREMENT FICTIVES pour le développement de l'interface. Aucun actif réel, aucun chiffre réel.",
+  "run_id": "run_exemple",
+  "as_of": "2026-11-12",
+  "profile_id": "amira",
+  "headline": "2 pistes cohérentes avec votre profil, 1 écartée",
+  "items": [
+    {
+      "ticker": "ACTIF_A",
+      "name": "Société fictive A",
+      "asset_class": "equity",
+      "fit": "élevée",
+      "confidence": "moyenne",
+      "why": [
+        {
+          "text": "Profil de croissance observé supérieur à la médiane de l'univers.",
+          "evidence_ids": [
+            "EV-EX-001"
+          ],
+          "claim_kind": "FAIT"
+        }
+      ],
+      "contributions": {
+        "croissance": 0.24,
+        "stabilite": 0.03,
+        "diversification": 0.12,
+        "esg": 0.02,
+        "qualite": 0.06,
+        "horizon": 0.05,
+        "preferences": 0.12
+      },
+      "debate_summary": {
+        "bull": "Appui",
+        "realist": "Appui avec réserve",
+        "bear": "Opposition",
+        "dissent": true
+      },
+      "risks": [
+        "Perte maximale importante sur la fenêtre observée."
+      ],
+      "limits": [
+        "Fenêtre de 5 ans.",
+        "Biais du survivant de l'univers."
+      ]
+    },
+    {
+      "ticker": "FNB_B",
+      "name": "FNB fictif B",
+      "asset_class": "etf_bond",
+      "fit": "partielle",
+      "confidence": "élevée",
+      "why": [
+        {
+          "text": "Apporte de la diversification par rapport aux autres pistes.",
+          "evidence_ids": [
+            "EV-EX-002"
+          ],
+          "claim_kind": "FAIT"
+        }
+      ],
+      "contributions": {
+        "croissance": 0.06,
+        "stabilite": 0.09,
+        "diversification": 0.18,
+        "esg": 0.02,
+        "qualite": 0.07,
+        "horizon": 0.07,
+        "preferences": 0.03
+      },
+      "debate_summary": {
+        "bull": "Appui avec réserve",
+        "realist": "Appui",
+        "bear": "Appui avec réserve",
+        "dissent": false
+      },
+      "risks": [
+        "Sensibilité aux taux d'intérêt."
+      ],
+      "limits": [
+        "Fenêtre de 5 ans."
+      ]
+    }
+  ],
+  "rejected": [
+    {
+      "ticker": "CRYPTO_C",
+      "reason": "Règle de votre profil : part maximale en crypto atteinte."
+    }
+  ],
+  "unknowns": [
+    "Aucune preuve ESG datée pour ACTIF_A."
+  ],
+  "disclaimer": "Simulation à des fins pédagogiques. Ceci n'est pas un conseil financier."
+}
