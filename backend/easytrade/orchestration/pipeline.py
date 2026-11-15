@@ -23,7 +23,7 @@ import json
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any, Callable, Iterable, Optional
 
 import pandas as pd
 
@@ -31,7 +31,7 @@ from easytrade.agents import simulated
 from easytrade.agents.debate.protocol import run_debate, step_name
 from easytrade.agents.explanation import explain
 from easytrade.agents.llm_client import CallInfo, LLMClient, make_client
-from easytrade.agents.profile_weighting import WeightingResult, template_for, weigh_profile
+from easytrade.agents.profile_weighting import SOURCE_PROFILE, WeightingResult, template_for, weigh_profile
 from easytrade.agents.research import run_research
 from easytrade.agents.tools import ResearchTools
 from easytrade.config import Settings, load_settings
@@ -51,7 +51,7 @@ from easytrade.schemas.decision import Decision
 from easytrade.schemas.evidence import EvidenceDraft
 from easytrade.schemas.explanation import Alternative, CoherenceAnalysis, Explanation, RejectedItem
 from easytrade.schemas.profile import Profile
-from easytrade.schemas.trace import RunTrace
+from easytrade.schemas.trace import RunTrace, TraceStep
 from easytrade.validation.metrics import basket_volatility_metric, compute_metrics_table
 
 VERSION = "v1"
@@ -117,6 +117,7 @@ class RunResult:
     debate: dict[str, DebateRecord] = field(default_factory=dict)
     fidelity: Optional[FidelityReport] = None
     error: Optional[str] = None
+    metrics: Optional[pd.DataFrame] = None  # table d'indicateurs du run (fiche d'un actif servie par l'API)
 
     def save(self, out_dir: Path) -> Path:
         """Écrit les artefacts du run (mêmes fichiers que ceux déposés sur S3 par les Lambda)."""
@@ -365,15 +366,21 @@ def run_pipeline(
     reading_level: str = "simple",
     max_candidates: Optional[int] = None,
     max_workers: int = 1,
+    on_step: Optional[Callable[[TraceStep], None]] = None,
+    profile_source: str = SOURCE_PROFILE,
 ) -> RunResult:
-    """Exécute une analyse complète. Un échec d'étape donne `status = "echec"`, trace à l'appui."""
+    """Exécute une analyse complète. Un échec d'étape donne `status = "echec"`, trace à l'appui.
+
+    `on_step` est appelé à la fermeture de chaque étape (progression affichée par le mobile).
+    `profile_source` : source des phrases du profil (énoncé du case, ou questionnaire de l'application).
+    """
     ws = workspace or Workspace.load()
     client = client or make_client("auto")
     as_of_date = to_timestamp(as_of if as_of is not None else ws.settings.as_of).date()
     requested_ticker = requested_ticker.strip().upper() if requested_ticker else None
     run_id = make_run_id(as_of_date, profile_id, requested_ticker)
     ledger = EvidenceLedger(as_of_date)
-    trace = TraceRecorder(run_id, as_of_date, profile_id)
+    trace = TraceRecorder(run_id, as_of_date, profile_id, on_step=on_step)
     result = RunResult(run_id=run_id, status="echec", as_of=as_of_date, profile_id=profile_id,
                        requested_ticker=requested_ticker, model_id=client.model_id("strong"),
                        trace=trace.to_trace(), ledger=ledger)
@@ -390,7 +397,7 @@ def run_pipeline(
         with trace.step("profil", "llm") as step:
             profile = profile or ws.profile(profile_id)
             weighting, info = weigh_profile(profile, template_for(profile, ws.personas), client, ledger,
-                                            ws.registry, forbidden=ws.forbidden)
+                                            ws.registry, forbidden=ws.forbidden, profile_source=profile_source)
             weights = weighting.profile_weights
             step.set(**_llm_fields([info]), outputs=weighting.evidence_ids)
             step.note(f"Niveau de risque : {weighting.risk_level} ; thèmes : "
@@ -404,6 +411,7 @@ def run_pipeline(
             metrics = compute_metrics_table(ws.store, as_of_date, ledger, ws.registry, ws.settings.quality)
             step.note(f"{len(metrics)} indicateurs calculés, {len(ledger) - before} preuves créées, "
                       f"aucune donnée publiée après le {as_of_date}.")
+        result.metrics = metrics
 
         # 2b. Recherche : candidats et preuves qualitatives
         with trace.step("recherche", "llm") as step:

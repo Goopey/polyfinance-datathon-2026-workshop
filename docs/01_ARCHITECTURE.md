@@ -83,19 +83,26 @@ Champs transverses, présents partout :
 
 | Méthode | Route | Rôle |
 |---|---|---|
+| GET | `/health` | État du service |
 | GET | `/personas` | Les 3 personas du case |
-| POST | `/profiles` | Créer un profil fictif |
-| GET | `/profiles/{id}` | `ProfileWeights` d'un profil (persona ou fictif) — ajout P5 |
-| POST | `/runs` | Lancer une analyse (asynchrone) |
-| GET | `/runs/{id}` | État, étape courante, résultat |
+| POST | `/profiles` | Créer un profil fictif (questionnaire), ou une variante à poids modifiés d'un profil existant |
+| GET | `/profiles/{id}` | `ProfileWeights` d'un profil (persona ou fictif) : règles, poids, justification |
+| POST | `/runs` | Lancer une analyse (asynchrone) ; avec `requested_ticker` : « Tester une idée » |
+| GET | `/runs/{id}` | État, cinq étapes affichées, résultat (`Explanation`) |
 | GET | `/runs/{id}/trace` | Trace d'exécution observable |
-| GET | `/assets` | Univers d'actifs (liste de « Tester une idée ») — ajout P5 |
-| GET | `/assets/{ticker}?profile_id=` | Fiche : métriques situées dans l'univers et comparées au profil, signaux |
-| GET | `/assets/{ticker}/graph` | Graphe de dépendances sourcé |
-| GET | `/evidence/{id}` | Une preuve : source, dates, traitement |
-| GET | `/data` | Sources et contrôles qualité (écran « Données ») — ajout P5 |
+| GET | `/assets` | Univers d'actifs (liste de « Tester une idée ») |
+| GET | `/assets/{ticker}?profile_id=&run_id=` | Fiche : indicateurs situés dans l'univers et comparés aux repères du profil, signaux |
+| GET | `/assets/{ticker}/graph?run_id=` | Graphe de dépendances sourcé |
+| GET | `/evidence/{id}?run_id=` | Une preuve : source, dates, traitement |
+| GET | `/data?run_id=` | Sources et contrôles qualité (écran « Données ») |
 
-Les formes exactes des réponses attendues par le mobile sont dans `mobile/src/types/contracts.ts` ; les champs proposés par le front sont listés dans `mobile/README.md`, section Contrats.
+C'est la surface complète de l'API (`backend/easytrade/api/`, lancement : `uvicorn easytrade.api.app:app` depuis `backend/`). Aucune route ne passe d'ordre : deux créations seulement, un profil fictif et une analyse simulée (scénario S8, point 3).
+
+**`run_id`.** Les identifiants de preuves suivent l'ordre d'insertion dans le registre d'une analyse : `EV-000412` ne désigne pas la même preuve dans deux runs. Le mobile transmet donc le run consulté pour la preuve, la fiche et le graphe ; sans `run_id`, l'API répond depuis un registre « hors analyse » calculé à la date de référence.
+
+**Un seul contrat, vérifié des deux côtés.** `mobile/src/types/contracts.ts` décrit les réponses. `mobile/contracts.schema.json` en est le schéma JSON, généré par `npm run contracts`. `mobile/tests/` valide le serveur fictif contre ce schéma, `backend/tests/api/` valide l'API réelle contre le même fichier : un champ ajouté, retiré ou renommé d'un seul côté fait échouer un test. Les schémas internes du moteur (`ProfileWeights`, `Decision`, `CoherenceReport`) gardent leur forme ; `api/service.py` les traduit vers les contrats de présentation de `schemas/api.py`.
+
+**Stockage.** En local, runs et profils fictifs vivent en mémoire du processus de l'API (`ApiService`). Sur AWS (P4), ce stockage passe à DynamoDB et S3 : seule cette classe change.
 
 ## Choix structurants
 

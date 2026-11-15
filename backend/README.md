@@ -11,7 +11,8 @@ python ../scripts/bootstrap_data.py                                 # tables pr�
 python ../scripts/run_local.py --persona amira --as-of 2026-11-12   # pipeline local complet (agents simulés sans Bedrock)
 python ../scripts/run_local.py --persona robert --ticker TSLA -v    # « Tester une idée »
 python ../scripts/run_local.py --tous --save                        # enregistre les runs des 3 personas dans data/curated/runs/
-uvicorn easytrade.api.app:app --reload                             # API locale (à implémenter)
+uvicorn easytrade.api.app:app --reload --port 8000                 # API locale (documentation interactive : /docs)
+pytest tests/api                                                   # contrat mobile ↔ backend (mobile/contracts.schema.json)
 ```
 
 | Dossier | Rôle | Conception |
@@ -25,4 +26,4 @@ uvicorn easytrade.api.app:app --reload                             # API locale 
 | `engine/` | Moteur de décision, sans LLM | `docs/03_DECISION_ENGINE.md` |
 | `explain/` | Registre de preuves, trace, fidélité | `docs/05_EXPLICABILITE.md` |
 | `orchestration/` | Pipeline local et points d'entrée Lambda | `docs/01_ARCHITECTURE.md` |
-| `api/` | Routes HTTP | `docs/01_ARCHITECTURE.md` |
+| `api/` | Routes HTTP ; `service.py` exécute le pipeline et traduit vers les contrats du mobile (`schemas/api.py`) | `docs/01_ARCHITECTURE.md` |

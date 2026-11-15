@@ -6,7 +6,7 @@
  * Sur un téléphone, `localhost` désigne le téléphone : utiliser l'adresse IP locale de l'ordinateur,
  * ou l'URL API Gateway une fois P4 déployée.
  */
-import { MockNotFound } from "../mocks/server";
+import { MockInvalid, MockNotFound } from "../mocks/server";
 
 export const USE_MOCKS = process.env.EXPO_PUBLIC_USE_MOCKS !== "false";
 export const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
@@ -54,6 +54,7 @@ export async function mocked<T>(fn: () => Promise<T>): Promise<T> {
     return await fn();
   } catch (e) {
     if (e instanceof MockNotFound) throw new ApiError(404, e.message);
+    if (e instanceof MockInvalid) throw new ApiError(422, e.message);
     throw e;
   }
 }

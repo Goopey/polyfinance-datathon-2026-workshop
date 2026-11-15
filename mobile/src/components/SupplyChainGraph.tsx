@@ -164,7 +164,8 @@ export function SupplyChainGraph({ graph, runId }: { graph: DependencyGraph; run
                 </Text>
                 {!node?.in_universe ? <Text style={type.caption}>Hors univers</Text> : null}
               </View>
-              {e.evidence_id ? <EvidenceChip id={e.evidence_id} runId={runId} /> : <ClaimTag kind="HYPOTHESE" />}
+              {e.claim_kind === "HYPOTHESE" ? <ClaimTag kind="HYPOTHESE" /> : null}
+              {e.evidence_id ? <EvidenceChip id={e.evidence_id} runId={runId} /> : null}
             </Pressable>
           );
         })}

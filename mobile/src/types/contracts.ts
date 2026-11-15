@@ -92,10 +92,14 @@ export interface ProfileDraft {
   objectif: "preserver" | "equilibre" | "croissance";
   horizon: "court" | "moyen" | "long";
   tolerance: "faible" | "moderee" | "elevee";
+  /** Parmi : esg, technologies, stabilite, diversification. */
   preferences: string[];
+  /** Parmi : crypto, speculatif, controverses (les règles que le moteur sait appliquer). */
   exclusions: string[];
   /** Poids modifiés par l'utilisateur sur l'écran de résumé ; normalisés par le backend. */
   weights_override?: Partial<CriterionMap>;
+  /** Profil existant dont on crée une variante (poids modifiés). */
+  base_persona?: string;
 }
 
 /** Sortie de l'agent de pondération (docs/02_AGENTS.md §1). */
@@ -109,6 +113,7 @@ export interface ProfileWeights {
     max_weight_crypto: number;
     excluded_asset_classes: string[];
     esg_exclusion: boolean;
+    speculatif: "permis" | "exclu" | "signalé";
   };
   weights: CriterionMap;
   rationale: { field: string; because: string; claim_kind?: ClaimKind }[];
@@ -219,7 +224,10 @@ export interface TraceStep {
   model_id?: string | null;
   prompt_version?: string | null;
   version?: string | null;
+  attempts?: number | null; // appels au modèle (2 = une relance après sortie invalide)
   tools_called?: string[];
+  inputs?: string[];
+  evidence_in?: string[];
   outputs?: string[];
   note?: string; // résultat d'un contrôle de gouvernance
 }

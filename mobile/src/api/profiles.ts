@@ -5,7 +5,7 @@ import type { Persona, ProfileDraft, ProfileWeights } from "../types/contracts";
 import { mockApi } from "../mocks/server";
 import { USE_MOCKS, http, mocked } from "./client";
 
-export type ProfileRequest = ProfileDraft & { base_persona?: string };
+export type ProfileRequest = ProfileDraft;
 
 export const getPersonas = () => (USE_MOCKS ? mocked(mockApi.personas) : http.get<Persona[]>("/personas"));
 

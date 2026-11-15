@@ -24,7 +24,6 @@ Un extra ne commence pas tant que les scénarios S1, S3, S5, S6 ne passent pas.
 | P7 Livrables | 10 % | Vidéo, documentation technique, one-pager, README, répétition du pitch | Les quatre livrables prêts |
 
 P1 + P2 et P5 (avec données simulées) démarrent en parallèle. P4 démarre dès que le compte AWS est disponible, sans attendre P3.
-
 ## Répartition proposée
 
 À adapter au nombre de personnes et aux affinités.

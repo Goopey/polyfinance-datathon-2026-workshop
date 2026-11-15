@@ -22,7 +22,7 @@ const TYPE_LABEL: Record<string, string> = {
 export default function Preuve() {
   const { id, run } = useLocalSearchParams<{ id: string; run?: string }>();
   const advanced = useSettings((s) => s.mode === "avance");
-  const q = useQuery({ queryKey: ["evidence", id], queryFn: () => getEvidence(id!), enabled: !!id });
+  const q = useQuery({ queryKey: ["evidence", run ?? null, id], queryFn: () => getEvidence(id!, run), enabled: !!id });
 
   if (q.isLoading) return <Loading />;
   if (q.error) return <Screen><ErrorState error={q.error} onRetry={() => q.refetch()} /></Screen>;

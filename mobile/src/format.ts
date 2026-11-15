@@ -12,7 +12,8 @@ export function fmtPct(v: number, digits = 1): string {
 export function fmtValue(v: number | null, unit: string | null): string {
   if (v === null) return "—";
   if (unit === "%") return fmtPct(v);
-  return unit ? `${fmtNum(v, 2)} ${unit}` : fmtNum(v, 2);
+  const digits = Number.isInteger(v) ? 0 : 2; // un décompte (« 3 actif(s) ») s'affiche sans décimales
+  return unit ? `${fmtNum(v, digits)} ${unit}` : fmtNum(v, digits);
 }
 
 /** Poids 0–1 affiché en pourcentage entier. */

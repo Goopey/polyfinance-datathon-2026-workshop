@@ -8,3 +8,5 @@ fastapi
 uvicorn
 mangum
 pytest
+httpx        # client de test de l'API (fastapi.testclient)
+jsonschema   # validation du contrat mobile (tests/api)

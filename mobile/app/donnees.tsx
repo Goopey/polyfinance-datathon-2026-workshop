@@ -36,11 +36,12 @@ function evidenceIdsOf(r: Explanation): string[] {
 }
 
 export default function Donnees() {
-  const overview = useQuery({ queryKey: ["data"], queryFn: getDataOverview });
   const { profileId, runs } = useProfileStore();
-  const run = useRun(profileId ? runs[profileId] : null);
+  const runId = profileId ? runs[profileId] : null;
+  const overview = useQuery({ queryKey: ["data", runId], queryFn: () => getDataOverview(runId) });
+  const run = useRun(runId);
   const ids = run.data?.result ? evidenceIdsOf(run.data.result) : [];
-  const evidences = useQueries({ queries: ids.map((id) => ({ queryKey: ["evidence", id], queryFn: () => getEvidence(id) })) });
+  const evidences = useQueries({ queries: ids.map((id) => ({ queryKey: ["evidence", runId, id], queryFn: () => getEvidence(id, runId) })) });
 
   if (overview.isLoading) return <Loading />;
   if (overview.error) return <Screen><ErrorState error={overview.error} onRetry={() => overview.refetch()} /></Screen>;

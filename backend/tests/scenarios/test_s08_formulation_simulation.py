@@ -2,7 +2,7 @@
 
 Conception : docs/09_SCENARIOS_TEST.md, docs/08_CONFORMITE.md
 Points 1 et 2 : vérifiés sur les sorties du pipeline local (données réelles, agents simulés).
-Point 3 (aucune route d'ordre) : en attente de l'API (avancement.md, tâche E3).
+Point 3 (aucune route d'ordre) : vérifié sur les routes réelles de l'API (easytrade/api/).
 """
 import pytest
 
@@ -44,4 +44,22 @@ def test_s08_aucune_prevision_ni_prix_cible(run):
 
 @pytest.mark.scenario("S8")
 def test_s08_3_aucune_route_d_ordre():
-    pytest.skip("API non implémentée (avancement.md, tâche E3) : point 3 à vérifier sur les routes réelles")
+    pytest.importorskip("fastapi")
+    from easytrade.api.app import app
+
+    openapi = app.openapi()
+    routes = [(method.upper(), path) for path, methods in openapi["paths"].items() for method in methods]
+    assert routes, "aucune route déclarée"
+    # Lecture seule, sauf deux créations : un profil fictif et une analyse simulée.
+    writes = sorted(path for method, path in routes if method not in {"GET", "HEAD", "OPTIONS"})
+    assert writes == ["/profiles", "/runs"]
+    forbidden = ("order", "ordre", "trade", "buy", "sell", "achat", "vente", "execute", "account", "compte",
+                 "portfolio", "broker", "courtage", "payment", "paiement")
+    for _, path in routes:
+        assert not any(word in path.lower() for word in forbidden), path
+    # Les corps acceptés ne contiennent aucun champ de transaction (montant, quantité, compte).
+    schemas = openapi["components"]["schemas"]
+    for name in ("RunRequest", "ProfileDraft"):
+        fields = set(schemas[name]["properties"])
+        assert not fields & {"amount", "montant", "quantity", "quantite", "account", "compte", "side", "price", "prix"}, name
+        assert schemas[name].get("additionalProperties") is False, f"{name} doit refuser les champs hors contrat"

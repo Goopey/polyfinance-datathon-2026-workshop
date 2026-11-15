@@ -8,8 +8,13 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "typecheck": "tsc --noEmit",
-    "export:web": "expo export --platform web"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tests",
+    "export:web": "expo export --platform web",
+    "test": "node --import tsx --test \"tests/*.test.ts\"",
+    "contracts": "node scripts/contracts-schema.mjs",
+    "contracts:check": "node scripts/contracts-schema.mjs --check",
+    "e2e:mock": "node e2e/run.mjs --mock",
+    "e2e:api": "node e2e/run.mjs --api"
   },
   "dependencies": {
     "@expo/metro-runtime": "~58.0.17",
@@ -31,7 +36,12 @@
     "zustand": "^5.1.0"
   },
   "devDependencies": {
+    "@types/node": "^26.6.6",
     "@types/react": "~19.3.0",
+    "ajv": "^8.20.0",
+    "puppeteer-core": "^25.17.0",
+    "ts-json-schema-generator": "^2.9.0",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.3"
   }
 }

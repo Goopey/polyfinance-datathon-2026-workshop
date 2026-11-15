@@ -4,7 +4,7 @@
 > En cas d'interruption : joindre ce fichier dans une nouvelle conversation et reprendre à la **première tâche non cochée** de la section 4.
 > **Règle : ne jamais recommencer une étape marquée ✅.**
 
-Dernière mise à jour : 2026-11-14 — étape 3 (P3) terminée en local : agents, débat, explication, vérificateur de fidélité, pipeline complet (`scripts/run_local.py`) ; S1, S3, S6, S11 au vert, S8 partiel. Les agents tournent en mode **simulé** (règles Python, aucun modèle) : le client Bedrock est écrit mais n'a pas été exécuté contre AWS (A2 non levé). C6 fait avec P3 ; C7 (calibrage) reste ouvert. Étape 5 (P5) sur données fictives ; F9 en attente de P4
+Dernière mise à jour : 2026-11-14 — étape 3 (P3) terminée en local : agents, débat, explication, vérificateur de fidélité, pipeline complet (`scripts/run_local.py`) ; S1, S3, S6, S11 au vert, S8 partiel. Les agents tournent en mode **simulé** (règles Python, aucun modèle) : le client Bedrock est écrit mais n'a pas été exécuté contre AWS (A2 non levé). C6 fait avec P3 ; C7 (calibrage) reste ouvert. Étape 5 (P5) : F9 fait, l'application est branchée sur l'API réelle en local (`backend/easytrade/api/`), contrat vérifié par des tests des deux côtés et par un parcours complet dans un navigateur ; restent l'essai sur téléphone et le déploiement (P4)
 
 ---
 
@@ -17,11 +17,60 @@ Dernière mise à jour : 2026-11-14 — étape 3 (P3) terminée en local : agent
 | 2 | Moteur de décision (P2) | 🟦 en cours | S4, S12 verts ; C6 fait avec P3 ; reste C7 (calibrage) |
 | 3 | Agents et explicabilité (P3) | ✅ terminée en local (agents simulés) ; exécution sur Bedrock à faire dès A2 | S1, S3, S6, S11 verts ; `pytest` : 195 réussis, 4 en attente |
 | 4 | AWS (P4) | ⬜ à faire | Un run complet sur AWS |
-| 5 | Mobile (P5) | 🟨 partielle : F1 à F8 ✅ sur données fictives ; F9 (API réelle) bloquée par P2 à P4 | Parcours complet vérifié de bout en bout (export web, clics réels) ; reste : téléphone + API réelle |
+| 5 | Mobile (P5) | 🟨 F1 à F9 ✅ : application branchée sur l'API réelle en local ; restent l'essai sur téléphone et l'API déployée (P4) | `npm run e2e:api` : parcours complet sur l'API réelle, 14 étapes, aucune erreur ; `pytest` : 247 réussis, 3 en attente ; `npm test` : 20 réussis |
 | 6 | Mateo / ESG + extras (P6) | ⬜ à faire | S2 |
 | 7 | Livrables (P7) | ⬜ à faire | Vidéo, documentation, one-pager, README |
 
 ## 2. Fichiers créés ou modifiés
+
+### Branchement mobile ↔ backend — F9 et routes de E3 en local (2026-11-14)
+
+Constat de départ : le pipeline (P3) produisait déjà `Explanation` et `RunTrace` au format du mobile, mais `api/*` était un squelette, `ProfileWeights` avait une autre forme, et aucune route ne servait la fiche, le graphe, les preuves ni les données. Détail : `docs/01_ARCHITECTURE.md` (API), `mobile/README.md`.
+
+**Backend**
+
+| Fichier | Contenu |
+|---|---|
+| `schemas/api.py` (nouveau) | Contrats de réponse, miroir de `contracts.ts` : `ProfileWeightsView`, `ProfileDraft`, `RunRequest`, `RunStatusView`, `AssetSheet`, `DependencyGraph`, `DataOverview` |
+| `api/service.py` (nouveau) | `ApiService` : lance le pipeline dans un fil d'exécution, garde runs et profils fictifs en mémoire, traduit les schémas internes vers les contrats du mobile ; preuves, fiches et graphe lus dans le registre du run |
+| `api/app.py`, `api/deps.py`, `api/routes_*.py` | Application FastAPI, 12 routes, CORS, 404 / 422 ; service créé à la première requête |
+| `orchestration/pipeline.py` | Ajouts sans changement de comportement : `on_step` (progression), `profile_source`, `RunResult.metrics` |
+| `explain/trace.py`, `data/sources_registry.py` | `TraceRecorder(on_step=…)` ; `SourcesRegistry.records()` |
+| `requirements.txt` | + `httpx`, `jsonschema` (tests de l'API) |
+
+**Mobile**
+
+| Fichier | Contenu |
+|---|---|
+| `src/api/assets.ts`, `app/preuve/[id].tsx`, `app/piste/[ticker].tsx`, `app/donnees.tsx` | `run_id` transmis pour la preuve, la fiche, le graphe et les données |
+| `src/types/contracts.ts` | + `hard_constraints.speculatif`, `ProfileDraft.base_persona`, `TraceStep.attempts / inputs / evidence_in` |
+| `app/run/[id].tsx`, `src/mocks/server.ts` | Noms d'étapes du pipeline réel (`dossiers_de_preuves`, `debate.bull.round1`, `controle.plafonds_panier`…) ; étape « sans objet » ; notes affichées |
+| `app/onboarding/questionnaire.tsx`, `resume.tsx` | Exclusions limitées à celles que le moteur applique (crypto, spéculatif, controverses) ; règle « spéculatif » affichée |
+| `src/components/RiskMeter.tsx`, `SupplyChainGraph.tsx`, `src/format.ts`, `src/i18n/fr.ts`, `app/(tabs)/_layout.tsx` | Rendement 2022, étiquette Hypothèse sur une arête sourcée, décomptes sans décimales, `etf_commodity`, hauteur de la barre d'onglets |
+| `contracts.schema.json`, `scripts/contracts-schema.mjs` (nouveaux) | Schéma JSON du contrat, généré depuis `contracts.ts` (`npm run contracts`) |
+| `tests/contracts.test.ts`, `tests/client.test.ts`, `e2e/run.mjs` (nouveaux) | Voir ci-dessous |
+
+**Données de référence** : `sources_registry.csv` + 1 ligne (`profil_questionnaire`), source des phrases d'un profil composé par questionnaire.
+
+**Tests mis en place**
+
+| Commande | Ce qui est vérifié |
+|---|---|
+| `cd backend && pytest tests/api` (51 tests) | Chaque route de l'API réelle contre `mobile/contracts.schema.json` ; résultat identique à celui du pipeline local ; chiffre d'une fiche = valeur de sa preuve ; preuves propres à un run ; aucune preuve après `as_of` ; refus 404 / 422 ; liste exacte des routes |
+| `cd backend && pytest tests/scenarios/test_s08*` | S8 point 3 : aucune route d'ordre, deux écritures seulement, corps sans champ de transaction |
+| `cd mobile && npm test` (20 tests) | Schéma à jour par rapport à `contracts.ts` ; serveur fictif conforme au même schéma ; URL et `run_id` envoyés par le client ; erreurs 404 ; formulations refusées ; preuves citées existantes |
+| `cd mobile && npm run e2e:api` | Navigateur réel sur l'API réelle : Robert → pistes → fiche → preuve → parcours de l'analyse → Tester une idée (Tesla, « incohérent ») → Données → Comparer → questionnaire → profil fictif analysé → Mateo « aucune recommandation ». Échoue sur toute erreur de console ou réponse HTTP en erreur |
+| `cd mobile && npm run e2e:mock` | Même parcours sur les données fictives |
+
+Deux garde-fous vérifient que le validateur refuse bien un champ en trop, un champ manquant et une valeur hors énumération (dont `élevé` au lieu de `élevée`).
+
+**Résultats (2026-11-14)** : `pytest` 247 réussis, 3 en attente (S2, S10, `test_graph_edges`) ; `npm test` 20 réussis ; `npm run typecheck` sans erreur ; `expo-doctor` 20/20 ; `e2e:api` et `e2e:mock` réussis. Un défaut trouvé par les tests et corrigé : après une étape en échec, l'étape suivante s'affichait aussi « échec » au lieu de « en attente ».
+
+**Non fait ou non vérifié**
+
+- Essai sur un vrai téléphone (Expo Go) ; API déployée sur AWS (P4) : runs et profils fictifs sont en mémoire du processus, perdus au redémarrage (le mobile relance alors l'analyse ; un profil fictif est à recréer).
+- Graphe : `graph_edges.csv` est vide et ses sources (`sec_edgar`, `sedar_plus`) sont au statut « prévu » ; l'API ne sert donc aucune arête pour l'instant (bloc G). La traduction des arêtes est testée sur des arêtes simulées.
+- `backend/.venv` créé sur ce poste avec `python -m venv --system-site-packages` pour installer `fastapi` et `uvicorn` sans toucher à Anaconda (ignoré par git).
 
 ### Étape 3 — P3 Agents et explicabilité (2026-11-14), en local
 
@@ -109,7 +158,7 @@ Fait en parallèle de P2, comme prévu par `docs/10_PLAN.md` (« P5 avec donnée
 
 **Non vérifié** : affichage sur un vrai téléphone (Expo Go) ; branchement à l'API réelle (inexistante).
 
-**Écarts avec les schémas P2** (à résoudre en F9, de préférence dans la couche API / `Explanation`, qui produit le contrat de présentation) : `ProfileWeights` (`persona_id`/`constraints`/`rationale: str` contre `profile_id`/`hard_constraints`/liste) ; `Confidence` au masculin (`élevé`, `moyen`) contre le féminin de `docs/02_AGENTS.md` et du mobile (`élevée`, `moyenne`) ; `Rejection.rule` contre `RejectedItem.kind` ; `ScoredCandidate.criteria[]` contre `contributions` ; `CoherenceReport` (`Tension{dimension, detail, severe, evidence_id}`, `context: str`, `alternatives: tickers`) contre des `Claim` sourcés et des alternatives justifiées.
+**Écarts avec les schémas P2** (résolus : `Explanation` suit le contrat depuis P3, et `api/service.py` traduit `ProfileWeights` — voir « Branchement mobile ↔ backend » plus haut) ; constat d'origine : `ProfileWeights` (`persona_id`/`constraints`/`rationale: str` contre `profile_id`/`hard_constraints`/liste) ; `Confidence` au masculin (`élevé`, `moyen`) contre le féminin de `docs/02_AGENTS.md` et du mobile (`élevée`, `moyenne`) ; `Rejection.rule` contre `RejectedItem.kind` ; `ScoredCandidate.criteria[]` contre `contributions` ; `CoherenceReport` (`Tension{dimension, detail, severe, evidence_id}`, `context: str`, `alternatives: tickers`) contre des `Claim` sourcés et des alternatives justifiées.
 
 ### Étape 2 — P2 Moteur de décision (2026-11-14)
 
@@ -240,13 +289,13 @@ Définitions : `docs/09_SCENARIOS_TEST.md`. Commande : `cd backend && pytest tes
 | S5 | Aucune fuite du futur | ✅ passe | `test_s05_aucune_fuite_du_futur.py` ; analyse à 2023-06-30 identique sur un jeu amputé du futur |
 | S6 | Fidélité de l'explication | ✅ passe (local, agents simulés) | `test_s06` (15 tests). Taux au premier passage : Amira 20/20, Robert 28/28, Mateo sans objet (aucune piste rédigée) ; 124 affirmations recontrôlées dans les trois sorties, 0 écart. Avec un agent d'explication volontairement fautif : une relance, toutes les phrases fautives retirées, sortie fidèle. **Le taux avec un vrai modèle reste à mesurer** |
 | S7 | Comparabilité (devises, calendriers, ajustements) | ✅ passe | 4 tests : CAD et dernier taux connu, adj_close, 7 fractionnements non réappliqués, 252 contre 365 |
-| S8 | Formulation et cadre de simulation | 🟨 partiel | `test_s08` : points 1 et 2 passent (aucune formulation refusée dans les sorties, le débat et la trace de 5 runs ; mention de simulation dans chaque `Explanation`). Point 3 (aucune route d'ordre) en attente de l'API (E3) |
+| S8 | Formulation et cadre de simulation | ✅ passe | `test_s08` : aucune formulation refusée dans les sorties, le débat et la trace de 5 runs ; mention de simulation dans chaque `Explanation` ; point 3 vérifié sur les routes réelles (deux écritures seulement : profil fictif, analyse simulée ; aucun champ de transaction) |
 | S9 | Exactitude et déterminisme des calculs | ✅ passe | Exécutions identiques ; XIU.TO, AAPL, BTC-USD recoupés par calcul sans pandas (tolérance relative 1e-9) |
 | S10 | Graphe sourcé | ⏳ non exécuté | Test en attente ; aucune arête saisie |
 | S11 | Désaccord conservé | ✅ passe | `test_s11` (5 tests, positions divergentes imposées par un faux client) : désaccord recopié dans `Decision.disagreements` et dans l'explication, confiance jamais « élevée », classement inchangé, arguments sans preuve valide supprimés ; si le débat s'oppose à toutes les pistes, aucune recommandation |
 | S12 | Adaptation au profil | ✅ passe | `test_s12` : même univers (8 actifs réels), classements différents pour Amira et Robert, contributions alignées sur les poids, déterministe |
 
-**Bilan : 9 passent (S1, S3, S4, S5, S6, S7, S9, S11, S12), 1 partiel (S8), 0 échoue, 2 non exécutés (S2, S10).** S1, S3 et S6 passent en local avec des agents simulés ; ils sont à rejouer avec Bedrock.
+**Bilan : 10 passent (S1, S3, S4, S5, S6, S7, S8, S9, S11, S12), 0 échoue, 2 non exécutés (S2, S10).** S1, S3 et S6 passent en local avec des agents simulés ; ils sont à rejouer avec Bedrock.
 
 ### Tests techniques
 
@@ -256,6 +305,7 @@ Définitions : `docs/09_SCENARIOS_TEST.md`. Commande : `cd backend && pytest tes
 | Tests unitaires P1 : `test_fx_calendar`, `test_point_in_time`, `test_metrics`, `test_evidence_ledger`, `test_data_quality` | ✅ | — |
 | Tests unitaires P2 : `test_constraints` (4), `test_scoring` (6) | ✅ | — |
 | Tests unitaires P3 : `test_wording` (16), `test_fidelity` (23), `test_llm_client` (12), `test_agents` (15), `test_governance` (11), `test_pipeline` (8) | ✅ | — |
+| Contrat mobile ↔ backend : `backend/tests/api` (51), `mobile/tests` (20), `npm run e2e:api` | ✅ | — |
 | `test_graph_edges` (G) | ⏳ en attente | Squelette |
 | Validité de tous les fichiers JSON et Python du dépôt | ✅ | — |
 
@@ -306,7 +356,7 @@ Cocher au fur et à mesure. Les blocs A et F peuvent avancer en parallèle des a
 
 - [ ] E1. `DataStack` : S3, DynamoDB ; `scripts/seed_aws.py`.
 - [ ] E2. `PipelineStack` : Lambda par étape, machine d'états, droits Bedrock.
-- [ ] E3. `ApiStack` : API Gateway + `api/app.py` et routes.
+- [ ] E3. `ApiStack` : API Gateway. `api/app.py` et les routes sont faits et testés en local (F9) ; reste le déploiement et le passage du stockage des runs à DynamoDB / S3 (`ApiService`).
 - [ ] E4. Un run complet sur AWS ; trace visible ; captures pour la vidéo.
 - [ ] E5. IAM à privilège minimal, secrets, étiquettes de coût.
 
@@ -320,7 +370,8 @@ Cocher au fur et à mesure. Les blocs A et F peuvent avancer en parallèle des a
 - [x] F6. « Pourquoi ? » : `EvidenceChip`, écran preuve, parcours de l'analyse.
 - [x] F7. Tester une idée.
 - [x] F8. Graphe de dépendances, version radiale.
-- [ ] F9. Brancher l'API réelle. Côté mobile, le client HTTP est prêt (`EXPO_PUBLIC_USE_MOCKS=false`). `Explanation`, `Trace` et les preuves du backend suivent maintenant `contracts.ts` (P3) ; reste à exposer `ProfileWeights` au format du mobile (`WeightingResult` contient déjà la justification par champ) et les routes (E3). Puis : test sur téléphone avec Expo Go.
+- [x] F9. Brancher l'API réelle : fait en local (`EXPO_PUBLIC_USE_MOCKS=false`, `uvicorn easytrade.api.app:app`). Contrat vérifié par `pytest tests/api`, `npm test` et `npm run e2e:api`.
+- [ ] F9b. Essai sur téléphone avec Expo Go (URL de l'API : adresse IP locale de l'ordinateur), puis sur l'API déployée (E3).
 - [ ] F10. Remplacer les données fictives de la vidéo par des runs réels (aucun chiffre fictif à l'écran).
 
 ### G. Graphe et ESG — P1 / P6
@@ -391,3 +442,15 @@ Détail et valeurs : `docs/03_DECISION_ENGINE.md`, section « Hypothèses ajout�
 5. Graphe : version radiale fixe, profondeur 1 ; la liste des relations sous le graphe donne le même contenu (accessibilité).
 6. Poids modifiables sur l'écran de résumé par pas de 5 points, renormalisés ; la modification crée un nouveau profil (`POST /profiles` avec `base_persona` et `weights_override`).
 7. Questionnaire : 3 gabarits (faible → Robert, modérée → Mateo, élevée → Amira) ajustés par les préférences et exclusions ; à reprendre par l'agent de pondération (D2).
+
+## 9. Hypothèses prises au branchement mobile ↔ backend (à valider par l'équipe)
+
+1. Le contrat de présentation est `mobile/src/types/contracts.ts` ; le backend s'y conforme par une couche de traduction (`api/service.py`), sans modifier les schémas internes du moteur.
+2. Toute lecture de preuve, de fiche ou de graphe est rattachée à un run (`run_id`), parce que les identifiants de preuves sont propres à un run.
+3. Même demande, même analyse : `run_id` est déterministe (`run_<date>_<profil>[_<titre>]`) et un run terminé est réutilisé. « Relancer l'analyse » rend donc le même résultat tant que les données n'ont pas changé.
+4. Questionnaire → profil fictif : gabarit par tolérance (faible → Robert, modérée → Mateo, élevée → Amira) ; horizons court / moyen / long = 3 à 5 ans, 5 à 12 ans, 12 ans et plus ; chaque réponse devient une phrase de profil (preuve `FAIT`, source `profil_questionnaire`). Identifiant dérivé des réponses : même questionnaire, même profil.
+5. Exclusions proposées : seulement celles que le moteur applique (crypto → part maximale 0 ; spéculatif → `exclu` ; controverses → exclusion ESG). « Actions individuelles » et « FNB » ont été retirées du questionnaire : le moteur n'a pas de règle d'exclusion par classe d'actifs.
+6. Poids modifiés à la main : la variante prend ces poids comme gabarit (l'écart de ± 10 points de l'agent de pondération s'applique autour d'eux), les règles du profil d'origine sont conservées.
+7. Repères de risque de la fiche : `RISK_LIMITS` du moteur, selon la tolérance du profil ; la fiche situe chaque indicateur entre le minimum et le maximum de l'univers à la même date.
+8. Cinq étapes affichées pendant l'analyse, déduites de la trace : profil ; recherche et validation (fin de `recherche`) ; débat (`debate.*`) ; décision ; explication.
+9. CORS ouvert à toutes les origines en local (`EASYTRADE_CORS_ORIGINS` pour restreindre) ; à restreindre au domaine de l'application une fois déployé.

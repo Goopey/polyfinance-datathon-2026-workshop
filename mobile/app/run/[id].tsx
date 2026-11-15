@@ -25,12 +25,19 @@ const STEP_LABEL: Record<string, string> = {
   profil: "Pondération du profil",
   recherche: "Recherche",
   validation: "Validation financière",
+  dossiers_de_preuves: "Dossiers de preuves et contraintes du profil",
   "controle.avant_debat": "Contrôle avant le débat",
-  "debat.bull.tour1+3": "Débat — Bull",
-  "debat.realist.tour1+3": "Débat — Réaliste",
-  "debat.bear.tour1+3": "Débat — Bear",
+  "debate.bull.round1": "Débat, tour 1 — Bull",
+  "debate.realist.round1": "Débat, tour 1 — Réaliste",
+  "debate.bear.round1": "Débat, tour 1 — Bear",
+  "debate.bull.round3": "Débat, position finale — Bull",
+  "debate.realist.round3": "Débat, position finale — Réaliste",
+  "debate.bear.round3": "Débat, position finale — Bear",
+  debat: "Débat",
   decision: "Moteur de décision",
-  "controle.decision": "Contrôle à la décision",
+  "controle.plafonds_panier": "Contrôle des plafonds du panier simulé",
+  "controle.diversification": "Contrôle de diversification",
+  "controle.aucune_recommandation": "Contrôle « aucune recommandation »",
   explication: "Explication",
   "controle.avant_affichage": "Contrôle avant l'affichage",
 };
@@ -55,7 +62,9 @@ export default function ParcoursAnalyse() {
         <Card>
           {controls.map((s) => (
             <View key={s.step} style={styles.control}>
-              <Text style={type.label}>{s.status === "ok" ? "✓" : "✕"} {STEP_LABEL[s.step] ?? s.step}</Text>
+              <Text style={[type.label, s.status === "echec" && { color: colors.bad }]}>
+                {s.status === "ok" ? "✓" : "✕"} {STEP_LABEL[s.step] ?? s.step}
+              </Text>
               {s.note ? <Text style={type.body}>{s.note}</Text> : null}
             </View>
           ))}
@@ -78,16 +87,17 @@ function StepRow({ s, runId }: { s: TraceStep; runId: string }) {
       <Row style={{ justifyContent: "space-between" }}>
         <Text style={type.h3}>{k.icon} {STEP_LABEL[s.step] ?? s.step}</Text>
         <Pill
-          icon={s.status === "ok" ? "✓" : "✕"}
-          text={s.status === "ok" ? "Terminé" : s.status === "echec" ? "Échec" : "Ignoré"}
-          fg={s.status === "ok" ? colors.good : colors.bad}
-          bg={s.status === "ok" ? colors.goodBg : colors.badBg}
+          icon={s.status === "ok" ? "✓" : s.status === "echec" ? "✕" : "–"}
+          text={s.status === "ok" ? "Terminé" : s.status === "echec" ? "Échec" : "Sans objet"}
+          fg={s.status === "ok" ? colors.good : s.status === "echec" ? colors.bad : colors.neutral}
+          bg={s.status === "ok" ? colors.goodBg : s.status === "echec" ? colors.badBg : colors.neutralBg}
         />
       </Row>
       <Text style={type.small}>{k.label} · {(ms / 1000).toLocaleString("fr-CA", { maximumFractionDigits: 1 })} s</Text>
       {s.model_id ? <Text style={type.small}>Modèle : {s.model_id}{s.prompt_version ? ` · prompt ${s.prompt_version}` : ""}</Text> : null}
       {s.version ? <Text style={type.small}>Version : {s.version}</Text> : null}
       {s.tools_called && s.tools_called.length > 0 ? <Text style={type.small}>Outils appelés : {s.tools_called.join(", ")}</Text> : null}
+      {s.note ? <Text style={type.body}>{s.note}</Text> : null}
       {advanced && s.outputs && s.outputs.length > 0 ? (
         <Row>
           <Text style={type.small}>Preuves produites :</Text>

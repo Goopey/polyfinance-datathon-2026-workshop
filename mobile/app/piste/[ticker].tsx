@@ -29,8 +29,8 @@ export default function FichePiste() {
   const advanced = useSettings((s) => s.mode === "avance");
   const run = useRun(runParam);
   const profileId = run.data?.profile_id ?? currentProfile ?? undefined;
-  const sheet = useQuery({ queryKey: ["asset", ticker, profileId], queryFn: () => getAsset(ticker!, profileId), enabled: !!ticker });
-  const graph = useQuery({ queryKey: ["graph", ticker], queryFn: () => getGraph(ticker!), enabled: !!ticker });
+  const sheet = useQuery({ queryKey: ["asset", ticker, profileId, runParam], queryFn: () => getAsset(ticker!, { profileId, runId: runParam }), enabled: !!ticker });
+  const graph = useQuery({ queryKey: ["graph", ticker, runParam], queryFn: () => getGraph(ticker!, runParam), enabled: !!ticker });
   const profile = useQuery({ queryKey: ["profile", profileId], queryFn: () => getProfile(profileId!), enabled: !!profileId });
 
   if (sheet.isLoading || (runParam && run.isLoading)) return <Loading />;

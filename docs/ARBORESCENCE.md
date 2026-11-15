@@ -30,9 +30,11 @@ easytrade/
 │   │   ├── api/
 │   │   │   ├── __init__.py
 │   │   │   ├── app.py
+│   │   │   ├── deps.py
 │   │   │   ├── routes_assets.py
 │   │   │   ├── routes_profiles.py
-│   │   │   └── routes_runs.py
+│   │   │   ├── routes_runs.py
+│   │   │   └── service.py
 │   │   ├── data/
 │   │   │   ├── __init__.py
 │   │   │   ├── calendar.py
@@ -85,6 +87,7 @@ easytrade/
 │   │   │   └── pipeline.py
 │   │   ├── schemas/
 │   │   │   ├── __init__.py
+│   │   │   ├── api.py
 │   │   │   ├── candidate.py
 │   │   │   ├── debate.py
 │   │   │   ├── decision.py
@@ -102,6 +105,10 @@ easytrade/
 │   │   ├── __init__.py
 │   │   └── config.py
 │   ├── tests/
+│   │   ├── api/
+│   │   │   ├── __init__.py
+│   │   │   ├── conftest.py
+│   │   │   └── test_api_contract.py
 │   │   ├── fixtures/
 │   │   │   └── README.md
 │   │   ├── scenarios/
@@ -207,6 +214,11 @@ easytrade/
 │   ├── README.md
 │   └── requirements.txt
 ├── mobile/
+│   ├── e2e/
+│   │   └── run.mjs
+│   ├── scripts/
+│   │   ├── contracts-schema.d.mts
+│   │   └── contracts-schema.mjs
 │   ├── app/
 │   │   ├── (tabs)/
 │   │   │   ├── _layout.tsx
@@ -277,7 +289,12 @@ easytrade/
 │   │   ├── types/
 │   │   │   └── contracts.ts
 │   │   └── format.ts
+│   ├── tests/
+│   │   ├── client.test.ts
+│   │   ├── contracts.test.ts
+│   │   └── tsconfig.json
 │   ├── app.json
+│   ├── contracts.schema.json
 │   ├── metro.config.js
 │   ├── package-lock.json
 │   ├── package.json

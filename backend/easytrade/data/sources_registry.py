@@ -68,5 +68,9 @@ class SourcesRegistry:
             raise ValueError(f"Source {source_id} non utilisable (statut « {record.statut} »)")
         return record
 
+    def records(self) -> tuple[SourceRecord, ...]:
+        """Toutes les sources, dans l'ordre du registre (écran « Données »)."""
+        return tuple(self._records.values())
+
     def __contains__(self, source_id: str) -> bool:
         return source_id in self._records

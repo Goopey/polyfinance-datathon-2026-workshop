@@ -41,10 +41,17 @@ class StepHandle:
 
 class TraceRecorder:
     def __init__(self, run_id: str, as_of: date, profile_id: str,
-                 clock: Optional[Callable[[], datetime]] = None):
+                 clock: Optional[Callable[[], datetime]] = None,
+                 on_step: Optional[Callable[[TraceStep], None]] = None):
         self.run_id, self.as_of, self.profile_id = run_id, as_of, profile_id
         self._clock = clock or _utc_now
         self._steps: list[TraceStep] = []
+        self._on_step = on_step  # appelé à la fermeture de chaque étape (progression suivie par l'API)
+
+    def _append(self, step: TraceStep) -> None:
+        self._steps.append(step)
+        if self._on_step is not None:
+            self._on_step(step)
 
     def _stamp(self) -> str:
         return self._clock().isoformat(timespec="milliseconds")
@@ -60,7 +67,7 @@ class TraceRecorder:
             handle.note(f"{type(error).__name__} : {error}")
             raise
         finally:
-            self._steps.append(TraceStep(started_at=started, ended_at=self._stamp(), **handle.fields))
+            self._append(TraceStep(started_at=started, ended_at=self._stamp(), **handle.fields))
 
     def now(self) -> str:
         return self._stamp()
@@ -71,7 +78,7 @@ class TraceRecorder:
         stamp = self._stamp()
         step = TraceStep(step=name, kind=kind, status=status, started_at=started_at or stamp, ended_at=stamp,
                          **fields)
-        self._steps.append(step)
+        self._append(step)
         return step
 
     def control(self, name: str, passed: bool, note: str) -> TraceStep:

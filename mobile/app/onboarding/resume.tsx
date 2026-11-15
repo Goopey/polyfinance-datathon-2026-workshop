@@ -64,6 +64,8 @@ export default function ResumeProfil() {
           <Rule text={`Au plus ${fmtWeight(hc.max_weight_per_sector)} sur un même secteur.`} />
           <Rule text={hc.max_weight_crypto === 0 ? "Aucun cryptoactif." : `Au plus ${fmtWeight(hc.max_weight_crypto)} en cryptoactifs.`} />
           {hc.esg_exclusion ? <Rule text="Écarter les entreprises à controverse environnementale ou sociale documentée." /> : null}
+          {hc.speculatif === "exclu" ? <Rule text="Écarter les placements hautement spéculatifs." /> : null}
+          {hc.speculatif === "signalé" ? <Rule text="Signaler les placements hautement spéculatifs (ils ne sont pas écartés)." /> : null}
           {hc.excluded_asset_classes.filter((c) => c !== "crypto").map((c) => (
             <Rule key={c} text={`Classe d'actifs exclue : ${fr.assetClass[c] ?? c}.`} />
           ))}

@@ -1,0 +1,1413 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "AssetMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "advanced": {
+          "type": "boolean"
+        },
+        "evidence_id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "metric": {
+          "type": "string"
+        },
+        "profile_limit": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "unit": {
+          "type": "string"
+        },
+        "universe_max": {
+          "type": "number"
+        },
+        "universe_min": {
+          "type": "number"
+        },
+        "value": {
+          "type": "number"
+        },
+        "window": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "metric",
+        "label",
+        "value",
+        "unit",
+        "window",
+        "evidence_id",
+        "universe_min",
+        "universe_max",
+        "profile_limit",
+        "advanced"
+      ],
+      "type": "object"
+    },
+    "AssetSheet": {
+      "additionalProperties": false,
+      "properties": {
+        "as_of": {
+          "type": "string"
+        },
+        "asset_class": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/definitions/AssetMetric"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "sector": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "signals": {
+          "items": {
+            "$ref": "#/definitions/Claim"
+          },
+          "type": "array"
+        },
+        "ticker": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "as_of",
+        "asset_class",
+        "currency",
+        "metrics",
+        "name",
+        "sector",
+        "signals",
+        "ticker"
+      ],
+      "type": "object"
+    },
+    "AssetSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "asset_class": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "sector": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ticker": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ticker",
+        "name",
+        "asset_class",
+        "sector",
+        "currency"
+      ],
+      "type": "object"
+    },
+    "Claim": {
+      "additionalProperties": false,
+      "description": "Affirmation courte, toujours rattachée à au moins une preuve.",
+      "properties": {
+        "claim_kind": {
+          "$ref": "#/definitions/ClaimKind"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "evidence_ids",
+        "claim_kind"
+      ],
+      "type": "object"
+    },
+    "ClaimKind": {
+      "description": "Types TypeScript des contrats JSON (miroir des schémas Pydantic de backend/easytrade/schemas/).\n\n- `Evidence` reprend exactement backend/easytrade/schemas/evidence.py (P1, implémenté).\n- Les autres types suivent docs/02_AGENTS.md, docs/03_DECISION_ENGINE.md et docs/05_EXPLICABILITE.md.   Les schémas Pydantic correspondants (P2, P3) ne sont pas encore écrits : les champs marqués   « proposé (P5) » sont la proposition du front, à reprendre tels quels ou à aligner côté backend.",
+      "enum": [
+        "FAIT",
+        "HYPOTHESE",
+        "SCENARIO"
+      ],
+      "type": "string"
+    },
+    "CoherenceAnalysis": {
+      "additionalProperties": false,
+      "description": "Analyse de cohérence de « Tester une idée » (docs/03_DECISION_ENGINE.md).",
+      "properties": {
+        "alternatives": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "ticker": {
+                "type": "string"
+              },
+              "why": {
+                "$ref": "#/definitions/Claim"
+              }
+            },
+            "required": [
+              "ticker",
+              "name",
+              "why"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "context": {
+          "items": {
+            "$ref": "#/definitions/Claim"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "tensions": {
+          "items": {
+            "$ref": "#/definitions/Claim"
+          },
+          "type": "array"
+        },
+        "ticker": {
+          "type": "string"
+        },
+        "verdict": {
+          "$ref": "#/definitions/Verdict"
+        }
+      },
+      "required": [
+        "ticker",
+        "name",
+        "verdict",
+        "tensions",
+        "context",
+        "alternatives"
+      ],
+      "type": "object"
+    },
+    "Confidence": {
+      "enum": [
+        "élevée",
+        "moyenne",
+        "faible"
+      ],
+      "type": "string"
+    },
+    "Criterion": {
+      "enum": [
+        "croissance",
+        "stabilite",
+        "diversification",
+        "esg",
+        "qualite",
+        "horizon",
+        "preferences"
+      ],
+      "type": "string"
+    },
+    "CriterionMap": {
+      "additionalProperties": false,
+      "properties": {
+        "croissance": {
+          "type": "number"
+        },
+        "diversification": {
+          "type": "number"
+        },
+        "esg": {
+          "type": "number"
+        },
+        "horizon": {
+          "type": "number"
+        },
+        "preferences": {
+          "type": "number"
+        },
+        "qualite": {
+          "type": "number"
+        },
+        "stabilite": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "croissance",
+        "stabilite",
+        "diversification",
+        "esg",
+        "qualite",
+        "horizon",
+        "preferences"
+      ],
+      "type": "object"
+    },
+    "DataOverview": {
+      "additionalProperties": false,
+      "properties": {
+        "as_of": {
+          "type": "string"
+        },
+        "quality": {
+          "items": {
+            "$ref": "#/definitions/QualityCheck"
+          },
+          "type": "array"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/definitions/SourceInfo"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "as_of",
+        "sources",
+        "quality"
+      ],
+      "type": "object"
+    },
+    "DebateAgent": {
+      "enum": [
+        "bull",
+        "realist",
+        "bear"
+      ],
+      "type": "string"
+    },
+    "DebatePosition": {
+      "additionalProperties": false,
+      "description": "Position finale d'un agent (tour 3), docs/02_AGENTS.md §3.",
+      "properties": {
+        "agent": {
+          "$ref": "#/definitions/DebateAgent"
+        },
+        "arguments": {
+          "items": {
+            "$ref": "#/definitions/Claim"
+          },
+          "type": "array"
+        },
+        "confidence": {
+          "$ref": "#/definitions/Confidence"
+        },
+        "open_questions": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "stance": {
+          "$ref": "#/definitions/Stance"
+        }
+      },
+      "required": [
+        "agent",
+        "stance",
+        "confidence",
+        "arguments",
+        "open_questions"
+      ],
+      "type": "object"
+    },
+    "DependencyGraph": {
+      "additionalProperties": false,
+      "properties": {
+        "center": {
+          "type": "string"
+        },
+        "edges": {
+          "items": {
+            "$ref": "#/definitions/GraphEdge"
+          },
+          "type": "array"
+        },
+        "nodes": {
+          "items": {
+            "$ref": "#/definitions/GraphNode"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "center",
+        "nodes",
+        "edges"
+      ],
+      "type": "object"
+    },
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "claim_kind": {
+          "$ref": "#/definitions/ClaimKind"
+        },
+        "currency": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "evidence_id": {
+          "type": "string"
+        },
+        "limits": {
+          "type": "string"
+        },
+        "observed_at": {
+          "type": "string"
+        },
+        "processing": {
+          "type": "string"
+        },
+        "produced_by": {
+          "type": "string"
+        },
+        "published_at": {
+          "type": "string"
+        },
+        "retrieved_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "$ref": "#/definitions/EvidenceSource"
+        },
+        "statement": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/EvidenceType"
+        },
+        "unit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "value": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "window": {
+          "$ref": "#/definitions/EvidenceWindow"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "type",
+        "claim_kind",
+        "subject",
+        "statement",
+        "value",
+        "unit",
+        "currency",
+        "window",
+        "observed_at",
+        "published_at",
+        "retrieved_at",
+        "source",
+        "processing",
+        "produced_by",
+        "limits"
+      ],
+      "type": "object"
+    },
+    "EvidenceSource": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "source_id",
+        "name",
+        "url"
+      ],
+      "type": "object"
+    },
+    "EvidenceType": {
+      "enum": [
+        "metric",
+        "filing",
+        "esg",
+        "relation",
+        "macro",
+        "news",
+        "profile"
+      ],
+      "type": "string"
+    },
+    "EvidenceWindow": {
+      "additionalProperties": false,
+      "properties": {
+        "end": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "observations": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "start": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "observations"
+      ],
+      "type": "object"
+    },
+    "Explanation": {
+      "additionalProperties": false,
+      "properties": {
+        "as_of": {
+          "type": "string"
+        },
+        "coherence": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CoherenceAnalysis"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "disclaimer": {
+          "type": "string"
+        },
+        "headline": {
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/definitions/ExplanationItem"
+          },
+          "type": "array"
+        },
+        "missing": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "no_recommendation": {
+          "type": "boolean"
+        },
+        "profile_id": {
+          "type": "string"
+        },
+        "rejected": {
+          "items": {
+            "$ref": "#/definitions/RejectedItem"
+          },
+          "type": "array"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "unknowns": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "run_id",
+        "as_of",
+        "profile_id",
+        "headline",
+        "no_recommendation",
+        "missing",
+        "items",
+        "rejected",
+        "coherence",
+        "unknowns",
+        "disclaimer"
+      ],
+      "type": "object"
+    },
+    "ExplanationItem": {
+      "additionalProperties": false,
+      "properties": {
+        "asset_class": {
+          "type": "string"
+        },
+        "confidence": {
+          "$ref": "#/definitions/Confidence"
+        },
+        "contributions": {
+          "$ref": "#/definitions/CriterionMap"
+        },
+        "debate": {
+          "items": {
+            "$ref": "#/definitions/DebatePosition"
+          },
+          "type": "array"
+        },
+        "debate_summary": {
+          "additionalProperties": false,
+          "properties": {
+            "bear": {
+              "type": "string"
+            },
+            "bull": {
+              "type": "string"
+            },
+            "dissent": {
+              "type": "boolean"
+            },
+            "realist": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "bull",
+            "realist",
+            "bear",
+            "dissent"
+          ],
+          "type": "object"
+        },
+        "fit": {
+          "$ref": "#/definitions/Fit"
+        },
+        "limits": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "risks": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "sector": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ticker": {
+          "type": "string"
+        },
+        "to_review": {
+          "type": "boolean"
+        },
+        "unknowns": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "why": {
+          "items": {
+            "$ref": "#/definitions/Claim"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "ticker",
+        "name",
+        "asset_class",
+        "sector",
+        "fit",
+        "confidence",
+        "to_review",
+        "why",
+        "contributions",
+        "debate",
+        "debate_summary",
+        "risks",
+        "limits",
+        "unknowns"
+      ],
+      "type": "object"
+    },
+    "Fit": {
+      "enum": [
+        "élevée",
+        "partielle",
+        "faible"
+      ],
+      "type": "string"
+    },
+    "GraphEdge": {
+      "additionalProperties": false,
+      "properties": {
+        "claim_kind": {
+          "enum": [
+            "FAIT",
+            "HYPOTHESE"
+          ],
+          "type": "string"
+        },
+        "evidence_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "relation": {
+          "$ref": "#/definitions/Relation"
+        },
+        "source": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "target",
+        "relation",
+        "claim_kind",
+        "evidence_id"
+      ],
+      "type": "object"
+    },
+    "GraphNode": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "in_universe": {
+          "type": "boolean"
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "in_universe"
+      ],
+      "type": "object"
+    },
+    "Persona": {
+      "additionalProperties": false,
+      "description": "Entrée de data/reference/personas.json.",
+      "properties": {
+        "contraintes": {
+          "$ref": "#/definitions/PersonaConstraints"
+        },
+        "id": {
+          "type": "string"
+        },
+        "poids": {
+          "$ref": "#/definitions/CriterionMap"
+        },
+        "profil": {
+          "additionalProperties": false,
+          "properties": {
+            "age": {
+              "type": "number"
+            },
+            "experience": {
+              "type": "string"
+            },
+            "horizon_annees": {
+              "additionalProperties": false,
+              "properties": {
+                "max": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "min": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "min",
+                "max"
+              ],
+              "type": "object"
+            },
+            "nom": {
+              "type": "string"
+            },
+            "objectif": {
+              "type": "string"
+            },
+            "preferences": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "profession": {
+              "type": "string"
+            },
+            "situation": {
+              "type": "string"
+            },
+            "test": {
+              "type": "string"
+            },
+            "tolerance_risque": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "nom",
+            "age",
+            "profession",
+            "situation",
+            "experience",
+            "tolerance_risque",
+            "horizon_annees",
+            "objectif",
+            "preferences",
+            "test"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "profil",
+        "poids",
+        "contraintes"
+      ],
+      "type": "object"
+    },
+    "PersonaConstraints": {
+      "additionalProperties": false,
+      "properties": {
+        "esg_exclusion": {
+          "type": "boolean"
+        },
+        "max_weight_crypto": {
+          "type": "number"
+        },
+        "max_weight_per_asset": {
+          "type": "number"
+        },
+        "max_weight_per_sector": {
+          "type": "number"
+        },
+        "speculatif": {
+          "enum": [
+            "permis",
+            "exclu",
+            "signalé"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "max_weight_per_asset",
+        "max_weight_per_sector",
+        "max_weight_crypto",
+        "esg_exclusion",
+        "speculatif"
+      ],
+      "type": "object"
+    },
+    "ProfileDraft": {
+      "additionalProperties": false,
+      "description": "Réponses du questionnaire « Créer un profil fictif » (proposé P5, corps de POST /profiles).",
+      "properties": {
+        "base_persona": {
+          "description": "Profil existant dont on crée une variante (poids modifiés).",
+          "type": "string"
+        },
+        "exclusions": {
+          "description": "Parmi : crypto, speculatif, controverses (les règles que le moteur sait appliquer).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "horizon": {
+          "enum": [
+            "court",
+            "moyen",
+            "long"
+          ],
+          "type": "string"
+        },
+        "objectif": {
+          "enum": [
+            "preserver",
+            "equilibre",
+            "croissance"
+          ],
+          "type": "string"
+        },
+        "preferences": {
+          "description": "Parmi : esg, technologies, stabilite, diversification.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "tolerance": {
+          "enum": [
+            "faible",
+            "moderee",
+            "elevee"
+          ],
+          "type": "string"
+        },
+        "weights_override": {
+          "additionalProperties": false,
+          "description": "Poids modifiés par l'utilisateur sur l'écran de résumé ; normalisés par le backend.",
+          "properties": {
+            "croissance": {
+              "type": "number"
+            },
+            "diversification": {
+              "type": "number"
+            },
+            "esg": {
+              "type": "number"
+            },
+            "horizon": {
+              "type": "number"
+            },
+            "preferences": {
+              "type": "number"
+            },
+            "qualite": {
+              "type": "number"
+            },
+            "stabilite": {
+              "type": "number"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "objectif",
+        "horizon",
+        "tolerance",
+        "preferences",
+        "exclusions"
+      ],
+      "type": "object"
+    },
+    "ProfileWeights": {
+      "additionalProperties": false,
+      "description": "Sortie de l'agent de pondération (docs/02_AGENTS.md §1).",
+      "properties": {
+        "hard_constraints": {
+          "additionalProperties": false,
+          "properties": {
+            "esg_exclusion": {
+              "type": "boolean"
+            },
+            "excluded_asset_classes": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "max_weight_crypto": {
+              "type": "number"
+            },
+            "max_weight_per_asset": {
+              "type": "number"
+            },
+            "max_weight_per_sector": {
+              "type": "number"
+            },
+            "speculatif": {
+              "enum": [
+                "permis",
+                "exclu",
+                "signalé"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "max_weight_per_asset",
+            "max_weight_per_sector",
+            "max_weight_crypto",
+            "excluded_asset_classes",
+            "esg_exclusion",
+            "speculatif"
+          ],
+          "type": "object"
+        },
+        "label": {
+          "type": "string"
+        },
+        "missing_information": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "profile_id": {
+          "type": "string"
+        },
+        "rationale": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "because": {
+                "type": "string"
+              },
+              "claim_kind": {
+                "$ref": "#/definitions/ClaimKind"
+              },
+              "field": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "field",
+              "because"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "weights": {
+          "$ref": "#/definitions/CriterionMap"
+        }
+      },
+      "required": [
+        "profile_id",
+        "label",
+        "summary",
+        "hard_constraints",
+        "weights",
+        "rationale",
+        "missing_information"
+      ],
+      "type": "object"
+    },
+    "QualityCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "check": {
+          "type": "string"
+        },
+        "details": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "avertissement",
+            "erreur"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "check",
+        "status",
+        "details"
+      ],
+      "type": "object"
+    },
+    "RejectedItem": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "enum": [
+            "contrainte",
+            "classement",
+            "preuves"
+          ],
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "ticker": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ticker",
+        "reason",
+        "kind"
+      ],
+      "type": "object"
+    },
+    "Relation": {
+      "enum": [
+        "FOURNISSEUR",
+        "CLIENT",
+        "CONCURRENT",
+        "PARTENAIRE"
+      ],
+      "type": "string"
+    },
+    "RunRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "as_of": {
+          "type": "string"
+        },
+        "profile_id": {
+          "type": "string"
+        },
+        "requested_ticker": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "profile_id"
+      ],
+      "type": "object"
+    },
+    "RunStatus": {
+      "additionalProperties": false,
+      "description": "Réponse de GET /runs/{id}.",
+      "properties": {
+        "as_of": {
+          "type": "string"
+        },
+        "error": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "profile_id": {
+          "type": "string"
+        },
+        "requested_ticker": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "result": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Explanation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "en_cours",
+            "termine",
+            "echec"
+          ],
+          "type": "string"
+        },
+        "steps": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/definitions/RunStepId"
+              },
+              "status": {
+                "$ref": "#/definitions/StepStatus"
+              }
+            },
+            "required": [
+              "id",
+              "status"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "run_id",
+        "profile_id",
+        "as_of",
+        "requested_ticker",
+        "status",
+        "steps",
+        "error",
+        "result"
+      ],
+      "type": "object"
+    },
+    "RunStepId": {
+      "enum": [
+        "profil",
+        "recherche_validation",
+        "debat",
+        "decision",
+        "explication"
+      ],
+      "type": "string"
+    },
+    "SourceInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "date_extraction": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "limites": {
+          "type": "string"
+        },
+        "nom": {
+          "type": "string"
+        },
+        "source_id": {
+          "type": "string"
+        },
+        "statut": {
+          "type": "string"
+        },
+        "type_de_donnee": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "nom",
+        "type_de_donnee",
+        "date_extraction",
+        "limites",
+        "statut"
+      ],
+      "type": "object"
+    },
+    "Stance": {
+      "enum": [
+        "appui",
+        "appui_reserve",
+        "opposition"
+      ],
+      "type": "string"
+    },
+    "StepStatus": {
+      "enum": [
+        "attente",
+        "en_cours",
+        "ok",
+        "echec"
+      ],
+      "type": "string"
+    },
+    "Trace": {
+      "additionalProperties": false,
+      "properties": {
+        "as_of": {
+          "type": "string"
+        },
+        "profile_id": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/definitions/TraceStep"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "run_id",
+        "as_of",
+        "profile_id",
+        "steps"
+      ],
+      "type": "object"
+    },
+    "TraceStep": {
+      "additionalProperties": false,
+      "properties": {
+        "attempts": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "ended_at": {
+          "type": "string"
+        },
+        "evidence_in": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "inputs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "enum": [
+            "code",
+            "llm",
+            "controle"
+          ],
+          "type": "string"
+        },
+        "model_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "note": {
+          "type": "string"
+        },
+        "outputs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "prompt_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "started_at": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "ok",
+            "echec",
+            "ignore"
+          ],
+          "type": "string"
+        },
+        "step": {
+          "type": "string"
+        },
+        "tools_called": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "step",
+        "kind",
+        "status",
+        "started_at",
+        "ended_at"
+      ],
+      "type": "object"
+    },
+    "Verdict": {
+      "enum": [
+        "cohérent",
+        "cohérent avec réserve",
+        "incohérent avec le profil"
+      ],
+      "type": "string"
+    }
+  }
+}

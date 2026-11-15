@@ -1,6 +1,6 @@
 # Application mobile EasyTrade (Expo / React Native)
 
-Conception : `docs/07_UX_UI.md`. État : phase P5 réalisée sur données fictives ; branchement à l'API réelle en attente du backend (P2 à P4).
+Conception : `docs/07_UX_UI.md`. État : tous les écrans sont réalisés ; l'application fonctionne sur des données fictives (sans backend) ou branchée sur l'API réelle du dépôt. Restent l'essai sur téléphone et l'API déployée sur AWS (P4).
 
 ## Démarrer
 
@@ -14,7 +14,11 @@ npx expo start          # puis : touche w (navigateur), ou scanner le QR code av
 
 | Commande | Rôle |
 |---|---|
-| `npm run typecheck` | Vérification TypeScript (`tsc --noEmit`) |
+| `npm run typecheck` | Vérification TypeScript de l'application et des tests |
+| `npm test` | Contrat mobile ↔ backend, client HTTP, règles d'affichage (voir « Tests ») |
+| `npm run e2e:api` | Parcours complet dans un navigateur, sur l'API réelle (lancée par le script) |
+| `npm run e2e:mock` | Même parcours sur les données fictives |
+| `npm run contracts` | Régénère `contracts.schema.json` après une modification de `src/types/contracts.ts` |
 | `npm run export:web` | Export web statique dans `dist/` (version hébergée pour le jury, extra n° 6) |
 | `npx expo-doctor` | Contrôle des versions et de la configuration Expo |
 
@@ -29,11 +33,32 @@ Pile : Expo SDK 58, `expo-router` (navigation par fichiers dans `app/`), TanStac
 
 Les variables se mettent dans `mobile/.env` (non versionné) ou dans l'environnement avant `npx expo start`. Sur un téléphone, `localhost` désigne le téléphone : utiliser l'adresse IP locale de l'ordinateur (`http://192.168.x.x:8000`) ou l'URL API Gateway.
 
+### Brancher l'API réelle
+
+```bash
+# Terminal 1 — API (données du dépôt ; agents simulés tant que Bedrock n'est pas configuré)
+cd backend && uvicorn easytrade.api.app:app --port 8000        # ajouter --host 0.0.0.0 pour un téléphone
+
+# Terminal 2 — application
+cd mobile && EXPO_PUBLIC_USE_MOCKS=false npx expo start
+# PowerShell : $env:EXPO_PUBLIC_USE_MOCKS="false"; npx expo start
+```
+
+Le bandeau « Données entièrement fictives » disparaît : les pistes, les chiffres et les preuves viennent du pipeline (`backend/easytrade/orchestration/pipeline.py`) sur les 31 actifs du jeu de départ.
+
+À savoir :
+
+- **Les preuves sont propres à une analyse.** `EV-000412` ne désigne pas la même preuve dans deux runs : la preuve, la fiche et le graphe sont demandés avec le `run_id` consulté (`src/api/assets.ts`).
+- **Même demande, même analyse.** L'identifiant d'un run est déterministe ; « Relancer l'analyse » rend le même résultat tant que les données n'ont pas changé.
+- **Runs et profils fictifs sont en mémoire de l'API.** Après un redémarrage de l'API, l'application relance l'analyse ; un profil créé par questionnaire est à recréer (« Changer de profil »).
+- **Le graphe est vide** tant que `data/reference/graph_edges.csv` n'est pas rempli (bloc G) : la fiche affiche « Aucune relation sourcée ».
+- **Mateo obtient « aucune recommandation »** tant que les signaux ESG ne sont pas sourcés : c'est la réponse attendue, pas une erreur.
+
 En mode fictif, un second bandeau « Données entièrement fictives » s'affiche sous le bandeau de simulation. **Aucun chiffre de ce mode ne doit apparaître dans la vidéo ou la documentation** : ce sont des valeurs inventées (actifs `ACTIF_A`, `FNB_B`…).
 
 ### Le serveur fictif
 
-`src/mocks/server.ts` imite toutes les routes. Il reproduit la *forme* du moteur de décision (contraintes dures → score pondéré `Σ w_k·s_k` → garde-fous de concentration → « aucune recommandation » → cohérence d'une demande) pour que l'interface se comporte comme avec le vrai backend : un profil fictif qui exclut tout donne bien « Aucune piste », Robert qui teste `ACTIF_G` obtient « Incohérent avec le profil ». **Ce n'est pas le moteur** : la référence sera `backend/easytrade/engine/` (P2).
+`src/mocks/server.ts` imite toutes les routes. Il reproduit la *forme* du moteur de décision (contraintes dures → score pondéré `Σ w_k·s_k` → garde-fous de concentration → « aucune recommandation » → cohérence d'une demande) pour que l'interface se comporte comme avec le vrai backend : Robert qui teste `ACTIF_G` obtient « Incohérent avec le profil ». Ses réponses respectent le même schéma que l'API réelle, ses étapes de trace portent les mêmes noms, et il refuse les mêmes choix de questionnaire. **Ce n'est pas le moteur** : la référence est `backend/easytrade/engine/`.
 
 Les personas viennent du vrai `data/reference/personas.json` (importé grâce à `metro.config.js`). La liste des sources de l'écran Données recopie `data/reference/sources_registry.csv`. Tout le reste est fictif.
 
@@ -58,24 +83,24 @@ Les personas viennent du vrai `data/reference/personas.json` (importé grâce à
 
 ## Contrats
 
-`src/types/contracts.ts` est le miroir TypeScript des schémas Pydantic. `Evidence` reprend exactement `backend/easytrade/schemas/evidence.py`. Pour le reste, les schémas backend (P2, P3) ne sont pas encore écrits : le front **propose** ces champs, à reprendre côté Pydantic ou à aligner.
+`src/types/contracts.ts` décrit tout ce que l'API renvoie à l'application. Le backend s'y conforme : `Explanation`, `Trace` et `Evidence` sont les schémas du pipeline, et `backend/easytrade/api/service.py` traduit le reste (`ProfileWeights`, `RunStatus`, `AssetSheet`, `DependencyGraph`, `DataOverview`) depuis les schémas internes du moteur.
 
-| Contrat | Champs proposés par le front |
+`contracts.schema.json` est le schéma JSON de ces types, généré par `npm run contracts`. C'est la référence commune : les tests du mobile et ceux du backend valident contre ce même fichier.
+
+**Changer un champ** : modifier `contracts.ts` et le schéma Pydantic correspondant (`backend/easytrade/schemas/`), lancer `npm run contracts`, puis `npm test` ici et `pytest tests/api` dans `backend/`. Un changement fait d'un seul côté fait échouer l'un des deux.
+
+Routes : table de `docs/01_ARCHITECTURE.md`. Exemples JSON conformes : `src/mocks/explanation.exemple.json` (run fictif d'Amira), `evidence.exemple.json`, `graph.exemple.json`.
+
+## Tests
+
+| Fichier | Ce qui est vérifié |
 |---|---|
-| `ProfileWeights` | `label`, `summary` (affichage) |
-| `ProfileDraft` (corps de `POST /profiles`) | `objectif`, `horizon`, `tolerance`, `preferences`, `exclusions`, `weights_override`, `base_persona` |
-| `RunStatus` (`GET /runs/{id}`) | `status`, `steps[{id, status}]` avec `id ∈ profil, recherche_validation, debat, decision, explication`, `result` |
-| `Explanation` | `no_recommendation`, `missing`, `coherence` (analyse de « Tester une idée »), `unknowns` |
-| `ExplanationItem` | `sector`, `to_review`, `debate` (positions complètes du tour 3), `contributions`, `unknowns` |
-| `RejectedItem` | `kind ∈ contrainte, classement, preuves` (« écarté par une règle » contre « moins bien classé »), `evidence_ids` |
-| `AssetSheet` (`GET /assets/{ticker}?profile_id=`) | `metrics[]` avec `universe_min`, `universe_max`, `profile_limit` (seuil indicatif du profil, hypothèse), `advanced` ; `signals[]` |
-| `TraceStep` | `kind ∈ code, llm, controle`, `note` (résultat d'un contrôle) |
+| `tests/contracts.test.ts` | `contracts.schema.json` est à jour ; chaque route du serveur fictif respecte le schéma ; aucune formulation de `data/reference/forbidden_wording.txt` ; toute preuve citée existe et n'est pas postérieure à l'analyse ; toute arête du graphe a une preuve ou l'étiquette Hypothèse ; le validateur refuse bien un écart |
+| `tests/client.test.ts` | URL appelées en mode API, `run_id` transmis pour la preuve, la fiche, le graphe et les données, corps de `POST /runs` et `POST /profiles`, erreurs 404 et API injoignable |
+| `e2e/run.mjs` | Parcours complet avec clics réels dans Chrome : exporte la version web, la sert, lance l'API (`--api`), puis échoue sur toute attente non satisfaite, erreur de console ou réponse HTTP en erreur. `E2E_SHOTS=<dossier>` enregistre une capture par étape |
+| `backend/tests/api/` (dans le backend) | L'API réelle respecte le même schéma, route par route |
 
-Les schémas internes du moteur (P2 : `Decision`, `ScoredCandidate`, `Rejection`, `CoherenceReport`, `ProfileWeights`) ne correspondent pas encore à ces contrats de réponse ; les écarts sont listés dans `avancement.md` (étape 5) et sont à résoudre en F9, de préférence dans la couche API ou l'agent d'explication.
-
-Routes ajoutées à la table de `docs/01_ARCHITECTURE.md` : `GET /profiles/{id}`, `GET /assets` (univers), `GET /data` (sources + contrôles qualité).
-
-Exemples JSON conformes, générés depuis le serveur fictif : `src/mocks/explanation.exemple.json` (run d'Amira), `evidence.exemple.json`, `graph.exemple.json`.
+Prérequis de `e2e` : Chrome ou Edge (`CHROME_PATH` pour un autre emplacement) ; pour `e2e:api`, l'environnement Python du backend (`EASYTRADE_PYTHON`, sinon `backend/.venv`, sinon `python`).
 
 ## Structure
 
@@ -91,6 +116,7 @@ Exemples JSON conformes, générés depuis le serveur fictif : `src/mocks/explan
 | `src/i18n/` | Textes et glossaire |
 | `src/mocks/` | Serveur et données fictives |
 | `src/format.ts` | Nombres, pourcentages et dates en français |
+| `tests/`, `e2e/`, `scripts/` | Tests du contrat et du client, parcours de bout en bout, génération du schéma |
 
 ## Règles d'interface appliquées
 

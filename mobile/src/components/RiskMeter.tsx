@@ -14,11 +14,13 @@ import { GlossaryTerm } from "./GlossaryTerm";
 const GLOSSARY: Record<string, string> = {
   volatilite: "volatilite", perte_max: "perte_max", pire_periode: "pire_periode", rendement_annualise: "rendement_annualise",
 };
+/** Indicateurs de rendement : situés dans l'univers sans lecture « plus risqué ». */
+const RETURNS = new Set(["rendement_annualise", "rendement_2022"]);
 /** Pour ces indicateurs, une valeur plus basse est plus risquée. */
 const LOWER_IS_RISKIER = new Set(["perte_max", "pire_periode"]);
 
 export function RiskMeter({ m, runId }: { m: AssetMetric; runId?: string | null }) {
-  const isRisk = m.metric !== "rendement_annualise";
+  const isRisk = !RETURNS.has(m.metric);
   const invert = LOWER_IS_RISKIER.has(m.metric);
   const span = m.universe_max - m.universe_min || 1;
   const pos = (v: number) => {

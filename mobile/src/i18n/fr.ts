@@ -43,7 +43,8 @@ export const fr = {
 
   relation: { FOURNISSEUR: "Fournisseur", CLIENT: "Client", CONCURRENT: "Concurrent", PARTENAIRE: "Partenaire" },
   assetClass: {
-    equity: "Action", etf_equity: "FNB d'actions", etf_bond: "FNB d'obligations", etf: "FNB", crypto: "Cryptoactif",
+    equity: "Action", etf_equity: "FNB d'actions", etf_bond: "FNB d'obligations", etf_commodity: "FNB de matières premières",
+    etf: "FNB", crypto: "Cryptoactif",
   } as Record<string, string>,
 
   unknownsTitle: "Ce que nous ne savons pas",

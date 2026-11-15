@@ -26,7 +26,14 @@ cd backend && python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 pytest                       # tous les tests
 pytest tests/scenarios -rs   # scénarios S1 à S12
+pytest tests/api             # contrat mobile ↔ backend
+uvicorn easytrade.api.app:app --port 8000   # API locale
 
 # Mobile
 cd mobile && npm install && npx expo start
+npm run typecheck && npm test   # types, contrat mobile ↔ backend, client HTTP
+npm run e2e:api                 # parcours complet dans un navigateur, sur l'API réelle (e2e:mock : données fictives)
+npm run contracts               # après toute modification de src/types/contracts.ts
 ```
+
+Changer un champ échangé entre le mobile et le backend : modifier `mobile/src/types/contracts.ts` **et** le schéma Pydantic (`backend/easytrade/schemas/`), lancer `npm run contracts`, puis les tests des deux côtés.

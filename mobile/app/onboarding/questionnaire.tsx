@@ -66,8 +66,6 @@ const QUESTIONS: Question[] = [
       { value: "crypto", label: "Cryptoactifs" },
       { value: "speculatif", label: "Placements hautement spéculatifs" },
       { value: "controverses", label: "Entreprises à controverse documentée" },
-      { value: "actions", label: "Actions individuelles" },
-      { value: "fnb", label: "Fonds négociés en bourse (FNB)" },
     ],
   },
 ];

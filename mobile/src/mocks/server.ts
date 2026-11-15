@@ -21,9 +21,14 @@ import {
 } from "./fixtures";
 
 export class MockNotFound extends Error {}
+export class MockInvalid extends Error {}
+
+export const PREFERENCES = ["esg", "technologies", "stabilite", "diversification"];
+export const EXCLUSIONS = ["crypto", "speculatif", "controverses"];
 
 const PERSONAS = (personasJson as unknown as { personas: Persona[] }).personas;
-const STEP_MS = 900;
+// Durée fictive d'une étape ; les tests la réduisent (EXPO_PUBLIC_MOCK_STEP_MS).
+const STEP_MS = Number(process.env.EXPO_PUBLIC_MOCK_STEP_MS ?? 900);
 const MAX_PISTES = 4;
 const DISCLAIMER = "Simulation à des fins pédagogiques. Ceci n'est pas un conseil financier.";
 
@@ -96,6 +101,7 @@ function personaToProfile(p: Persona): MockProfile {
         max_weight_crypto: c.max_weight_crypto,
         excluded_asset_classes: excluded,
         esg_exclusion: c.esg_exclusion,
+        speculatif: c.speculatif,
       },
       weights: normalize(p.poids),
       rationale,
@@ -109,7 +115,7 @@ for (const p of PERSONAS) PROFILES.set(p.id, personaToProfile(p));
 const TEMPLATE: Record<Tolerance, string> = { faible: "robert", moderee: "mateo", elevee: "amira" };
 let customCounter = 0;
 
-function draftToProfile(d: ProfileDraft & { base_persona?: string }, id: string): MockProfile {
+function draftToProfile(d: ProfileDraft, id: string): MockProfile {
   const base = PROFILES.get(d.base_persona ?? TEMPLATE[d.tolerance])!;
   const weights = { ...base.pw.weights };
   if (!d.base_persona) {
@@ -123,9 +129,6 @@ function draftToProfile(d: ProfileDraft & { base_persona?: string }, id: string)
   const excluded = new Set<string>(d.base_persona ? base.pw.hard_constraints.excluded_asset_classes : []);
   const ex = d.exclusions;
   if (ex.includes("crypto")) excluded.add("crypto");
-  if (ex.includes("actions")) excluded.add("equity");
-  if (ex.includes("obligations")) excluded.add("etf_bond");
-  if (ex.includes("fnb")) { excluded.add("etf_equity"); excluded.add("etf_bond"); }
   const horizonLabel = d.base_persona ? base.horizonLabel : { court: "moins de 5 ans", moyen: "5 à 12 ans", long: "plus de 12 ans" }[d.horizon];
   const tolLabel = { faible: "faible", moderee: "modéré", elevee: "élevé" }[d.tolerance];
   return {
@@ -146,6 +149,7 @@ function draftToProfile(d: ProfileDraft & { base_persona?: string }, id: string)
         max_weight_crypto: excluded.has("crypto") ? 0 : base.pw.hard_constraints.max_weight_crypto,
         excluded_asset_classes: [...excluded],
         esg_exclusion: d.base_persona ? base.pw.hard_constraints.esg_exclusion : ex.includes("controverses"),
+        speculatif: ex.includes("speculatif") ? "exclu" : base.speculatif,
       },
       weights: normalize(weights),
       rationale: [
@@ -497,8 +501,14 @@ export const mockApi = {
     return getMockProfile(id).pw;
   },
 
-  async createProfile(draft: ProfileDraft & { base_persona?: string }): Promise<ProfileWeights> {
+  async createProfile(draft: ProfileDraft): Promise<ProfileWeights> {
     await sleep(500);
+    // Mêmes choix acceptés que l'API (backend/easytrade/api/service.py) : le reste est refusé.
+    const unknown = [
+      ...draft.preferences.filter((p) => !PREFERENCES.includes(p)),
+      ...draft.exclusions.filter((e) => !EXCLUSIONS.includes(e)),
+    ];
+    if (unknown.length) throw new MockInvalid(`Choix non pris en charge : ${unknown.join(", ")}`);
     customCounter += 1;
     const id = `${draft.base_persona ?? "fictif"}_${Date.now().toString(36)}${customCounter}`;
     const p = draftToProfile(draft, id);
@@ -541,13 +551,14 @@ export const mockApi = {
       { step: "profil", kind: "llm", status: "ok", started_at: at(0), ended_at: at(820), model_id: "modèle fictif (mode développement)", prompt_version: "profile_weighting@v1", outputs: [] },
       { step: "recherche", kind: "llm", status: "ok", started_at: at(900), ended_at: at(1650), model_id: "modèle fictif (mode développement)", prompt_version: "research@v1", tools_called: ["lister_univers", "preuves_esg", "relations"], outputs: [] },
       { step: "validation", kind: "code", status: "ok", started_at: at(900), ended_at: at(1300), version: "validation@v1", outputs: ASSETS.flatMap((a) => ids(a.ticker)).slice(0, 6) },
+      { step: "dossiers_de_preuves", kind: "code", status: "ok", started_at: at(1660), ended_at: at(1700), version: "engine@v1", outputs: [] },
       { step: "controle.avant_debat", kind: "controle", status: "ok", started_at: at(1700), ended_at: at(1720), note: `Contraintes dures appliquées : ${constraintRejects} candidat(s) écarté(s) par une règle du profil ; candidats sans preuve : 0.` },
-      ...(["bull", "realist", "bear"] as const).map((ag, i) => ({
-        step: `debat.${ag}.tour1+3`, kind: "llm" as const, status: "ok" as const, started_at: at(1800 + i * 20), ended_at: at(2600 + i * 40),
+      ...([1, 3] as const).flatMap((round) => (["bull", "realist", "bear"] as const).map((ag, i) => ({
+        step: `debate.${ag}.round${round}`, kind: "llm" as const, status: "ok" as const, started_at: at(1800 + i * 20), ended_at: at(2600 + i * 40),
         model_id: "modèle fictif (mode développement)", prompt_version: `${ag}@v1`, tools_called: [],
-      })),
-      { step: "decision", kind: "code", status: "ok", started_at: at(2700), ended_at: at(2780), version: "engine.decision@v1", outputs: [] },
-      { step: "controle.decision", kind: "controle", status: "ok", started_at: at(2780), ended_at: at(2790),
+      }))),
+      { step: "decision", kind: "code", status: "ok", started_at: at(2700), ended_at: at(2780), version: "engine@v1", outputs: [] },
+      { step: "controle.plafonds_panier", kind: "controle", status: "ok", started_at: at(2780), ended_at: at(2790),
         note: result.no_recommendation ? "Sortie « aucune recommandation » : preuves ou candidats insuffisants." : `Plafonds appliqués ; ${result.rejected.filter((r) => r.reason.startsWith("Déclassé")).length} piste(s) déclassée(s) pour concentration${result.coherence ? " ; tension profil / demande évaluée" : ""}.` },
       { step: "explication", kind: "llm", status: "ok", started_at: at(3600), ended_at: at(4400), model_id: "modèle fictif (mode développement)", prompt_version: "explanation@v1" },
       { step: "controle.avant_affichage", kind: "controle", status: "ok", started_at: at(4400), ended_at: at(4450), note: "Vérificateur de fidélité : chaque nombre correspond à une preuve citée ; 0 phrase retirée. Filtre de formulations : 0 terme refusé." },

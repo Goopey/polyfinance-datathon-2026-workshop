@@ -41,7 +41,18 @@ python scripts/run_local.py --persona robert --ticker TSLA -v   # « Tester une 
 
 Sans Amazon Bedrock configuré (`BEDROCK_MODEL_ID_FAST`, `BEDROCK_MODEL_ID_STRONG`), le pipeline local utilise des agents simulés par des règles, sans modèle de langage ; la sortie le signale. Les calculs, le classement et les contrôles sont les mêmes dans les deux cas.
 
-À venir (voir `avancement.md`) : API (`uvicorn easytrade.api.app:app`), branchement de l'application mobile (`mobile/README.md`), déploiement AWS (`infra/README.md`).
+API et application, sur les données réelles du dépôt :
+
+```bash
+cd backend && uvicorn easytrade.api.app:app --port 8000        # API locale
+cd mobile && npm install
+EXPO_PUBLIC_USE_MOCKS=false npx expo start                      # application branchée sur l'API (PowerShell : $env:EXPO_PUBLIC_USE_MOCKS="false")
+npm test && npm run e2e:api                                     # contrat mobile ↔ backend, puis parcours complet dans un navigateur
+```
+
+Sans `EXPO_PUBLIC_USE_MOCKS=false`, l'application tourne sur des données fictives, sans backend (`mobile/README.md`).
+
+À venir (voir `avancement.md`) : exécution des agents sur Amazon Bedrock, déploiement AWS (`infra/README.md`).
 
 Configuration : copier `.env.example` en `.env`.
 
