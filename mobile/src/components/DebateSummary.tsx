@@ -3,12 +3,13 @@
  * Mode Simple : position + premier argument. Mode Avancé : tous les arguments et questions ouvertes.
  */
 import { StyleSheet, Text, View } from "react-native";
-import { fr } from "../i18n/fr";
+import { useT } from "../i18n";
 import { useSettings } from "../store/settings";
-import { colors, radius, space } from "../theme/tokens";
+import { alpha, colors, radius, space } from "../theme/tokens";
 import { type } from "../theme/typography";
 import type { DebatePosition, Stance } from "../types/contracts";
 import { ClaimLine } from "./EvidenceChip";
+import { Icon, type IconName } from "./Icon";
 import { Pill } from "./ui";
 
 const STANCE: Record<Stance, { icon: string; fg: string; bg: string }> = {
@@ -16,16 +17,19 @@ const STANCE: Record<Stance, { icon: string; fg: string; bg: string }> = {
   appui_reserve: { icon: "◆", fg: colors.warn, bg: colors.warnBg },
   opposition: { icon: "▼", fg: colors.bad, bg: colors.badBg },
 };
+const AGENT: Record<DebatePosition["agent"], IconName> = { bull: "sparkles", realist: "scale", bear: "trendingDown" };
 
 export function DebateSummary({ debate, dissent, runId }: { debate: DebatePosition[]; dissent: boolean; runId?: string | null }) {
+  const t = useT();
   const advanced = useSettings((s) => s.mode === "avance");
   return (
     <View style={{ gap: space.md }}>
       {dissent ? (
         <View style={styles.dissent}>
-          <Text style={type.body}>
-            ⚖ <Text style={{ fontWeight: "700" }}>Désaccord conservé.</Text> Les trois agents ont reçu les mêmes preuves et
-            n'arrivent pas à la même position : la confiance en tient compte.
+          <Icon name="scale" size={20} color={colors.warn} />
+          <Text style={[type.body, { flex: 1 }]}>
+            <Text style={{ fontWeight: "700", color: colors.warn }}>{t.debate.dissentStrong}</Text>
+            {t.debate.dissentBody}
           </Text>
         </View>
       ) : null}
@@ -33,32 +37,40 @@ export function DebateSummary({ debate, dissent, runId }: { debate: DebatePositi
         const s = STANCE[d.stance];
         const args = advanced ? d.arguments : d.arguments.slice(0, 1);
         return (
-          <View key={d.agent} style={styles.card}>
-            <Text style={type.h3}>{fr.agent[d.agent]}</Text>
+          <View key={d.agent} style={[styles.card, { borderLeftColor: s.fg }]}>
+            <View style={styles.head}>
+              <Icon name={AGENT[d.agent] ?? "scale"} size={18} color={colors.mint} />
+              <Text style={[type.h3, { flex: 1 }]}>{t.agent[d.agent]}</Text>
+            </View>
             <View style={styles.badges}>
-              <Pill icon={s.icon} text={fr.stance[d.stance]} fg={s.fg} bg={s.bg} />
-              {advanced ? <Pill text={fr.confidence[d.confidence]} fg={colors.text} bg={colors.neutralBg} /> : null}
+              <Pill icon={s.icon} text={t.stance[d.stance]} fg={s.fg} bg={s.bg} />
+              {advanced ? <Pill text={t.confidence[d.confidence]} fg={colors.info} bg={colors.infoBg} /> : null}
             </View>
             {args.map((a) => (
               <ClaimLine key={a.text} claim={a} runId={runId} />
             ))}
             {advanced && d.open_questions.length > 0 ? (
-              <Text style={type.small}>Question ouverte : {d.open_questions.join(" ")}</Text>
+              <Text style={type.small}>{t.debate.openQuestion(d.open_questions.join(" "))}</Text>
             ) : null}
           </View>
         );
       })}
-      <Text style={type.caption}>
-        Les agents argumentent à partir des preuves ; ils ne produisent aucun chiffre et ne décident pas. Le classement vient du moteur de décision.
-      </Text>
+      <Text style={type.caption}>{t.debate.caption}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: space.md, gap: space.sm },
+  card: {
+    backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
+    borderLeftWidth: 3, padding: space.md, gap: space.sm,
+  },
+  head: { flexDirection: "row", alignItems: "center", gap: space.sm },
   badges: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
-  dissent: { backgroundColor: colors.warnBg, borderRadius: radius.md, padding: space.md },
+  dissent: {
+    flexDirection: "row", gap: space.md, alignItems: "flex-start",
+    backgroundColor: colors.warnBg, borderRadius: radius.md, padding: space.md, borderWidth: 1, borderColor: alpha(colors.warn, 0.3),
+  },
 });
 
 export default DebateSummary;

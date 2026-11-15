@@ -8,17 +8,19 @@ import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { createProfile, getProfile } from "../../src/api/profiles";
 import { ClaimTag } from "../../src/components/ClaimTag";
+import { Icon, type IconName } from "../../src/components/Icon";
 import { Button, Card, ErrorState, Loading, Row, Screen, Section } from "../../src/components/ui";
 import { fmtWeight } from "../../src/format";
-import { fr } from "../../src/i18n/fr";
+import { useT } from "../../src/i18n";
 import { useProfileStore } from "../../src/store/profile";
-import { colors, radius, space } from "../../src/theme/tokens";
+import { alpha, colors, radius, space } from "../../src/theme/tokens";
 import { type } from "../../src/theme/typography";
 import { CRITERIA, type Criterion, type CriterionMap, type ProfileWeights } from "../../src/types/contracts";
 
 const STEP = 0.05;
 
 export default function ResumeProfil() {
+  const t = useT();
   const { id } = useLocalSearchParams<{ id: string }>();
   const setProfile = useProfileStore((s) => s.setProfile);
   const profile = useQuery({ queryKey: ["profile", id], queryFn: () => getProfile(id!), enabled: !!id });
@@ -53,57 +55,56 @@ export default function ResumeProfil() {
 
   return (
     <Screen>
-      <View style={{ gap: space.xs }}>
-        <Text style={type.title}>Voici comment nous avons compris votre profil</Text>
-        <Text style={type.body}>{pw.summary}</Text>
+      <View style={{ gap: space.sm }}>
+        <Text style={type.title}>{t.resume.title}</Text>
+        <Text style={[type.body, { color: colors.textMuted }]}>{pw.summary}</Text>
       </View>
 
-      <Section title="Règles (elles écartent)">
+      <Section title={t.resume.rulesTitle} hint={t.resume.rulesHint}>
         <Card>
-          <Rule text={`Au plus ${fmtWeight(hc.max_weight_per_asset)} du panier simulé sur un même actif.`} />
-          <Rule text={`Au plus ${fmtWeight(hc.max_weight_per_sector)} sur un même secteur.`} />
-          <Rule text={hc.max_weight_crypto === 0 ? "Aucun cryptoactif." : `Au plus ${fmtWeight(hc.max_weight_crypto)} en cryptoactifs.`} />
-          {hc.esg_exclusion ? <Rule text="Écarter les entreprises à controverse environnementale ou sociale documentée." /> : null}
-          {hc.speculatif === "exclu" ? <Rule text="Écarter les placements hautement spéculatifs." /> : null}
-          {hc.speculatif === "signalé" ? <Rule text="Signaler les placements hautement spéculatifs (ils ne sont pas écartés)." /> : null}
+          <Rule text={t.resume.ruleMaxAsset(fmtWeight(hc.max_weight_per_asset))} />
+          <Rule text={t.resume.ruleMaxSector(fmtWeight(hc.max_weight_per_sector))} />
+          <Rule icon={hc.max_weight_crypto === 0 ? "ban" : "check"} text={hc.max_weight_crypto === 0 ? t.resume.ruleNoCrypto : t.resume.ruleMaxCrypto(fmtWeight(hc.max_weight_crypto))} />
+          {hc.esg_exclusion ? <Rule icon="ban" text={t.resume.ruleEsg} /> : null}
+          {hc.speculatif === "exclu" ? <Rule icon="ban" text={t.resume.ruleSpecExcluded} /> : null}
+          {hc.speculatif === "signalé" ? <Rule icon="alert" text={t.resume.ruleSpecFlagged} /> : null}
           {hc.excluded_asset_classes.filter((c) => c !== "crypto").map((c) => (
-            <Rule key={c} text={`Classe d'actifs exclue : ${fr.assetClass[c] ?? c}.`} />
+            <Rule key={c} icon="ban" text={t.resume.ruleClass(t.assetClass[c] ?? c)} />
           ))}
         </Card>
       </Section>
 
-      <Section title="Poids (ils classent)">
-        <Text style={type.small}>Touchez − ou + pour modifier un poids. Les poids sont ramenés à 100 % au total.</Text>
-        <Card>
+      <Section title={t.resume.weightsTitle} hint={t.resume.weightsHint}>
+        <Card style={{ gap: space.md }}>
           {CRITERIA.map((k) => {
             const share = weights[k] / total;
             return (
               <View key={k} style={styles.weightRow}>
-                <View style={{ flex: 1, gap: 4 }}>
+                <View style={{ flex: 1, gap: 6 }}>
                   <Row style={{ justifyContent: "space-between" }}>
-                    <Text style={type.label}>{fr.criteria[k]}</Text>
-                    <Text style={type.small}>{fmtWeight(share)}</Text>
+                    <Text style={type.label}>{t.criteria[k]}</Text>
+                    <Text style={[type.label, { color: colors.mint }]}>{fmtWeight(share)}</Text>
                   </Row>
                   <View style={styles.track}>
                     <View style={[styles.fill, { width: `${share * 100}%` }]} />
                   </View>
                 </View>
-                <Stepper label="−" onPress={() => bump(k, -STEP)} a11y={`Diminuer ${fr.criteria[k]}`} />
-                <Stepper label="+" onPress={() => bump(k, STEP)} a11y={`Augmenter ${fr.criteria[k]}`} />
+                <Stepper icon="minus" onPress={() => bump(k, -STEP)} a11y={t.resume.decrease(t.criteria[k])} />
+                <Stepper icon="plus" onPress={() => bump(k, STEP)} a11y={t.resume.increase(t.criteria[k])} />
               </View>
             );
           })}
           <Row>
             <ClaimTag kind="HYPOTHESE" />
-            <Text style={[type.caption, { flex: 1 }]}>Valeurs de départ fixées par l'équipe, à calibrer.</Text>
+            <Text style={[type.caption, { flex: 1 }]}>{t.resume.calibrate}</Text>
           </Row>
         </Card>
       </Section>
 
-      <Section title="Pourquoi ces valeurs">
-        <Card>
+      <Section title={t.resume.whyTitle}>
+        <Card style={{ gap: space.md }}>
           {pw.rationale.map((r) => (
-            <View key={r.field + r.because} style={{ gap: 4 }}>
+            <View key={r.field + r.because} style={{ gap: 6 }}>
               <Text style={type.body}>{r.because}</Text>
               {r.claim_kind ? <ClaimTag kind={r.claim_kind} /> : null}
             </View>
@@ -112,48 +113,57 @@ export default function ResumeProfil() {
       </Section>
 
       {pw.missing_information.length > 0 ? (
-        <Card style={{ backgroundColor: colors.warnBg, borderColor: colors.warnBg }}>
-          <Text style={type.h3}>? Informations manquantes</Text>
+        <Card style={{ backgroundColor: colors.warnBg, borderColor: alpha(colors.warn, 0.3) }}>
+          <Row>
+            <Icon name="help" size={18} color={colors.warn} />
+            <Text style={[type.h3, { color: colors.warn }]}>{t.resume.missingTitle}</Text>
+          </Row>
           {pw.missing_information.map((m) => <Text key={m} style={type.body}>{m}</Text>)}
         </Card>
       ) : null}
 
       {confirm.error ? <ErrorState error={confirm.error} /> : null}
-      <Button
-        label={confirm.isPending ? "Enregistrement…" : modified ? "Confirmer les poids modifiés" : "Confirmer et voir les pistes"}
-        disabled={confirm.isPending}
-        onPress={() => confirm.mutate()}
-      />
-      {modified ? <Button label="Revenir aux poids proposés" variant="ghost" onPress={() => setWeights(pw.weights)} /> : null}
-      <Button label="Choisir un autre profil" variant="ghost" onPress={() => router.replace("/onboarding")} />
+      <View style={{ gap: space.sm, marginTop: space.sm }}>
+        <Button
+          label={confirm.isPending ? t.resume.saving : modified ? t.resume.confirmModified : t.resume.confirm}
+          icon={confirm.isPending ? undefined : "arrowRight"}
+          disabled={confirm.isPending}
+          onPress={() => confirm.mutate()}
+        />
+        {modified ? <Button label={t.resume.revert} variant="secondary" icon="refresh" onPress={() => setWeights(pw.weights)} /> : null}
+        <Button label={t.resume.chooseOther} variant="ghost" onPress={() => router.replace("/onboarding")} />
+      </View>
     </Screen>
   );
 }
 
-function Rule({ text }: { text: string }) {
+function Rule({ text, icon = "check" }: { text: string; icon?: IconName }) {
+  const c = icon === "ban" ? colors.bad : icon === "alert" ? colors.warn : colors.good;
   return (
-    <Row style={{ alignItems: "flex-start", flexWrap: "nowrap" }}>
-      <Text style={[type.body, { color: colors.primary }]}>▪</Text>
+    <Row style={{ alignItems: "flex-start", flexWrap: "nowrap", paddingVertical: 2 }}>
+      <View style={[styles.ruleIcon, { backgroundColor: alpha(c, 0.12) }]}>
+        <Icon name={icon} size={14} color={c} strokeWidth={2.6} />
+      </View>
       <Text style={[type.body, { flex: 1 }]}>{text}</Text>
     </Row>
   );
 }
 
-function Stepper({ label, onPress, a11y }: { label: string; onPress: () => void; a11y: string }) {
+function Stepper({ icon, onPress, a11y }: { icon: IconName; onPress: () => void; a11y: string }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={a11y} style={({ pressed }) => [styles.stepper, pressed && { opacity: 0.7 }]}>
-      <Text style={styles.stepperText}>{label}</Text>
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={a11y} style={({ pressed }) => [styles.stepper, pressed && { opacity: 0.7, transform: [{ scale: 0.94 }] }]}>
+      <Icon name={icon} size={18} color={colors.mint} strokeWidth={2.6} />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  weightRow: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingVertical: space.xs },
-  track: { height: 10, borderRadius: radius.sm, backgroundColor: colors.surfaceMuted, overflow: "hidden" },
-  fill: { height: 10, backgroundColor: colors.primary },
+  weightRow: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  track: { height: 8, borderRadius: radius.pill, backgroundColor: colors.surfaceRaised, overflow: "hidden" },
+  fill: { height: 8, borderRadius: radius.pill, backgroundColor: colors.primary },
+  ruleIcon: { width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", marginTop: 0 },
   stepper: {
-    width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderColor: colors.primary,
-    alignItems: "center", justifyContent: "center",
+    width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: colors.borderStrong,
+    backgroundColor: colors.surfaceRaised, alignItems: "center", justifyContent: "center",
   },
-  stepperText: { fontSize: 22, color: colors.primary, fontWeight: "700", lineHeight: 26 },
 });

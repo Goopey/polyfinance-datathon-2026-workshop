@@ -11,9 +11,9 @@
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from "react-native";
-import Svg, { Circle, G, Line, Text as SvgText } from "react-native-svg";
-import { fr } from "../i18n/fr";
-import { colors, radius, space } from "../theme/tokens";
+import Svg, { Circle, Defs, G, Line, RadialGradient, Stop, Text as SvgText } from "react-native-svg";
+import { useT } from "../i18n";
+import { alpha, colors, palette, radius, space } from "../theme/tokens";
 import { type } from "../theme/typography";
 import type { DependencyGraph, GraphEdge, GraphNode, Relation } from "../types/contracts";
 import { ClaimTag } from "./ClaimTag";
@@ -21,20 +21,22 @@ import { EvidenceChip, openEvidence } from "./EvidenceChip";
 import { Button } from "./ui";
 
 const REL_COLOR: Record<Relation, string> = {
-  FOURNISSEUR: "#1F4FD1",
-  CLIENT: "#13703F",
-  CONCURRENT: "#A12626",
-  PARTENAIRE: "#8A5A00",
+  FOURNISSEUR: colors.info,
+  CLIENT: colors.good,
+  CONCURRENT: colors.bad,
+  PARTENAIRE: colors.warn,
 };
 const REL_ICON: Record<Relation, string> = { FOURNISSEUR: "→", CLIENT: "←", CONCURRENT: "⇄", PARTENAIRE: "∞" };
 const HEIGHT = 320;
-const FONT = Platform.OS === "web" ? "system-ui, -apple-system, Segoe UI, Roboto, sans-serif" : undefined;
+const FONT = Platform.OS === "web" ? "Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif" : undefined;
+const GREY = "#5F7F6E";
 
 function shortLabel(s: string, max = 16) {
   return s.length > max ? `${s.slice(0, max - 1)}…` : s;
 }
 
 export function SupplyChainGraph({ graph, runId }: { graph: DependencyGraph; runId?: string | null }) {
+  const t = useT();
   const [width, setWidth] = useState(320);
   const [selected, setSelected] = useState<GraphNode | null>(null);
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
@@ -58,8 +60,8 @@ export function SupplyChainGraph({ graph, runId }: { graph: DependencyGraph; run
   if (graph.edges.length === 0) {
     return (
       <View style={styles.empty}>
-        <Text style={type.body}>Aucune relation sourcée n'a encore été saisie pour cet actif.</Text>
-        <Text style={type.small}>Une arête n'apparaît que si un document daté la justifie, ou si elle est étiquetée « Hypothèse ».</Text>
+        <Text style={type.body}>{t.graph.emptyTitle}</Text>
+        <Text style={type.small}>{t.graph.emptyBody}</Text>
       </View>
     );
   }
@@ -71,8 +73,18 @@ export function SupplyChainGraph({ graph, runId }: { graph: DependencyGraph; run
 
   return (
     <View style={{ gap: space.md }}>
-      <View onLayout={onLayout} style={styles.canvas} accessibilityLabel={`Graphe de dépendances de ${center?.label ?? graph.center}`}>
+      <View onLayout={onLayout} style={styles.canvas} accessibilityLabel={t.graph.a11y(center?.label ?? graph.center)}>
         <Svg width={width} height={HEIGHT}>
+          <Defs>
+            <RadialGradient id="halo" cx="50%" cy="50%" r="50%">
+              <Stop offset="0" stopColor={palette.g300} stopOpacity="0.28" />
+              <Stop offset="1" stopColor={palette.g800} stopOpacity="0" />
+            </RadialGradient>
+          </Defs>
+          {(() => {
+            const c = layout.get(graph.center);
+            return c ? <Circle cx={c.x} cy={c.y} r={90} fill="url(#halo)" /> : null;
+          })()}
           {graph.edges.map((e) => {
             const a = layout.get(e.source);
             const b = layout.get(e.target);
@@ -86,13 +98,13 @@ export function SupplyChainGraph({ graph, runId }: { graph: DependencyGraph; run
               <G key={key}>
                 <Line
                   x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-                  stroke={REL_COLOR[e.relation]} strokeWidth={2.5}
+                  stroke={REL_COLOR[e.relation]} strokeWidth={2.5} strokeOpacity={0.9}
                   strokeDasharray={e.claim_kind === "HYPOTHESE" ? "6,5" : undefined}
                 />
                 <SvgText x={vertical ? mx + 7 : mx} y={vertical ? my + 4 : my - 6} fontSize={11} fill={REL_COLOR[e.relation]}
                   textAnchor={vertical ? "start" : "middle"} fontWeight="600"
                   fontFamily={FONT}>
-                  {fr.relation[e.relation]}
+                  {t.relation[e.relation]}
                 </SvgText>
                 {/* Zone tactile large, invisible */}
                 <Line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="transparent" strokeWidth={22} onPress={() => onEdge(e)} />
@@ -103,14 +115,14 @@ export function SupplyChainGraph({ graph, runId }: { graph: DependencyGraph; run
             const p = layout.get(n.id);
             if (!p) return null;
             const isCenter = n.id === graph.center;
-            const fill = isCenter ? colors.primary : n.in_universe ? colors.surface : colors.surfaceMuted;
-            const stroke = isCenter ? colors.primary : n.in_universe ? colors.text : "#9AA5B4";
+            const fill = isCenter ? colors.mint : n.in_universe ? colors.surfaceRaised : colors.surface;
+            const stroke = isCenter ? colors.mint : n.in_universe ? colors.primary : GREY;
             return (
               <G key={n.id} onPress={() => setSelected(n)}>
                 <Circle cx={p.x} cy={p.y} r={isCenter ? 32 : 18} fill={fill} stroke={stroke} strokeWidth={2}
                   strokeDasharray={n.in_universe ? undefined : "3,3"} />
                 {isCenter ? (
-                  <SvgText x={p.x} y={p.y + 4} fontSize={11} textAnchor="middle" fill={colors.primaryText} fontWeight="700" fontFamily={FONT}>
+                  <SvgText x={p.x} y={p.y + 4} fontSize={11} textAnchor="middle" fill={colors.primaryText} fontWeight="800" fontFamily={FONT}>
                     {shortLabel(n.id, 9)}
                   </SvgText>
                 ) : (
@@ -130,39 +142,37 @@ export function SupplyChainGraph({ graph, runId }: { graph: DependencyGraph; run
       {selected ? (
         <View style={styles.mini}>
           <Text style={type.h3}>{selected.label}</Text>
-          <Text style={type.small}>
-            {selected.in_universe
-              ? "Dans l'univers d'actifs analysé."
-              : "Hors univers : affiché pour le contexte, sans indicateurs."}
-          </Text>
+          <Text style={type.small}>{selected.in_universe ? t.graph.inUniverse : t.graph.outUniverse}</Text>
           {relationsOf(selected.id).map((e) => (
             <Text key={`${e.source}-${e.target}`} style={type.body}>
-              {REL_ICON[e.relation]} {fr.relation[e.relation]} {e.claim_kind === "HYPOTHESE" ? "(hypothèse)" : ""}
+              {REL_ICON[e.relation]} {t.relation[e.relation]} {e.claim_kind === "HYPOTHESE" ? t.graph.hypothesis : ""}
             </Text>
           ))}
           {selected.in_universe && selected.id !== graph.center ? (
-            <Button label="Voir sa fiche" variant="secondary"
+            <Button label={t.graph.seeIts} variant="secondary"
               onPress={() => router.push({ pathname: "/piste/[ticker]", params: runId ? { ticker: selected.id, run: runId } : { ticker: selected.id } })} />
           ) : null}
-          <Button label="Fermer" variant="ghost" onPress={() => setSelected(null)} />
+          <Button label={t.common.close} variant="ghost" onPress={() => setSelected(null)} />
         </View>
       ) : (
-        <Text style={type.caption}>Touchez un lien pour voir sa preuve, ou une société pour sa mini-fiche.</Text>
+        <Text style={type.caption}>{t.graph.tapHint}</Text>
       )}
 
-      <View style={{ gap: space.sm }}>
-        <Text style={type.label}>Relations ({graph.edges.length})</Text>
+      <View style={{ gap: space.xs }}>
+        <Text style={type.label}>{t.graph.relations(graph.edges.length)}</Text>
         {graph.edges.map((e) => {
           const other = e.source === graph.center ? e.target : e.source;
           const node = graph.nodes.find((n) => n.id === other);
           return (
-            <Pressable key={`${e.source}-${e.target}-l`} onPress={() => onEdge(e)} style={styles.relRow} accessibilityRole="button">
-              <Text style={[styles.relIcon, { color: REL_COLOR[e.relation] }]}>{REL_ICON[e.relation]}</Text>
+            <Pressable key={`${e.source}-${e.target}-l`} onPress={() => onEdge(e)} style={({ pressed }) => [styles.relRow, pressed && { opacity: 0.75 }]} accessibilityRole="button">
+              <View style={[styles.relIconWrap, { backgroundColor: alpha(REL_COLOR[e.relation], 0.14) }]}>
+                <Text style={[styles.relIcon, { color: REL_COLOR[e.relation] }]}>{REL_ICON[e.relation]}</Text>
+              </View>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={type.body}>
-                  {fr.relation[e.relation]} : {node?.label ?? other}
+                  {t.relation[e.relation]} : {node?.label ?? other}
                 </Text>
-                {!node?.in_universe ? <Text style={type.caption}>Hors univers</Text> : null}
+                {!node?.in_universe ? <Text style={type.caption}>{t.graph.outUniverseShort}</Text> : null}
               </View>
               {e.claim_kind === "HYPOTHESE" ? <ClaimTag kind="HYPOTHESE" /> : null}
               {e.evidence_id ? <EvidenceChip id={e.evidence_id} runId={runId} /> : null}
@@ -175,25 +185,26 @@ export function SupplyChainGraph({ graph, runId }: { graph: DependencyGraph; run
 }
 
 function Legend() {
+  const t = useT();
   return (
-    <View style={styles.legend} accessibilityLabel="Légende du graphe">
+    <View style={styles.legend} accessibilityLabel={t.graph.legendA11y}>
       {(Object.keys(REL_COLOR) as Relation[]).map((r) => (
         <View key={r} style={styles.legendItem}>
           <View style={[styles.swatch, { backgroundColor: REL_COLOR[r] }]} />
-          <Text style={type.caption}>{REL_ICON[r]} {fr.relation[r]}</Text>
+          <Text style={type.caption}>{REL_ICON[r]} {t.relation[r]}</Text>
         </View>
       ))}
       <View style={styles.legendItem}>
         <View style={[styles.swatch, { backgroundColor: colors.text }]} />
-        <Text style={type.caption}>Trait plein : fait sourcé</Text>
+        <Text style={type.caption}>{t.graph.solid}</Text>
       </View>
       <View style={styles.legendItem}>
         <View style={styles.dashed} />
-        <Text style={type.caption}>Pointillé : hypothèse</Text>
+        <Text style={type.caption}>{t.graph.dashed}</Text>
       </View>
       <View style={styles.legendItem}>
         <View style={styles.greyNode} />
-        <Text style={type.caption}>Gris : hors univers</Text>
+        <Text style={type.caption}>{t.graph.grey}</Text>
       </View>
     </View>
   );
@@ -201,15 +212,19 @@ function Legend() {
 
 const styles = StyleSheet.create({
   canvas: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, overflow: "hidden" },
-  empty: { backgroundColor: colors.surfaceMuted, borderRadius: radius.md, padding: space.lg, gap: space.xs },
+  empty: { backgroundColor: colors.surface, borderRadius: radius.md, padding: space.lg, gap: space.xs, borderWidth: 1, borderColor: colors.border },
   legend: { flexDirection: "row", flexWrap: "wrap", gap: space.md },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   swatch: { width: 18, height: 3, borderRadius: 2 },
   dashed: { width: 18, height: 0, borderTopWidth: 2, borderStyle: "dashed", borderColor: colors.text },
-  greyNode: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: "#9AA5B4" },
-  mini: { backgroundColor: colors.surfaceMuted, borderRadius: radius.md, padding: space.md, gap: space.sm },
-  relRow: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: 44, paddingVertical: space.xs },
-  relIcon: { fontSize: 20, fontWeight: "700", width: 24, textAlign: "center" },
+  greyNode: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.surface, borderWidth: 1, borderColor: GREY },
+  mini: { backgroundColor: colors.surfaceRaised, borderRadius: radius.md, padding: space.md, gap: space.sm, borderWidth: 1, borderColor: colors.borderStrong },
+  relRow: {
+    flexDirection: "row", alignItems: "center", gap: space.md, minHeight: 52, paddingVertical: space.sm, paddingHorizontal: space.sm,
+    borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+  },
+  relIconWrap: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  relIcon: { fontSize: 16, fontWeight: "700", textAlign: "center" },
 });
 
 export default SupplyChainGraph;

@@ -8,99 +8,85 @@ import { useLocalSearchParams } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 import { getTrace } from "../../src/api/runs";
 import { EvidenceChip } from "../../src/components/EvidenceChip";
+import { Icon, type IconName } from "../../src/components/Icon";
 import { Card, ErrorState, Loading, Pill, Row, Screen, Section } from "../../src/components/ui";
-import { durationMs, fmtDate } from "../../src/format";
+import { durationMs, fmtDate, fmtSeconds } from "../../src/format";
+import { useT } from "../../src/i18n";
 import { useSettings } from "../../src/store/settings";
-import { colors, space } from "../../src/theme/tokens";
+import { alpha, colors, space } from "../../src/theme/tokens";
 import { type } from "../../src/theme/typography";
 import type { TraceStep } from "../../src/types/contracts";
 
-const KIND = {
-  code: { icon: "⚙", label: "Code déterministe" },
-  llm: { icon: "✎", label: "Agent (modèle de langage)" },
-  controle: { icon: "⛨", label: "Contrôle de gouvernance" },
-} as const;
-
-const STEP_LABEL: Record<string, string> = {
-  profil: "Pondération du profil",
-  recherche: "Recherche",
-  validation: "Validation financière",
-  dossiers_de_preuves: "Dossiers de preuves et contraintes du profil",
-  "controle.avant_debat": "Contrôle avant le débat",
-  "debate.bull.round1": "Débat, tour 1 — Bull",
-  "debate.realist.round1": "Débat, tour 1 — Réaliste",
-  "debate.bear.round1": "Débat, tour 1 — Bear",
-  "debate.bull.round3": "Débat, position finale — Bull",
-  "debate.realist.round3": "Débat, position finale — Réaliste",
-  "debate.bear.round3": "Débat, position finale — Bear",
-  debat: "Débat",
-  decision: "Moteur de décision",
-  "controle.plafonds_panier": "Contrôle des plafonds du panier simulé",
-  "controle.diversification": "Contrôle de diversification",
-  "controle.aucune_recommandation": "Contrôle « aucune recommandation »",
-  explication: "Explication",
-  "controle.avant_affichage": "Contrôle avant l'affichage",
-};
+const KIND_ICON: Record<TraceStep["kind"], IconName> = { code: "sliders", llm: "sparkles", controle: "check" };
 
 export default function ParcoursAnalyse() {
+  const t = useT();
   const { id } = useLocalSearchParams<{ id: string }>();
   const q = useQuery({ queryKey: ["trace", id], queryFn: () => getTrace(id!), enabled: !!id });
   if (q.isLoading) return <Loading />;
   if (q.error) return <Screen><ErrorState error={q.error} onRetry={() => q.refetch()} /></Screen>;
-  const t = q.data!;
-  const controls = t.steps.filter((s) => s.kind === "controle");
+  const tr = q.data!;
+  const controls = tr.steps.filter((s) => s.kind === "controle");
 
   return (
     <Screen>
-      <Text style={type.small}>Analyse {t.run_id} · profil {t.profile_id} · données au {fmtDate(t.as_of)}</Text>
-      <Text style={type.body}>
-        Les étapes réellement exécutées, dans l'ordre. Les chiffres viennent des étapes ⚙ (code) ; les agents ✎ argumentent et rédigent à partir
-        des preuves, sans produire de chiffre.
-      </Text>
+      <Text style={type.caption}>{t.trail.header(tr.run_id, tr.profile_id, fmtDate(tr.as_of))}</Text>
+      <Text style={[type.body, { color: colors.textMuted }]}>{t.trail.intro}</Text>
 
-      <Section title="Contrôles de gouvernance">
-        <Card>
-          {controls.map((s) => (
-            <View key={s.step} style={styles.control}>
-              <Text style={[type.label, s.status === "echec" && { color: colors.bad }]}>
-                {s.status === "ok" ? "✓" : "✕"} {STEP_LABEL[s.step] ?? s.step}
-              </Text>
-              {s.note ? <Text style={type.body}>{s.note}</Text> : null}
-            </View>
-          ))}
+      <Section title={t.trail.controls}>
+        <Card style={{ gap: space.md }}>
+          {controls.map((s) => {
+            const ok = s.status === "ok";
+            return (
+              <View key={s.step} style={styles.control}>
+                <View style={[styles.dot, { backgroundColor: ok ? colors.goodBg : colors.badBg }]}>
+                  <Icon name={ok ? "check" : "x"} size={14} color={ok ? colors.good : colors.bad} strokeWidth={3} />
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={[type.label, !ok && { color: colors.bad }]}>{t.trail.steps[s.step] ?? s.step}</Text>
+                  {s.note ? <Text style={type.small}>{s.note}</Text> : null}
+                </View>
+              </View>
+            );
+          })}
         </Card>
       </Section>
 
-      <Section title="Étapes">
-        {t.steps.filter((s) => s.kind !== "controle").map((s) => <StepRow key={s.step} s={s} runId={t.run_id} />)}
+      <Section title={t.trail.stepsTitle}>
+        {tr.steps.filter((s) => s.kind !== "controle").map((s) => <StepRow key={s.step} s={s} runId={tr.run_id} />)}
       </Section>
     </Screen>
   );
 }
 
 function StepRow({ s, runId }: { s: TraceStep; runId: string }) {
+  const t = useT();
   const advanced = useSettings((st) => st.mode === "avance");
-  const k = KIND[s.kind];
   const ms = durationMs(s.started_at, s.ended_at);
+  const st = s.status === "ok"
+    ? { icon: "check" as const, text: t.trail.done, fg: colors.good, bg: colors.goodBg }
+    : s.status === "echec"
+      ? { icon: "x" as const, text: t.trail.failed, fg: colors.bad, bg: colors.badBg }
+      : { icon: "minus" as const, text: t.trail.na, fg: colors.neutral, bg: colors.neutralBg };
   return (
     <Card>
-      <Row style={{ justifyContent: "space-between" }}>
-        <Text style={type.h3}>{k.icon} {STEP_LABEL[s.step] ?? s.step}</Text>
-        <Pill
-          icon={s.status === "ok" ? "✓" : s.status === "echec" ? "✕" : "–"}
-          text={s.status === "ok" ? "Terminé" : s.status === "echec" ? "Échec" : "Sans objet"}
-          fg={s.status === "ok" ? colors.good : s.status === "echec" ? colors.bad : colors.neutral}
-          bg={s.status === "ok" ? colors.goodBg : s.status === "echec" ? colors.badBg : colors.neutralBg}
-        />
+      <Row style={{ justifyContent: "space-between", flexWrap: "nowrap" }}>
+        <Row style={{ flex: 1, flexWrap: "nowrap" }}>
+          <View style={styles.kind}>
+            <Icon name={KIND_ICON[s.kind]} size={16} color={s.kind === "llm" ? colors.hypothesis : colors.mint} />
+          </View>
+          <Text style={[type.h3, { flex: 1 }]}>{t.trail.steps[s.step] ?? s.step}</Text>
+        </Row>
+        <Pill icon={st.icon} text={st.text} fg={st.fg} bg={st.bg} />
       </Row>
-      <Text style={type.small}>{k.label} · {(ms / 1000).toLocaleString("fr-CA", { maximumFractionDigits: 1 })} s</Text>
-      {s.model_id ? <Text style={type.small}>Modèle : {s.model_id}{s.prompt_version ? ` · prompt ${s.prompt_version}` : ""}</Text> : null}
-      {s.version ? <Text style={type.small}>Version : {s.version}</Text> : null}
-      {s.tools_called && s.tools_called.length > 0 ? <Text style={type.small}>Outils appelés : {s.tools_called.join(", ")}</Text> : null}
+      <Text style={type.small}>{t.trail.kind[s.kind]} · {fmtSeconds(ms)} s</Text>
+      {s.model_id ? <Text style={type.small}>{t.trail.model(s.model_id, s.prompt_version)}</Text> : null}
+      {s.version ? <Text style={type.small}>{t.trail.version(s.version)}</Text> : null}
+      {s.tools_called && s.tools_called.length > 0 ? <Text style={type.small}>{t.trail.tools(s.tools_called.join(", "))}</Text> : null}
       {s.note ? <Text style={type.body}>{s.note}</Text> : null}
       {advanced && s.outputs && s.outputs.length > 0 ? (
         <Row>
-          <Text style={type.small}>Preuves produites :</Text>
+          <Text style={type.small}>{t.trail.outputs}</Text>
           {s.outputs.map((o) => <EvidenceChip key={o} id={o} runId={runId} label={o} />)}
         </Row>
       ) : null}
@@ -109,5 +95,10 @@ function StepRow({ s, runId }: { s: TraceStep; runId: string }) {
 }
 
 const styles = StyleSheet.create({
-  control: { gap: 2, paddingVertical: space.xs },
+  control: { flexDirection: "row", alignItems: "flex-start", gap: space.md },
+  dot: { width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center" },
+  kind: {
+    width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center",
+    backgroundColor: colors.surfaceRaised, borderWidth: 1, borderColor: alpha(colors.mint, 0.12),
+  },
 });
