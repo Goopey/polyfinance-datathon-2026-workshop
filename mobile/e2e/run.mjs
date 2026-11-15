@@ -179,7 +179,8 @@ async function main() {
   await step("Pistes à explorer");
   await click("Écartées et pourquoi");
   await visible("Écartées par une règle de votre profil");
-  await step("Écartées et pourquoi");
+  if (MODE === "api") await visible("risque au-delà de votre tolérance au risque");
+  await step("Écartées et pourquoi : règles du profil et tolérance au risque chiffrée");
 
   await page.click('[aria-label^="Ouvrir la fiche de"]');
   await visible("Pourquoi cette piste");
@@ -255,6 +256,19 @@ async function main() {
   await step("Analyse du profil créé");
 
   if (MODE === "api") {
+    // Réponses contradictoires : la lecture la plus prudente est appliquée et dite à l'utilisateur.
+    await go("/profil");
+    await click("Changer de profil");
+    await click("Créer mon propre profil");
+    await click("Préserver le capital"); await click("Suivant");
+    await click("Moins de 5 ans"); await click("Suivant");
+    await click("Ça fait partie du jeu"); await click("Suivant");
+    await click("Suivant");
+    await click("Voir mon profil");
+    await visible("Vos réponses se contredisent");
+    await visible("préserver le capital : tolérance au risque retenue « faible »");
+    await step("Questionnaire contradictoire : tolérance prudente appliquée et expliquée");
+
     await go("/profil");
     await click("Changer de profil");
     await click("Mateo, 41 ans");

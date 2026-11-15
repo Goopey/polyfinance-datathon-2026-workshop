@@ -24,8 +24,10 @@ from typing import Any, Iterable, Mapping, Optional
 from easytrade.agents.debate.protocol import evidence_payload, profile_payload
 from easytrade.agents.llm_client import TIER_STRONG, CallInfo, LLMClient, load_prompt, structured_call
 from easytrade.agents.profile_weighting import WeightingResult
+from easytrade.engine.constraints import RISK_FLAG
 from easytrade.engine.decision import MISSING_LABELS
 from easytrade.engine.scoring import fit_level
+from easytrade.engine.signals import horizon_label, horizon_metric
 from easytrade.explain.evidence_ledger import EvidenceLedger
 from easytrade.explain.fidelity import (
     ClaimCheck,
@@ -61,8 +63,8 @@ PAST_ONLY = "Les indicateurs décrivent le passé sur la période disponible : i
 FALLBACK_TEMPLATES = {
     "croissance": "Rendement annualisé observé de {id} sur la période disponible.",
     "stabilite": "Volatilité annualisée observée de {id} sur la période disponible.",
-    "horizon": "Pire période glissante de 3 ans observée sur la période : {id}.",
-    "diversification": "Secteur peu représenté dans l'univers analysé, ce qui sert de repère pour la diversification.",
+    "horizon": "Pire période glissante de {window} observée sur la période : {id}.",
+    "diversification": "Corrélation moyenne de {id} avec les autres actifs analysés, un repère pour la diversification.",
     "preferences": "Se rattache à un thème d'intérêt déclaré dans votre profil.",
 }
 
@@ -80,9 +82,11 @@ def _top_criteria(candidate: ScoredCandidate, weighting: WeightingResult) -> lis
     sourced = [c for c in candidate.criteria if not c.missing and c.evidence_id]
     sourced.sort(key=lambda c: (-c.contribution, c.criterion))
     scored = [c for c in sourced if c.score >= STRENGTH_SCORE] or sourced[:1]
+    window = horizon_label(horizon_metric(weighting.profile.horizon_annees.min))
     return [
         {"criterion": c.criterion, "label": CRITERION_LABELS[c.criterion], "evidence_id": c.evidence_id,
-         "weight_evidence_id": weighting.weight_evidence.get(c.criterion)}
+         "weight_evidence_id": weighting.weight_evidence.get(c.criterion),
+         **({"window": window} if c.criterion == "horizon" else {})}
         for c in scored[:MAX_WHY]
     ]
 
@@ -93,7 +97,7 @@ def _fallback_why(candidate: ScoredCandidate, weighting: WeightingResult, ledger
         template = FALLBACK_TEMPLATES.get(top["criterion"])
         if not template:
             continue
-        text = template.replace("{id}", "{" + top["evidence_id"] + "}")
+        text = template.replace("{id}", "{" + top["evidence_id"] + "}").replace("{window}", top.get("window", ""))
         check = check_claim(Claim(text=text, evidence_ids=(top["evidence_id"],)), ledger, ledger.as_of,
                             forbidden, ignore=ignore)
         if check.ok:
@@ -125,6 +129,8 @@ def _item(candidate: ScoredCandidate, why: tuple[Claim, ...], decision: Decision
     risks = [a.text for a in (bear.arguments if bear else ())]
     if "spéculatif signalé" in candidate.flags:
         risks.append("Actif signalé comme hautement spéculatif par une règle de votre profil.")
+    if RISK_FLAG in candidate.flags:
+        risks.append("Dépasse un repère de risque de votre profil : adéquation plafonnée à « partielle ».")
     limits: list[str] = []
     for claim in why:
         for evidence_id in claim.evidence_ids:

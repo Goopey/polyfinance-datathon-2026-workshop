@@ -8,6 +8,7 @@ import Svg, { Circle } from "react-native-svg";
 import { fmtNum } from "../format";
 import { alpha, colors } from "../theme/tokens";
 import { fontFamily } from "../theme/typography";
+import { settle } from "./ui";
 
 export function ScoreRing({ score, size = 72, color = colors.mint, label }: { score: number; size?: number; color?: string; label?: string }) {
   const pct = Math.max(0, Math.min(100, score));
@@ -19,7 +20,8 @@ export function ScoreRing({ score, size = 72, color = colors.mint, label }: { sc
   const [shown, setShown] = useState(0);
   useEffect(() => {
     const id = v.addListener(({ value }) => setShown(value));
-    Animated.timing(v, { toValue: pct, duration: 700, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
+    settle(Animated.timing(v, { toValue: pct, duration: 700, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
+      v, pct);
     return () => v.removeListener(id);
   }, [v, pct]);
   return (

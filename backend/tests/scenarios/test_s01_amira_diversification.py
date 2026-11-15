@@ -48,17 +48,26 @@ def test_s01_3_au_moins_trois_secteurs_hors_technologies(run):
 
 
 @pytest.mark.scenario("S1")
-def test_s01_4_et_5_un_candidat_declasse_pour_concentration_motif_rattache_au_profil(run):
+def test_s01_4_et_5_plafond_de_concentration_tenu_et_rattache_au_profil(run):
+    """Le plafond par secteur borne le thème favori d'Amira (technologies) : soit il est atteint, soit un
+    candidat est déclassé pour concentration ; dans les deux cas, la règle vient de son souhait de diversification.
+    (Depuis la diversification mesurée par la corrélation, la liste se diversifie d'elle-même avant que le
+    plafond n'ait à déclasser un titre : le contrôle est alors « atteint », pas « déclenché ».)"""
+    constraints = run.weighting.profile_weights.constraints
+    size = len(run.decision.retained)
+    cap = int(constraints.max_weight_per_sector * size + 1e-9)
+    tech = [i for i in run.explanation.items if concentration_group(i.sector) == TECHNOLOGY_GROUP]
     displaced = [r for r in run.explanation.rejected if r.kind == "classement"]
-    assert displaced, "aucun candidat déclassé pour concentration"
-    item = displaced[0]
-    assert "concentration" in item.reason
-    assert item.ticker not in {i.ticker for i in run.explanation.items}
-    # Le motif cite la règle (hypothèse chiffrée) et la phrase du profil à l'origine de la règle.
-    statements = [run.ledger.get(i).statement for i in item.evidence_ids]
-    assert any("Part maximale par secteur" in s for s in statements)
-    assert any("Préférence déclarée" in s and "diversification" in s for s in statements), statements
-    # La justification de l'agent de pondération relie bien le plafond au souhait de diversification.
+    assert tech, "aucune piste technologique : le profil offensif n'est pas respecté"
+    assert len(tech) <= cap
+    assert displaced or len(tech) == cap, (len(tech), cap)
+    for item in displaced:
+        assert "concentration" in item.reason and item.ticker not in {i.ticker for i in run.explanation.items}
+        statements = [run.ledger.get(i).statement for i in item.evidence_ids]
+        assert any("Part maximale par secteur" in s or "Part maximale en cryptoactifs" in s for s in statements)
+    # La règle (hypothèse chiffrée) est rattachée par l'agent de pondération au souhait de diversification.
+    rule = run.ledger.get(run.weighting.constraint_evidence["max_weight_per_sector"])
+    assert rule.statement.startswith("Part maximale par secteur")
     origin = run.weighting.rationale_evidence("hard_constraints.max_weight_per_sector")
     assert origin and "diversification" in run.ledger.get(origin[0]).statement
 

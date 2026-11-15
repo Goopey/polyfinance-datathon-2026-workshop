@@ -221,11 +221,14 @@ class _Builder:
                      "adj_close ; rendement cumulé entre le dernier prix de l'année précédente et celui de l'année")
         before_base = series.index[series.index <= base]
         in_period = series.loc[before_base[-1]:year_end] if len(before_base) else series.iloc[0:0]
-        if value is None or len(in_period) < 2:
+        year_complete = self.as_of >= pd.Timestamp(CALENDAR_YEAR, 12, 31)
+        if value is None or len(in_period) < 2 or not year_complete:
+            # Année en cours à la date d'analyse : un cumul partiel n'est pas « le rendement de l'année ».
             results.append(MetricResult(
                 as_of=self.as_of.date(), ticker=ticker, metric=spec.name, window=str(CALENDAR_YEAR), value=None, unit="%",
                 currency="CAD" if self.currency == "CAD" else asset_currency, observations=0,
-                note=f"Aucune donnée couvrant l'année {CALENDAR_YEAR}",
+                note=(f"Aucune donnée couvrant l'année {CALENDAR_YEAR}" if year_complete
+                      else f"Année {CALENDAR_YEAR} incomplète à la date d'analyse"),
             ))
         else:
             results.append(self._record(

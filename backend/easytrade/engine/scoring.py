@@ -3,7 +3,8 @@
 Conception : docs/03_DECISION_ENGINE.md (sections « Score d'adéquation » et « Critères »)
     score(a) = Σ_k  w_k · s_k(a)      avec Σ w_k = 1 et s_k(a) ∈ [0, 1]
 - s_k est le rang centile du signal dans l'univers à la date `as_of` : il évite de comparer des
-  unités différentes et reste borné.
+  unités différentes et reste borné. Exception : le critère `esg`, catégoriel, est noté en absolu
+  (`ABSOLUTE_CRITERIA`, engine/esg.py).
 - Un signal manquant n'est jamais un bon score : s_k = 0 et le critère est marqué « manquant »
   (il abaisse aussi la confiance, voir decision.py).
 - La contribution w_k · s_k est conservée critère par critère pour l'explication.
@@ -15,8 +16,13 @@ import math
 from typing import Optional
 
 from easytrade.schemas.candidate import Asset, CriterionScore, ScoredCandidate
+from easytrade.engine.constraints import RISK_FLAG
 from easytrade.engine.signals import applicable
 from easytrade.schemas.weights import CRITERIA
+
+# Critères catégoriels notés en absolu (engine/esg.py) : sur deux catégories (préoccupation documentée = 0,
+# filtre ESG documenté = 1), un rang centile placerait la préoccupation documentée au-dessus d'un inconnu.
+ABSOLUTE_CRITERIA = frozenset({"esg"})
 
 
 def _is_number(value: object) -> bool:
@@ -59,7 +65,9 @@ def fit_level(candidate: ScoredCandidate) -> str:
     if covered <= 0:
         return "faible"
     relative = candidate.fit_score * applicable_weight / covered  # fit_score est déjà rapporté aux critères applicables
-    if relative >= FIT_HIGH:
+    # Un actif qui dépasse un repère de risque du profil (sans être écarté) ne peut pas être « élevée ».
+    beyond_risk = RISK_FLAG in candidate.flags
+    if relative >= FIT_HIGH and not beyond_risk:
         return "élevée"
     return "partielle" if relative >= FIT_PARTIAL else "faible"
 
@@ -79,11 +87,16 @@ def score_candidates(
     flags = flags or {}
     tickers = [asset.ticker for asset in eligible]
 
-    # Rang centile par critère, calculé sur les actifs admissibles.
+    # Rang centile par critère, calculé sur les actifs admissibles ; score absolu pour les critères
+    # catégoriels (`ABSOLUTE_CRITERIA`), dont le signal est déjà un score dans [0, 1].
     ranks: dict[str, dict[str, Optional[float]]] = {}
     for criterion in CRITERIA:
         per_ticker = {t: signals.get(t, {}).get(criterion) for t in tickers}
-        ranks[criterion] = percentile_rank(per_ticker)
+        if criterion in ABSOLUTE_CRITERIA:
+            ranks[criterion] = {t: (min(1.0, max(0.0, float(v))) if _is_number(v) else None)
+                                for t, v in per_ticker.items()}
+        else:
+            ranks[criterion] = percentile_rank(per_ticker)
 
     scored: list[ScoredCandidate] = []
     for asset in eligible:

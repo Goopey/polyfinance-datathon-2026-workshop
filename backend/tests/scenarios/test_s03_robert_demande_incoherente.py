@@ -51,7 +51,9 @@ def test_s03_2_verdict_et_tensions_chiffrees(run):
 def test_s03_2_horizon_de_3_a_5_ans(pipeline_run):
     run = pipeline_run("robert", "TSLA")
     coherence = run.explanation.coherence
-    assert any("3 ans" in claim.text for claim in coherence.tensions), [c.text for c in coherence.tensions]
+    # Horizon de moins de 5 ans : le critère horizon regarde la pire année glissante (engine.signals).
+    assert any("Pire période glissante sur 1 an" in claim.text for claim in coherence.tensions), [
+        c.text for c in coherence.tensions]
     # La mise en contexte rattache le risque à l'horizon déclaré du profil.
     horizon = run.weighting.fact("horizon")
     assert "3 à 5 ans" in horizon.text

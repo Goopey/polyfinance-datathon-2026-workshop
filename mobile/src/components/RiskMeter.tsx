@@ -8,7 +8,7 @@
  * Couleur doublée d'un libellé (« au-delà / sous votre seuil »), jamais seule.
  */
 import { useEffect, useRef } from "react";
-import { Animated, Easing, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, Platform, StyleSheet, Text, View } from "react-native";
 import { fmtPct } from "../format";
 import { useT } from "../i18n";
 import { useTx } from "../i18n/data";
@@ -19,6 +19,7 @@ import type { AssetMetric } from "../types/contracts";
 import { EvidenceChip } from "./EvidenceChip";
 import { GlossaryTerm } from "./GlossaryTerm";
 import { Icon } from "./Icon";
+import { settle, webGrow } from "./ui";
 
 const GLOSSARY: Record<string, string> = {
   volatilite: "volatilite", perte_max: "perte_max", pire_periode: "pire_periode", rendement_annualise: "rendement_annualise",
@@ -43,12 +44,16 @@ export function RiskMeter({ m, runId }: { m: AssetMetric; runId?: string | null 
     ? (m.value >= 0 ? colors.good : colors.bad)
     : limit !== null ? (over ? colors.bad : colors.good) : m.metric === "perte_max" ? colors.warn : colors.info;
 
-  // Barre qui se remplit à l'affichage.
-  const grow = useRef(new Animated.Value(0)).current;
+  // Barre qui se remplit à l'affichage. Sa longueur finale est toujours exacte : sur le web, largeur
+  // statique et images clés CSS ; sur téléphone, `settle` garantit la valeur finale.
+  const target = `${signed ? mag / 2 : mag}%`;
+  const grow = useRef(new Animated.Value(Platform.OS === "web" ? 1 : 0)).current;
   useEffect(() => {
-    Animated.timing(grow, { toValue: 1, duration: 650, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
+    if (Platform.OS === "web") return;
+    settle(Animated.timing(grow, { toValue: 1, duration: 650, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
+      grow, 1);
   }, [grow]);
-  const width = grow.interpolate({ inputRange: [0, 1], outputRange: ["0%", `${signed ? mag / 2 : mag}%`] });
+  const width = Platform.OS === "web" ? target : grow.interpolate({ inputRange: [0, 1], outputRange: ["0%", target] });
 
   return (
     <View style={styles.wrap} accessible accessibilityLabel={t.riskMeter.a11y(label, fmtPct(m.value), tx(m.window))}>
@@ -67,6 +72,7 @@ export function RiskMeter({ m, runId }: { m: AssetMetric; runId?: string | null 
             styles.fill,
             { width, backgroundColor: tone },
             signed ? (m.value >= 0 ? { left: "50%" } : { right: "50%" }) : { left: 0 },
+            Platform.OS === "web" ? webGrow(target) : null,
           ]}
         />
         {limit !== null ? (

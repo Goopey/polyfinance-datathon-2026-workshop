@@ -16,7 +16,45 @@ import { Glow } from "./Glow";
 import { Icon, type IconName } from "./Icon";
 
 const NATIVE = Platform.OS !== "web";
+const WEB = Platform.OS === "web";
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+/*
+ * Animations sur le web : CSS (images clés et transitions), jamais `Animated` lié à un style. Avec
+ * react-native-web, une vue animée re-rendue pendant l'animation garde la valeur du moment du re-rendu :
+ * une carte restait à 92 % d'opacité, et une barre de risque aurait pu se figer à mi-longueur. Les
+ * animations CSS sont exécutées par le navigateur et finissent toujours à leur valeur. Sur téléphone,
+ * `Animated` avec le pilote natif reste utilisé.
+ */
+const EASE = "cubic-bezier(0.2, 0.7, 0.2, 1)";
+
+/** Style web : entrée en fondu et léger glissement, après `delayMs`. */
+export function webEnter(delayMs = 0, durationMs = 320): ViewStyle {
+  return {
+    animationKeyframes: [{ "0%": { opacity: 0, transform: [{ translateY: 10 }] }, "100%": { opacity: 1, transform: [{ translateY: 0 }] } }],
+    animationDuration: `${durationMs}ms`,
+    animationDelay: `${delayMs}ms`,
+    animationTimingFunction: EASE,
+    animationFillMode: "both",
+  } as unknown as ViewStyle;
+}
+
+/** Style web : une barre qui pousse de 0 jusqu'à sa largeur finale (la largeur statique reste la référence). */
+export function webGrow(width: string, durationMs = 650): ViewStyle {
+  return {
+    animationKeyframes: [{ "0%": { width: "0%" }, "100%": { width } }],
+    animationDuration: `${durationMs}ms`,
+    animationTimingFunction: EASE,
+    animationFillMode: "both",
+  } as unknown as ViewStyle;
+}
+
+/** Style web : transition douce des propriétés qui changent au toucher ou au survol. */
+export const webTransition = {
+  transitionProperty: "transform, opacity, background-color, border-color, box-shadow, width",
+  transitionDuration: "180ms",
+  transitionTimingFunction: EASE,
+} as unknown as ViewStyle;
 
 type TapState = { pressed: boolean; hovered: boolean };
 type TapProps = Omit<PressableProps, "style" | "children"> & {
@@ -33,9 +71,30 @@ type TapProps = Omit<PressableProps, "style" | "children"> & {
 export function Tap({ style, children, scaleTo = 0.96, onPressIn, onPressOut, onHoverIn, onHoverOut, disabled, ...rest }: TapProps) {
   const scale = useRef(new Animated.Value(1)).current;
   const [state, setState] = useState<TapState>({ pressed: false, hovered: false });
-  const spring = (to: number) =>
-    Animated.spring(scale, { toValue: to, useNativeDriver: NATIVE, speed: 40, bounciness: to === 1 ? 10 : 0 }).start();
+  const spring = (to: number) => {
+    if (!WEB) {
+      settle(Animated.spring(scale, { toValue: to, useNativeDriver: NATIVE, speed: 40, bounciness: to === 1 ? 10 : 0 }),
+        scale, to);
+    }
+  };
   const resolved = typeof style === "function" ? style(state) : style;
+  if (WEB) {
+    // Web : enfoncement et survol par style + transition CSS (voir l'en-tête de ce fichier).
+    return (
+      <Pressable
+        {...rest}
+        disabled={disabled}
+        onPressIn={(e) => { setState((s) => ({ ...s, pressed: true })); onPressIn?.(e); }}
+        onPressOut={(e) => { setState((s) => ({ ...s, pressed: false })); onPressOut?.(e); }}
+        onHoverIn={(e) => { setState((s) => ({ ...s, hovered: true })); onHoverIn?.(e); }}
+        onHoverOut={(e) => { setState((s) => ({ ...s, hovered: false })); onHoverOut?.(e); }}
+        style={[resolved, webTransition, state.hovered && !disabled && styles.hover,
+          { transform: [{ scale: state.pressed && !disabled ? scaleTo : 1 }] }]}
+      >
+        {children}
+      </Pressable>
+    );
+  }
   return (
     <AnimatedPressable
       {...rest}
@@ -51,14 +110,28 @@ export function Tap({ style, children, scaleTo = 0.96, onPressIn, onPressOut, on
   );
 }
 
+/**
+ * Lance une animation vers sa valeur finale et garantit cette valeur même si l'animation est interrompue.
+ * Sur le web (react-native-web), une animation en cours peut être arrêtée quand la vue animée est re-rendue
+ * (ex. rafraîchissement d'une requête) : sans ce garde-fou, une barre ou une carte resterait figée à mi-chemin.
+ */
+export function settle(animation: Animated.CompositeAnimation, value: Animated.Value, final: number): void {
+  animation.start(({ finished }) => {
+    if (!finished) value.setValue(final);
+  });
+}
+
 /** Apparition en fondu et léger glissement ; `index` décale l'entrée des éléments d'une liste. */
 export function FadeIn({ children, index = 0, style }: { children: ReactNode; index?: number; style?: StyleProp<ViewStyle> }) {
-  const v = useRef(new Animated.Value(0)).current;
+  const delay = Math.min(index, 8) * 55;
+  const v = useRef(new Animated.Value(WEB ? 1 : 0)).current;
   useEffect(() => {
-    Animated.timing(v, {
-      toValue: 1, duration: 320, delay: Math.min(index, 8) * 55, easing: Easing.out(Easing.cubic), useNativeDriver: NATIVE,
-    }).start();
-  }, [v, index]);
+    if (WEB) return;
+    settle(Animated.timing(v, {
+      toValue: 1, duration: 320, delay, easing: Easing.out(Easing.cubic), useNativeDriver: NATIVE,
+    }), v, 1);
+  }, [v, delay]);
+  if (WEB) return <View style={[style, webEnter(delay)]}>{children}</View>;
   const translateY = v.interpolate({ inputRange: [0, 1], outputRange: [10, 0] });
   return <Animated.View style={[style, { opacity: v, transform: [{ translateY }] }]}>{children}</Animated.View>;
 }
@@ -70,10 +143,10 @@ export function Collapsible({ title, summary, children, initiallyOpen = false, i
   const [open, setOpen] = useState(initiallyOpen);
   const rot = useRef(new Animated.Value(initiallyOpen ? 1 : 0)).current;
   const toggle = () => {
-    Animated.timing(rot, { toValue: open ? 0 : 1, duration: 200, useNativeDriver: NATIVE }).start();
+    if (!WEB) settle(Animated.timing(rot, { toValue: open ? 0 : 1, duration: 200, useNativeDriver: NATIVE }), rot, open ? 0 : 1);
     setOpen(!open);
   };
-  const rotate = rot.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "180deg"] });
+  const rotate = WEB ? (open ? "180deg" : "0deg") : rot.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "180deg"] });
   return (
     <View style={styles.collapse}>
       <Tap onPress={toggle} scaleTo={0.985} accessibilityRole="button" accessibilityState={{ expanded: open }}
@@ -87,9 +160,15 @@ export function Collapsible({ title, summary, children, initiallyOpen = false, i
           <Text style={type.h3} accessibilityRole="header">{title}</Text>
           {summary ? <Text style={type.small} numberOfLines={open ? undefined : 1}>{summary}</Text> : null}
         </View>
-        <Animated.View style={{ transform: [{ rotate }] }}>
-          <Icon name="chevronDown" size={20} color={colors.mint} />
-        </Animated.View>
+        {WEB ? (
+          <View style={[{ transform: [{ rotate: rotate as string }] }, webTransition]}>
+            <Icon name="chevronDown" size={20} color={colors.mint} />
+          </View>
+        ) : (
+          <Animated.View style={{ transform: [{ rotate }] }}>
+            <Icon name="chevronDown" size={20} color={colors.mint} />
+          </Animated.View>
+        )}
       </Tap>
       {open ? <FadeIn style={styles.collapseBody}>{children}</FadeIn> : null}
     </View>

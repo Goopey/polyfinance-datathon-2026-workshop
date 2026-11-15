@@ -23,7 +23,15 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Iterable, Optional
 
 from easytrade.agents.debate import bear, bull, realist
-from easytrade.agents.llm_client import TIER_FAST, CallInfo, LLMClient, load_prompt, structured_call
+from easytrade.agents.llm_client import (
+    MAX_ATTEMPTS,
+    TIER_FAST,
+    CallInfo,
+    LLMClient,
+    LLMOutputError,
+    load_prompt,
+    structured_call,
+)
 from easytrade.agents.profile_weighting import WeightingResult
 from easytrade.explain.evidence_ledger import EvidenceLedger
 from easytrade.explain.fidelity import check_claim, text_is_supported
@@ -33,6 +41,7 @@ from easytrade.schemas.debate import AGENTS, Claim, DebateRecord, DebateTurn, De
 MODULES = {"bull": bull, "realist": realist, "bear": bear}
 MAX_ARGUMENTS = 4
 MAX_OPEN_QUESTIONS = 3
+UNANSWERED = "Position non exprimée : la réponse de l'agent était invalide après une relance."
 
 
 def step_name(agent: str, round_number: int) -> str:
@@ -134,10 +143,18 @@ def run_debate(
     def call(agent: str, round_number: int, extra: Optional[dict] = None) -> tuple[DebateTurn, CallInfo]:
         module = MODULES[agent]
         payload = {**base, "agent": agent, "mandate": module.MANDATE, "round": round_number, **(extra or {})}
-        draft, info = structured_call(
-            client, step=step_name(agent, round_number), prompt=load_prompt(module.PROMPT), payload=payload,
-            schema=DebateTurnDraft, tier=TIER_FAST,
-        )
+        step = step_name(agent, round_number)
+        prompt = load_prompt(module.PROMPT)
+        try:
+            draft, info = structured_call(client, step=step, prompt=prompt, payload=payload,
+                                          schema=DebateTurnDraft, tier=TIER_FAST)
+        except LLMOutputError:
+            # Une sortie invalide (même après relance) ne fait pas échouer l'analyse entière : la position
+            # de cet agent est « non exprimée », sans argument, et la confiance de la piste baisse.
+            turn = DebateTurn(ticker=pack.ticker, agent=agent, round=round_number, stance="appui_reserve",
+                              confidence="faible", arguments=(), open_questions=(UNANSWERED,))
+            return turn, CallInfo(step=step, model_id=client.model_id(TIER_FAST), prompt_version=prompt.tag,
+                                  attempts=MAX_ATTEMPTS)
         turn = clean_turn(draft, ticker=pack.ticker, agent=agent, round_number=round_number, pack=pack,
                           ledger=ledger, forbidden=forbidden, ignore=ignore)
         return turn, info
@@ -155,4 +172,10 @@ def run_debate(
     summaries = {turn.agent: _summary(turn) for turn in round1}
     extras = {agent: {"own_round1": summaries[agent], "round1": summaries} for agent in AGENTS}
     final = run_round(3, extras)
+    # Une réponse invalide isolée est tolérée (position « non exprimée ») ; si la majorité des tours de
+    # ce candidat est invalide, le débat n'a rien produit d'exploitable : erreur, comme avant.
+    turns = (*round1, *final)
+    unanswered = sum(1 for turn in turns if UNANSWERED in turn.open_questions)
+    if unanswered * 2 > len(turns):
+        raise LLMOutputError(f"Débat de {pack.ticker} : {unanswered} réponses invalides sur {len(turns)}.")
     return DebateRecord(ticker=pack.ticker, round1=tuple(round1), final=tuple(final)), infos

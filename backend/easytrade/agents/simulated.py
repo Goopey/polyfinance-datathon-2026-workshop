@@ -128,11 +128,15 @@ def _facts(payload: Mapping[str, Any]) -> dict[str, Any]:
         "ret": "annualized_return:full", "vol": "annualized_volatility:full", "dd": "max_drawdown:full",
         "w1": "worst_rolling_1y:full", "w3": "worst_rolling_3y:full", "y2022": "return_2022:2022",
         "lim_vol": "repere:volatilite", "lim_dd": "repere:perte_max", "pref": "signal:preferences",
+        "cash": "macro:taux_directeur_moyen",
     }.items()}
     vol, lim_vol = facts["vol"][1], facts["lim_vol"][1]
     dd, lim_dd = facts["dd"][1], facts["lim_dd"][1]
     facts["over_vol"] = vol is not None and lim_vol is not None and vol > lim_vol
     facts["over_dd"] = dd is not None and lim_dd is not None and dd < lim_dd
+    ret, cash = facts["ret"][1], facts["cash"][1]
+    # Rendement inférieur au placement sans risque (taux directeur moyen sur la même période).
+    facts["below_cash"] = ret is not None and cash is not None and ret <= cash
     facts["types"] = {e["type"] for e in payload["evidence"]}
     return facts
 
@@ -156,8 +160,18 @@ def debate_bull(payload: Mapping[str, Any]) -> dict:
     f = _facts(payload)
     arguments: list[dict] = []
     ret_id, ret = f["ret"]
-    if ret is not None and ret > 0:
-        arguments.append(_argument(f"Rendement annualisé observé de {_ref(ret_id)} sur toute la période disponible.", ret_id))
+    cash_id = f["cash"][0]
+    if ret is not None and ret > 0 and not f["below_cash"]:
+        if cash_id:
+            arguments.append(_argument(
+                f"Rendement annualisé observé de {_ref(ret_id)} sur toute la période disponible, au-dessus du "
+                f"taux directeur moyen de la Banque du Canada ({_ref(cash_id)}) sur la période.", ret_id, cash_id))
+        else:
+            arguments.append(_argument(f"Rendement annualisé observé de {_ref(ret_id)} sur toute la période disponible.", ret_id))
+    elif ret is not None and ret > 0 and cash_id:
+        arguments.append(_argument(
+            f"Rendement annualisé observé de {_ref(ret_id)}, positif mais sous le taux directeur moyen de la "
+            f"Banque du Canada ({_ref(cash_id)}) sur la même période.", ret_id, cash_id))
     w3_id, w3 = f["w3"]
     if w3 is not None and w3 > 0:
         arguments.append(_argument(
@@ -170,7 +184,8 @@ def debate_bull(payload: Mapping[str, Any]) -> dict:
         arguments.append(_argument(
             f"Volatilité annualisée de {_ref(vol_id)}, sous le repère de {_ref(f['lim_vol'][0])} retenu pour ce profil.",
             vol_id, f["lim_vol"][0]))
-    stance = "appui" if ret is not None and ret > 0 else "appui_reserve"
+    # Le Bull plaide pour l'actif, mais n'appuie sans réserve que si le rendement a battu le placement sans risque.
+    stance = "appui" if ret is not None and ret > 0 and not f["below_cash"] else "appui_reserve"
     return {"stance": stance, "confidence": "moyenne", "arguments": arguments, "open_questions": []}
 
 
@@ -223,6 +238,10 @@ def debate_realist(payload: Mapping[str, Any]) -> dict:
             f"Rendement annualisé observé de {_ref(ret_id)} pour une volatilité annualisée de {_ref(vol_id)} "
             "sur la même période.", ret_id, vol_id))
     exceeded = int(f["over_vol"]) + int(f["over_dd"])
+    if f["below_cash"] and f["cash"][0] and ret is not None:
+        arguments.append(_argument(
+            f"Sur la période, le rendement annualisé ({_ref(ret_id)}) n'a pas dépassé le taux directeur moyen de la "
+            f"Banque du Canada ({_ref(f['cash'][0])}) : le risque pris n'a pas été rémunéré.", ret_id, f["cash"][0]))
     if f["over_dd"]:
         arguments.append(_argument(
             f"La perte maximale observée ({_ref(dd_id)}) dépasse le repère de {_ref(f['lim_dd'][0])} du profil.",
@@ -233,7 +252,7 @@ def debate_realist(payload: Mapping[str, Any]) -> dict:
             vol_id, f["lim_vol"][0]))
     if exceeded == 2 and ret is not None and ret <= 0:
         stance = "opposition"
-    elif exceeded:
+    elif exceeded or f["below_cash"]:
         stance = "appui_reserve"
     else:
         stance = "appui"
@@ -244,8 +263,8 @@ def debate_realist(payload: Mapping[str, Any]) -> dict:
 _WHY = {
     "croissance": "Rendement annualisé observé de {v} sur toute la période disponible.",
     "stabilite": "Volatilité annualisée observée de {v}, un repère pour le critère de stabilité de votre profil.",
-    "horizon": "Pire période glissante de 3 ans observée sur la période : {v}.",
-    "diversification": "Secteur peu représenté dans l'univers analysé, ce qui sert de repère pour la diversification.",
+    "horizon": "Pire période glissante de {window} observée sur la période : {v}.",
+    "diversification": "Corrélation moyenne de {v} avec les autres actifs analysés, un repère pour la diversification.",
     "preferences": "Se rattache à un thème d'intérêt déclaré dans votre profil.",
 }
 
@@ -257,7 +276,8 @@ def explanation(payload: Mapping[str, Any]) -> dict:
         for top in item["top_criteria"]:
             template = _WHY.get(top["criterion"])
             if template:
-                why.append(_argument(template.replace("{v}", _ref(top["evidence_id"])), top["evidence_id"]))
+                text = template.replace("{v}", _ref(top["evidence_id"])).replace("{window}", top.get("window", "3 ans"))
+                why.append(_argument(text, top["evidence_id"]))
         items.append({"ticker": item["ticker"], "why": why})
     notes = []
     coherence = payload.get("coherence")

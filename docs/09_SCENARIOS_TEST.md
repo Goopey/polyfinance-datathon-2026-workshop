@@ -14,7 +14,9 @@ Convention : chaque scénario a un test automatisé dans `backend/tests/scenario
   2. Les plafonds sont tenus : part crypto, part par secteur, part par actif.
   3. Au moins trois secteurs ou classes d'actifs hors technologies dans les pistes retenues.
   4. L'explication cite le souhait de diversification comme origine de la règle.
-  5. Au moins un candidat est écarté ou déclassé pour concentration, avec le motif.
+  5. Le plafond par secteur borne le thème favori : il est atteint pour les technologies, ou un candidat est
+     déclassé pour concentration, avec le motif. (Mis à jour le 2026-11-15 : depuis la diversification mesurée par
+     la corrélation, la liste se diversifie avant que le plafond n'ait à déclasser un titre.)
 - **Échec type** : liste composée uniquement de titres technologiques et de crypto.
 
 ### S2 — Mateo : l'ESG change le résultat
@@ -98,12 +100,12 @@ Convention : chaque scénario a un test automatisé dans `backend/tests/scenario
 
 ## Tableau de suivi (recopié dans `avancement.md`)
 
-État au 2026-11-14 (fin de P3). Le détail et les écarts sont dans `avancement.md`, qui fait foi.
+État au 2026-11-15 (S2 mis à jour ce jour ; autres lignes : fin de P3). Le détail et les écarts sont dans `avancement.md`, qui fait foi.
 
 | ID | Scénario | Automatisé | État |
 |---|---|:-:|---|
 | S1 | Amira : diversification | ✔ | Passe en local (agents simulés) |
-| S2 | Mateo : ESG | — | Non exécuté (données ESG absentes, P6) |
+| S2 | Mateo : ESG | ✔ | Passe en local (agents simulés), depuis le 2026-11-15 ; point 1 vérifié sur une controverse de test (aucune dans le dépôt) |
 | S3 | Robert : demande incohérente | ✔ | Passe en local (agents simulés) |
 | S4 | Aucune recommandation | ✔ | Passe |
 | S5 | Aucune fuite du futur | ✔ | Passe |

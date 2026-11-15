@@ -168,6 +168,7 @@ export const en: Dict = {
     weightsHint: "Tap − or + to adjust; the total stays at 100%.",
     decrease: (c) => `Decrease ${c}`,
     increase: (c) => `Increase ${c}`,
+    conflictTitle: "Your answers conflict: we apply the more cautious one",
     whyTitle: "Why these values",
     whySummary: (n) => `${n} reason${n > 1 ? "s" : ""} drawn from your profile`,
     missingTitle: "Missing information",
@@ -263,6 +264,7 @@ export const en: Dict = {
   },
 
   priceChart: {
+    adjusted: (cur) => `Adjusted price (dividends reinvested), in ${cur}`,
     since: (d) => `since ${d}`,
     asOf: (d) => `as of ${d}`,
     low: (v, cur) => `low ${v} ${cur}`,

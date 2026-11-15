@@ -24,45 +24,26 @@
    "speculatif": "permis"
   },
   "status": "termine",
-  "headline": "7 pistes cohérentes avec votre profil, 1 écartée",
+  "headline": "7 pistes cohérentes avec votre profil, 2 écartées",
   "no_recommendation": false,
   "missing": [],
   "items": [
    {
-    "ticker": "GOOGL",
+    "ticker": "NVDA",
     "class": "equity",
-    "sector": "Communication Services",
-    "fit": "élevée",
+    "sector": "Information Technology",
+    "fit": "partielle",
     "confidence": "moyenne",
-    "to_review": false,
-    "score": 67.4,
-    "vol": 32.3,
-    "dd": -39.5,
-    "over_vol": false,
-    "over_dd": false,
+    "to_review": true,
+    "score": 70.7,
+    "vol": 51.1,
+    "dd": -63.5,
+    "over_vol": true,
+    "over_dd": true,
     "stances": {
      "bull": "appui",
-     "realist": "appui",
-     "bear": "appui_reserve"
-    },
-    "dissent": true
-   },
-   {
-    "ticker": "QQQ",
-    "class": "etf_equity",
-    "sector": "Broad market (U.S. growth/tech-heavy)",
-    "fit": "élevée",
-    "confidence": "moyenne",
-    "to_review": false,
-    "score": 67.1,
-    "vol": 22.8,
-    "dd": -32.1,
-    "over_vol": false,
-    "over_dd": false,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui",
-     "bear": "appui_reserve"
+     "realist": "appui_reserve",
+     "bear": "opposition"
     },
     "dissent": true
    },
@@ -73,7 +54,7 @@
     "fit": "élevée",
     "confidence": "élevée",
     "to_review": false,
-    "score": 64.2,
+    "score": 67.8,
     "vol": 18.4,
     "dd": -26.0,
     "over_vol": false,
@@ -86,23 +67,23 @@
     "dissent": false
    },
    {
-    "ticker": "SPY",
-    "class": "etf_equity",
-    "sector": "Broad market (U.S.)",
-    "fit": "partielle",
-    "confidence": "moyenne",
+    "ticker": "XOM",
+    "class": "equity",
+    "sector": "Energy",
+    "fit": "élevée",
+    "confidence": "élevée",
     "to_review": false,
-    "score": 60.2,
-    "vol": 16.7,
-    "dd": -22.2,
+    "score": 65.5,
+    "vol": 26.0,
+    "dd": -19.1,
     "over_vol": false,
     "over_dd": false,
     "stances": {
      "bull": "appui",
      "realist": "appui",
-     "bear": "appui_reserve"
+     "bear": "appui"
     },
-    "dissent": true
+    "dissent": false
    },
    {
     "ticker": "JNJ",
@@ -111,7 +92,7 @@
     "fit": "partielle",
     "confidence": "élevée",
     "to_review": false,
-    "score": 58.4,
+    "score": 60.4,
     "vol": 18.4,
     "dd": -15.5,
     "over_vol": false,
@@ -124,34 +105,34 @@
     "dissent": false
    },
    {
-    "ticker": "XIU.TO",
-    "class": "etf_equity",
-    "sector": "Broad market (Canada)",
+    "ticker": "CNQ.TO",
+    "class": "equity",
+    "sector": "Energy",
     "fit": "partielle",
-    "confidence": "moyenne",
+    "confidence": "élevée",
     "to_review": false,
-    "score": 57.3,
-    "vol": 13.1,
-    "dd": -16.4,
+    "score": 59.7,
+    "vol": 30.7,
+    "dd": -33.1,
     "over_vol": false,
     "over_dd": false,
     "stances": {
      "bull": "appui",
      "realist": "appui",
-     "bear": "appui_reserve"
+     "bear": "appui"
     },
-    "dissent": true
+    "dissent": false
    },
    {
-    "ticker": "ESGV",
-    "class": "etf_equity",
-    "sector": "Broad market (U.S., ESG-screened)",
+    "ticker": "GOOGL",
+    "class": "equity",
+    "sector": "Communication Services",
     "fit": "partielle",
     "confidence": "moyenne",
     "to_review": false,
-    "score": 55.9,
-    "vol": 18.0,
-    "dd": -26.9,
+    "score": 57.1,
+    "vol": 32.3,
+    "dd": -39.5,
     "over_vol": false,
     "over_dd": false,
     "stances": {
@@ -159,13 +140,36 @@
      "realist": "appui",
      "bear": "appui_reserve"
     },
-    "dissent": true
+    "dissent": false
+   },
+   {
+    "ticker": "MFC.TO",
+    "class": "equity",
+    "sector": "Financials",
+    "fit": "partielle",
+    "confidence": "élevée",
+    "to_review": false,
+    "score": 56.0,
+    "vol": 21.6,
+    "dd": -21.0,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui"
+    },
+    "dissent": false
    }
   ],
   "rejected": [
    [
-    "NVDA",
-    "classement"
+    "SHOP.TO",
+    "contrainte"
+   ],
+   [
+    "ETH-USD",
+    "contrainte"
    ]
   ]
  },
@@ -194,13 +198,242 @@
    "speculatif": "exclu"
   },
   "status": "termine",
-  "headline": "Aucune piste à présenter pour ce profil : les preuves ne suffisent pas.",
-  "no_recommendation": true,
-  "missing": [
-   "Aucune recommandation : le critère le plus important de votre profil (ESG, 25 %) n'a aucune donnée à cette date (signaux ESG non encore sourcés)."
+  "headline": "10 pistes cohérentes avec votre profil, 12 écartées",
+  "no_recommendation": false,
+  "missing": [],
+  "items": [
+   {
+    "ticker": "ESGV",
+    "class": "etf_equity",
+    "sector": "Broad market (U.S., ESG-screened)",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 59.9,
+    "vol": 18.0,
+    "dd": -26.9,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "JNJ",
+    "class": "equity",
+    "sector": "Health Care",
+    "fit": "élevée",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 49.8,
+    "vol": 18.4,
+    "dd": -15.5,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "GLD",
+    "class": "etf_commodity",
+    "sector": "Gold",
+    "fit": "élevée",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 46.4,
+    "vol": 18.4,
+    "dd": -26.0,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "ZST.TO",
+    "class": "etf_bond",
+    "sector": "Bonds (Canada ultra short-term)",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 45.5,
+    "vol": 0.6,
+    "dd": -0.4,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "TD.TO",
+    "class": "equity",
+    "sector": "Financials",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 41.6,
+    "vol": 17.7,
+    "dd": -26.1,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "FTS.TO",
+    "class": "equity",
+    "sector": "Utilities",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 40.9,
+    "vol": 14.7,
+    "dd": -24.0,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "AGG",
+    "class": "etf_bond",
+    "sector": "Bonds (U.S. aggregate)",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 39.9,
+    "vol": 7.4,
+    "dd": -12.8,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui_reserve",
+     "realist": "appui_reserve",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "RY.TO",
+    "class": "equity",
+    "sector": "Financials",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 37.9,
+    "vol": 15.5,
+    "dd": -21.2,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "XBB.TO",
+    "class": "etf_bond",
+    "sector": "Bonds (Canada aggregate)",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 37.8,
+    "vol": 6.6,
+    "dd": -15.5,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui_reserve",
+     "realist": "appui_reserve",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "MFC.TO",
+    "class": "equity",
+    "sector": "Financials",
+    "fit": "faible",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 36.9,
+    "vol": 21.6,
+    "dd": -21.0,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui"
+    },
+    "dissent": false
+   }
   ],
-  "items": [],
   "rejected": [
+   [
+    "CNQ.TO",
+    "contrainte"
+   ],
+   [
+    "SHOP.TO",
+    "contrainte"
+   ],
+   [
+    "CSU.TO",
+    "contrainte"
+   ],
+   [
+    "AAPL",
+    "contrainte"
+   ],
+   [
+    "MSFT",
+    "contrainte"
+   ],
+   [
+    "NVDA",
+    "contrainte"
+   ],
+   [
+    "GOOGL",
+    "contrainte"
+   ],
+   [
+    "AMZN",
+    "contrainte"
+   ],
+   [
+    "TSLA",
+    "contrainte"
+   ],
+   [
+    "XOM",
+    "contrainte"
+   ],
    [
     "BTC-USD",
     "contrainte"
@@ -236,29 +469,10 @@
    "speculatif": "signalé"
   },
   "status": "termine",
-  "headline": "10 pistes cohérentes avec votre profil, 2 écartées",
+  "headline": "10 pistes cohérentes avec votre profil, 14 écartées",
   "no_recommendation": false,
   "missing": [],
   "items": [
-   {
-    "ticker": "XIU.TO",
-    "class": "etf_equity",
-    "sector": "Broad market (Canada)",
-    "fit": "élevée",
-    "confidence": "moyenne",
-    "to_review": false,
-    "score": 66.0,
-    "vol": 13.1,
-    "dd": -16.4,
-    "over_vol": false,
-    "over_dd": false,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui",
-     "bear": "appui_reserve"
-    },
-    "dissent": true
-   },
    {
     "ticker": "ZST.TO",
     "class": "etf_bond",
@@ -266,7 +480,7 @@
     "fit": "élevée",
     "confidence": "élevée",
     "to_review": false,
-    "score": 65.5,
+    "score": 69.8,
     "vol": 0.6,
     "dd": -0.4,
     "over_vol": false,
@@ -285,7 +499,7 @@
     "fit": "élevée",
     "confidence": "élevée",
     "to_review": false,
-    "score": 64.2,
+    "score": 63.6,
     "vol": 18.4,
     "dd": -15.5,
     "over_vol": false,
@@ -298,32 +512,51 @@
     "dissent": false
    },
    {
-    "ticker": "SPY",
-    "class": "etf_equity",
-    "sector": "Broad market (U.S.)",
+    "ticker": "AGG",
+    "class": "etf_bond",
+    "sector": "Bonds (U.S. aggregate)",
     "fit": "élevée",
     "confidence": "moyenne",
     "to_review": false,
-    "score": 64.1,
-    "vol": 16.7,
-    "dd": -22.2,
+    "score": 60.8,
+    "vol": 7.4,
+    "dd": -12.8,
     "over_vol": false,
     "over_dd": false,
     "stances": {
-     "bull": "appui",
-     "realist": "appui",
+     "bull": "appui_reserve",
+     "realist": "appui_reserve",
      "bear": "appui_reserve"
     },
-    "dissent": true
+    "dissent": false
+   },
+   {
+    "ticker": "XBB.TO",
+    "class": "etf_bond",
+    "sector": "Bonds (Canada aggregate)",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 56.9,
+    "vol": 6.6,
+    "dd": -15.5,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui_reserve",
+     "realist": "appui_reserve",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
    },
    {
     "ticker": "GLD",
     "class": "etf_commodity",
     "sector": "Gold",
-    "fit": "élevée",
+    "fit": "partielle",
     "confidence": "moyenne",
     "to_review": true,
-    "score": 61.4,
+    "score": 54.9,
     "vol": 18.4,
     "dd": -26.0,
     "over_vol": false,
@@ -336,73 +569,54 @@
     "dissent": true
    },
    {
-    "ticker": "AGG",
-    "class": "etf_bond",
-    "sector": "Bonds (U.S. aggregate)",
-    "fit": "partielle",
-    "confidence": "moyenne",
-    "to_review": false,
-    "score": 60.0,
-    "vol": 7.4,
-    "dd": -12.8,
-    "over_vol": false,
-    "over_dd": false,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui",
-     "bear": "appui_reserve"
-    },
-    "dissent": true
-   },
-   {
-    "ticker": "XBB.TO",
-    "class": "etf_bond",
-    "sector": "Bonds (Canada aggregate)",
-    "fit": "partielle",
-    "confidence": "moyenne",
-    "to_review": false,
-    "score": 60.0,
-    "vol": 6.6,
-    "dd": -15.5,
-    "over_vol": false,
-    "over_dd": false,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui",
-     "bear": "appui_reserve"
-    },
-    "dissent": true
-   },
-   {
-    "ticker": "ESGV",
+    "ticker": "XIU.TO",
     "class": "etf_equity",
-    "sector": "Broad market (U.S., ESG-screened)",
+    "sector": "Broad market (Canada)",
     "fit": "partielle",
     "confidence": "moyenne",
-    "to_review": true,
-    "score": 59.5,
-    "vol": 18.0,
-    "dd": -26.9,
+    "to_review": false,
+    "score": 52.5,
+    "vol": 13.1,
+    "dd": -16.4,
     "over_vol": false,
-    "over_dd": true,
+    "over_dd": false,
     "stances": {
      "bull": "appui",
-     "realist": "appui_reserve",
-     "bear": "opposition"
+     "realist": "appui",
+     "bear": "appui_reserve"
     },
-    "dissent": true
+    "dissent": false
    },
    {
-    "ticker": "GOOGL",
+    "ticker": "FTS.TO",
     "class": "equity",
-    "sector": "Communication Services",
+    "sector": "Utilities",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 52.1,
+    "vol": 14.7,
+    "dd": -24.0,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "TD.TO",
+    "class": "equity",
+    "sector": "Financials",
     "fit": "partielle",
     "confidence": "moyenne",
     "to_review": true,
-    "score": 54.3,
-    "vol": 32.3,
-    "dd": -39.5,
-    "over_vol": true,
+    "score": 49.3,
+    "vol": 17.7,
+    "dd": -26.1,
+    "over_vol": false,
     "over_dd": true,
     "stances": {
      "bull": "appui",
@@ -412,26 +626,93 @@
     "dissent": true
    },
    {
-    "ticker": "QQQ",
-    "class": "etf_equity",
-    "sector": "Broad market (U.S. growth/tech-heavy)",
-    "fit": "partielle",
-    "confidence": "moyenne",
-    "to_review": true,
-    "score": 54.0,
-    "vol": 22.8,
-    "dd": -32.1,
-    "over_vol": true,
-    "over_dd": true,
+    "ticker": "PG",
+    "class": "equity",
+    "sector": "Consumer Staples",
+    "fit": "faible",
+    "confidence": "élevée",
+    "to_review": false,
+    "score": 46.7,
+    "vol": 18.8,
+    "dd": -23.5,
+    "over_vol": false,
+    "over_dd": false,
     "stances": {
      "bull": "appui",
-     "realist": "appui_reserve",
-     "bear": "opposition"
+     "realist": "appui",
+     "bear": "appui"
     },
-    "dissent": true
+    "dissent": false
+   },
+   {
+    "ticker": "RY.TO",
+    "class": "equity",
+    "sector": "Financials",
+    "fit": "faible",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 44.9,
+    "vol": 15.5,
+    "dd": -21.2,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
    }
   ],
   "rejected": [
+   [
+    "CNQ.TO",
+    "contrainte"
+   ],
+   [
+    "SHOP.TO",
+    "contrainte"
+   ],
+   [
+    "CSU.TO",
+    "contrainte"
+   ],
+   [
+    "AAPL",
+    "contrainte"
+   ],
+   [
+    "MSFT",
+    "contrainte"
+   ],
+   [
+    "NVDA",
+    "contrainte"
+   ],
+   [
+    "GOOGL",
+    "contrainte"
+   ],
+   [
+    "AMZN",
+    "contrainte"
+   ],
+   [
+    "TSLA",
+    "contrainte"
+   ],
+   [
+    "JPM",
+    "contrainte"
+   ],
+   [
+    "QQQ",
+    "contrainte"
+   ],
+   [
+    "TLT",
+    "contrainte"
+   ],
    [
     "BTC-USD",
     "contrainte"
@@ -444,43 +725,43 @@
  },
  "preserver_court_elevee": {
   "profile_id": "fictif_b03fbcc0",
-  "tolerance": "élevé",
-  "level": "élevée",
+  "tolerance": "faible",
+  "level": "faible",
   "limits": {
-   "vol": 45.0,
-   "dd": -50.0
+   "vol": 18.0,
+   "dd": -20.0
   },
   "weights": {
-   "croissance": 0.3,
-   "stabilite": 0.1,
-   "diversification": 0.2,
-   "esg": 0.05,
-   "qualite": 0.1,
-   "horizon": 0.1,
-   "preferences": 0.15
+   "croissance": 0.0,
+   "stabilite": 0.409089,
+   "diversification": 0.136364,
+   "esg": 0.045455,
+   "qualite": 0.227273,
+   "horizon": 0.136364,
+   "preferences": 0.045455
   },
   "constraints": {
-   "max_weight_per_asset": 0.15,
-   "max_weight_per_sector": 0.4,
-   "max_weight_crypto": 0.15,
+   "max_weight_per_asset": 0.1,
+   "max_weight_per_sector": 0.3,
+   "max_weight_crypto": 0.0,
    "esg_exclusion": false,
-   "speculatif": "permis"
+   "speculatif": "signalé"
   },
   "status": "termine",
-  "headline": "7 pistes cohérentes avec votre profil, 1 écartée",
+  "headline": "10 pistes cohérentes avec votre profil, 20 écartées",
   "no_recommendation": false,
   "missing": [],
   "items": [
    {
-    "ticker": "GLD",
-    "class": "etf_commodity",
-    "sector": "Gold",
+    "ticker": "ZST.TO",
+    "class": "etf_bond",
+    "sector": "Bonds (Canada ultra short-term)",
     "fit": "élevée",
     "confidence": "élevée",
     "to_review": false,
-    "score": 66.6,
-    "vol": 18.4,
-    "dd": -26.0,
+    "score": 82.4,
+    "vol": 0.6,
+    "dd": -0.4,
     "over_vol": false,
     "over_dd": false,
     "stances": {
@@ -491,78 +772,40 @@
     "dissent": false
    },
    {
-    "ticker": "SPY",
-    "class": "etf_equity",
-    "sector": "Broad market (U.S.)",
+    "ticker": "AGG",
+    "class": "etf_bond",
+    "sector": "Bonds (U.S. aggregate)",
     "fit": "élevée",
     "confidence": "moyenne",
     "to_review": false,
-    "score": 62.6,
-    "vol": 16.7,
-    "dd": -22.2,
+    "score": 69.5,
+    "vol": 7.4,
+    "dd": -12.8,
     "over_vol": false,
     "over_dd": false,
     "stances": {
-     "bull": "appui",
-     "realist": "appui",
+     "bull": "appui_reserve",
+     "realist": "appui_reserve",
      "bear": "appui_reserve"
     },
-    "dissent": true
+    "dissent": false
    },
    {
-    "ticker": "GOOGL",
-    "class": "equity",
-    "sector": "Communication Services",
+    "ticker": "XBB.TO",
+    "class": "etf_bond",
+    "sector": "Bonds (Canada aggregate)",
     "fit": "élevée",
     "confidence": "moyenne",
     "to_review": false,
-    "score": 62.1,
-    "vol": 32.3,
-    "dd": -39.5,
-    "over_vol": false,
-    "over_dd": false,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui",
-     "bear": "appui_reserve"
-    },
-    "dissent": true
-   },
-   {
-    "ticker": "QQQ",
-    "class": "etf_equity",
-    "sector": "Broad market (U.S. growth/tech-heavy)",
-    "fit": "partielle",
-    "confidence": "moyenne",
-    "to_review": false,
-    "score": 61.2,
-    "vol": 22.8,
-    "dd": -32.1,
-    "over_vol": false,
-    "over_dd": false,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui",
-     "bear": "appui_reserve"
-    },
-    "dissent": true
-   },
-   {
-    "ticker": "JNJ",
-    "class": "equity",
-    "sector": "Health Care",
-    "fit": "partielle",
-    "confidence": "élevée",
-    "to_review": false,
-    "score": 60.6,
-    "vol": 18.4,
+    "score": 66.3,
+    "vol": 6.6,
     "dd": -15.5,
     "over_vol": false,
     "over_dd": false,
     "stances": {
-     "bull": "appui",
-     "realist": "appui",
-     "bear": "appui"
+     "bull": "appui_reserve",
+     "realist": "appui_reserve",
+     "bear": "appui_reserve"
     },
     "dissent": false
    },
@@ -573,7 +816,7 @@
     "fit": "partielle",
     "confidence": "moyenne",
     "to_review": false,
-    "score": 59.8,
+    "score": 53.5,
     "vol": 13.1,
     "dd": -16.4,
     "over_vol": false,
@@ -583,32 +826,203 @@
      "realist": "appui",
      "bear": "appui_reserve"
     },
+    "dissent": false
+   },
+   {
+    "ticker": "FTS.TO",
+    "class": "equity",
+    "sector": "Utilities",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": true,
+    "score": 52.0,
+    "vol": 14.7,
+    "dd": -24.0,
+    "over_vol": false,
+    "over_dd": true,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui_reserve",
+     "bear": "opposition"
+    },
     "dissent": true
    },
    {
-    "ticker": "ESGV",
-    "class": "etf_equity",
-    "sector": "Broad market (U.S., ESG-screened)",
-    "fit": "partielle",
+    "ticker": "JNJ",
+    "class": "equity",
+    "sector": "Health Care",
+    "fit": "faible",
     "confidence": "moyenne",
-    "to_review": false,
-    "score": 58.3,
-    "vol": 18.0,
-    "dd": -26.9,
-    "over_vol": false,
+    "to_review": true,
+    "score": 46.0,
+    "vol": 18.4,
+    "dd": -15.5,
+    "over_vol": true,
     "over_dd": false,
     "stances": {
      "bull": "appui",
-     "realist": "appui",
-     "bear": "appui_reserve"
+     "realist": "appui_reserve",
+     "bear": "opposition"
+    },
+    "dissent": true
+   },
+   {
+    "ticker": "RY.TO",
+    "class": "equity",
+    "sector": "Financials",
+    "fit": "faible",
+    "confidence": "moyenne",
+    "to_review": true,
+    "score": 38.3,
+    "vol": 15.5,
+    "dd": -21.2,
+    "over_vol": false,
+    "over_dd": true,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui_reserve",
+     "bear": "opposition"
+    },
+    "dissent": true
+   },
+   {
+    "ticker": "ENB.TO",
+    "class": "equity",
+    "sector": "Energy",
+    "fit": "faible",
+    "confidence": "moyenne",
+    "to_review": true,
+    "score": 37.2,
+    "vol": 16.1,
+    "dd": -21.4,
+    "over_vol": false,
+    "over_dd": true,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui_reserve",
+     "bear": "opposition"
+    },
+    "dissent": true
+   },
+   {
+    "ticker": "TD.TO",
+    "class": "equity",
+    "sector": "Financials",
+    "fit": "faible",
+    "confidence": "moyenne",
+    "to_review": true,
+    "score": 33.6,
+    "vol": 17.7,
+    "dd": -26.1,
+    "over_vol": false,
+    "over_dd": true,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui_reserve",
+     "bear": "opposition"
+    },
+    "dissent": true
+   },
+   {
+    "ticker": "XOM",
+    "class": "equity",
+    "sector": "Energy",
+    "fit": "faible",
+    "confidence": "moyenne",
+    "to_review": true,
+    "score": 33.5,
+    "vol": 26.0,
+    "dd": -19.1,
+    "over_vol": true,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui_reserve",
+     "bear": "opposition"
     },
     "dissent": true
    }
   ],
   "rejected": [
    [
+    "MFC.TO",
+    "contrainte"
+   ],
+   [
+    "CNQ.TO",
+    "contrainte"
+   ],
+   [
+    "CNR.TO",
+    "contrainte"
+   ],
+   [
+    "ATD.TO",
+    "contrainte"
+   ],
+   [
+    "SHOP.TO",
+    "contrainte"
+   ],
+   [
+    "CSU.TO",
+    "contrainte"
+   ],
+   [
+    "AAPL",
+    "contrainte"
+   ],
+   [
+    "MSFT",
+    "contrainte"
+   ],
+   [
     "NVDA",
-    "classement"
+    "contrainte"
+   ],
+   [
+    "GOOGL",
+    "contrainte"
+   ],
+   [
+    "AMZN",
+    "contrainte"
+   ],
+   [
+    "TSLA",
+    "contrainte"
+   ],
+   [
+    "JPM",
+    "contrainte"
+   ],
+   [
+    "PG",
+    "contrainte"
+   ],
+   [
+    "QQQ",
+    "contrainte"
+   ],
+   [
+    "ESGV",
+    "contrainte"
+   ],
+   [
+    "TLT",
+    "contrainte"
+   ],
+   [
+    "GLD",
+    "contrainte"
+   ],
+   [
+    "BTC-USD",
+    "contrainte"
+   ],
+   [
+    "ETH-USD",
+    "contrainte"
    ]
   ],
   "draft": {
@@ -628,12 +1042,12 @@
    "dd": -50.0
   },
   "weights": {
-   "croissance": 0.3,
-   "stabilite": 0.1,
+   "croissance": 0.45,
+   "stabilite": 0.05,
    "diversification": 0.2,
    "esg": 0.05,
    "qualite": 0.1,
-   "horizon": 0.1,
+   "horizon": 0.0,
    "preferences": 0.15
   },
   "constraints": {
@@ -644,10 +1058,67 @@
    "speculatif": "permis"
   },
   "status": "termine",
-  "headline": "7 pistes cohérentes avec votre profil, 1 écartée",
+  "headline": "7 pistes cohérentes avec votre profil, 2 écartées",
   "no_recommendation": false,
   "missing": [],
   "items": [
+   {
+    "ticker": "XOM",
+    "class": "equity",
+    "sector": "Energy",
+    "fit": "élevée",
+    "confidence": "élevée",
+    "to_review": false,
+    "score": 73.9,
+    "vol": 26.0,
+    "dd": -19.1,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "CNQ.TO",
+    "class": "equity",
+    "sector": "Energy",
+    "fit": "élevée",
+    "confidence": "élevée",
+    "to_review": false,
+    "score": 71.0,
+    "vol": 30.7,
+    "dd": -33.1,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "NVDA",
+    "class": "equity",
+    "sector": "Information Technology",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": true,
+    "score": 69.7,
+    "vol": 51.1,
+    "dd": -63.5,
+    "over_vol": true,
+    "over_dd": true,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui_reserve",
+     "bear": "opposition"
+    },
+    "dissent": true
+   },
    {
     "ticker": "GLD",
     "class": "etf_commodity",
@@ -655,7 +1126,7 @@
     "fit": "élevée",
     "confidence": "élevée",
     "to_review": false,
-    "score": 66.6,
+    "score": 68.7,
     "vol": 18.4,
     "dd": -26.0,
     "over_vol": false,
@@ -668,70 +1139,13 @@
     "dissent": false
    },
    {
-    "ticker": "SPY",
-    "class": "etf_equity",
-    "sector": "Broad market (U.S.)",
-    "fit": "élevée",
-    "confidence": "moyenne",
-    "to_review": false,
-    "score": 62.6,
-    "vol": 16.7,
-    "dd": -22.2,
-    "over_vol": false,
-    "over_dd": false,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui",
-     "bear": "appui_reserve"
-    },
-    "dissent": true
-   },
-   {
-    "ticker": "GOOGL",
-    "class": "equity",
-    "sector": "Communication Services",
-    "fit": "élevée",
-    "confidence": "moyenne",
-    "to_review": false,
-    "score": 62.1,
-    "vol": 32.3,
-    "dd": -39.5,
-    "over_vol": false,
-    "over_dd": false,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui",
-     "bear": "appui_reserve"
-    },
-    "dissent": true
-   },
-   {
-    "ticker": "QQQ",
-    "class": "etf_equity",
-    "sector": "Broad market (U.S. growth/tech-heavy)",
-    "fit": "partielle",
-    "confidence": "moyenne",
-    "to_review": false,
-    "score": 61.2,
-    "vol": 22.8,
-    "dd": -32.1,
-    "over_vol": false,
-    "over_dd": false,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui",
-     "bear": "appui_reserve"
-    },
-    "dissent": true
-   },
-   {
     "ticker": "JNJ",
     "class": "equity",
     "sector": "Health Care",
-    "fit": "partielle",
+    "fit": "élevée",
     "confidence": "élevée",
     "to_review": false,
-    "score": 60.6,
+    "score": 66.9,
     "vol": 18.4,
     "dd": -15.5,
     "over_vol": false,
@@ -744,15 +1158,15 @@
     "dissent": false
    },
    {
-    "ticker": "XIU.TO",
-    "class": "etf_equity",
-    "sector": "Broad market (Canada)",
+    "ticker": "TD.TO",
+    "class": "equity",
+    "sector": "Financials",
     "fit": "partielle",
     "confidence": "moyenne",
     "to_review": false,
     "score": 59.8,
-    "vol": 13.1,
-    "dd": -16.4,
+    "vol": 17.7,
+    "dd": -26.1,
     "over_vol": false,
     "over_dd": false,
     "stances": {
@@ -760,32 +1174,36 @@
      "realist": "appui",
      "bear": "appui_reserve"
     },
-    "dissent": true
+    "dissent": false
    },
    {
-    "ticker": "ESGV",
-    "class": "etf_equity",
-    "sector": "Broad market (U.S., ESG-screened)",
+    "ticker": "MFC.TO",
+    "class": "equity",
+    "sector": "Financials",
     "fit": "partielle",
-    "confidence": "moyenne",
+    "confidence": "élevée",
     "to_review": false,
-    "score": 58.3,
-    "vol": 18.0,
-    "dd": -26.9,
+    "score": 59.6,
+    "vol": 21.6,
+    "dd": -21.0,
     "over_vol": false,
     "over_dd": false,
     "stances": {
      "bull": "appui",
      "realist": "appui",
-     "bear": "appui_reserve"
+     "bear": "appui"
     },
-    "dissent": true
+    "dissent": false
    }
   ],
   "rejected": [
    [
-    "NVDA",
-    "classement"
+    "SHOP.TO",
+    "contrainte"
+   ],
+   [
+    "ETH-USD",
+    "contrainte"
    ]
   ],
   "draft": {
@@ -805,12 +1223,12 @@
    "dd": -20.0
   },
   "weights": {
-   "croissance": 0.1,
-   "stabilite": 0.3,
+   "croissance": 0.05,
+   "stabilite": 0.4,
    "diversification": 0.15,
    "esg": 0.05,
    "qualite": 0.25,
-   "horizon": 0.1,
+   "horizon": 0.05,
    "preferences": 0.05
   },
   "constraints": {
@@ -821,29 +1239,10 @@
    "speculatif": "signalé"
   },
   "status": "termine",
-  "headline": "10 pistes cohérentes avec votre profil, 2 écartées",
+  "headline": "10 pistes cohérentes avec votre profil, 20 écartées",
   "no_recommendation": false,
   "missing": [],
   "items": [
-   {
-    "ticker": "XIU.TO",
-    "class": "etf_equity",
-    "sector": "Broad market (Canada)",
-    "fit": "élevée",
-    "confidence": "moyenne",
-    "to_review": false,
-    "score": 67.4,
-    "vol": 13.1,
-    "dd": -16.4,
-    "over_vol": false,
-    "over_dd": false,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui",
-     "bear": "appui_reserve"
-    },
-    "dissent": true
-   },
    {
     "ticker": "ZST.TO",
     "class": "etf_bond",
@@ -851,7 +1250,7 @@
     "fit": "élevée",
     "confidence": "élevée",
     "to_review": false,
-    "score": 66.9,
+    "score": 73.3,
     "vol": 0.6,
     "dd": -0.4,
     "over_vol": false,
@@ -864,91 +1263,72 @@
     "dissent": false
    },
    {
-    "ticker": "SPY",
-    "class": "etf_equity",
-    "sector": "Broad market (U.S.)",
-    "fit": "élevée",
-    "confidence": "moyenne",
-    "to_review": true,
-    "score": 65.5,
-    "vol": 16.7,
-    "dd": -22.2,
-    "over_vol": false,
-    "over_dd": true,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui_reserve",
-     "bear": "opposition"
-    },
-    "dissent": true
-   },
-   {
-    "ticker": "GLD",
-    "class": "etf_commodity",
-    "sector": "Gold",
-    "fit": "élevée",
-    "confidence": "moyenne",
-    "to_review": true,
-    "score": 62.8,
-    "vol": 18.4,
-    "dd": -26.0,
-    "over_vol": true,
-    "over_dd": true,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui_reserve",
-     "bear": "opposition"
-    },
-    "dissent": true
-   },
-   {
-    "ticker": "JNJ",
-    "class": "equity",
-    "sector": "Health Care",
-    "fit": "élevée",
-    "confidence": "moyenne",
-    "to_review": true,
-    "score": 62.7,
-    "vol": 18.4,
-    "dd": -15.5,
-    "over_vol": true,
-    "over_dd": false,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui_reserve",
-     "bear": "opposition"
-    },
-    "dissent": true
-   },
-   {
-    "ticker": "AGG",
-    "class": "etf_bond",
-    "sector": "Bonds (U.S. aggregate)",
-    "fit": "élevée",
-    "confidence": "moyenne",
-    "to_review": false,
-    "score": 61.4,
-    "vol": 7.4,
-    "dd": -12.8,
-    "over_vol": false,
-    "over_dd": false,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui",
-     "bear": "appui_reserve"
-    },
-    "dissent": true
-   },
-   {
     "ticker": "XBB.TO",
     "class": "etf_bond",
     "sector": "Bonds (Canada aggregate)",
     "fit": "élevée",
     "confidence": "moyenne",
     "to_review": false,
-    "score": 61.4,
+    "score": 61.2,
     "vol": 6.6,
     "dd": -15.5,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui_reserve",
+     "realist": "appui_reserve",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "AGG",
+    "class": "etf_bond",
+    "sector": "Bonds (U.S. aggregate)",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 59.4,
+    "vol": 7.4,
+    "dd": -12.8,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui_reserve",
+     "realist": "appui_reserve",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "JNJ",
+    "class": "equity",
+    "sector": "Health Care",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": true,
+    "score": 49.3,
+    "vol": 18.4,
+    "dd": -15.5,
+    "over_vol": true,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui_reserve",
+     "bear": "opposition"
+    },
+    "dissent": true
+   },
+   {
+    "ticker": "XIU.TO",
+    "class": "etf_equity",
+    "sector": "Broad market (Canada)",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 49.1,
+    "vol": 13.1,
+    "dd": -16.4,
     "over_vol": false,
     "over_dd": false,
     "stances": {
@@ -956,57 +1336,95 @@
      "realist": "appui",
      "bear": "appui_reserve"
     },
-    "dissent": true
+    "dissent": false
    },
    {
-    "ticker": "ESGV",
-    "class": "etf_equity",
-    "sector": "Broad market (U.S., ESG-screened)",
-    "fit": "élevée",
-    "confidence": "moyenne",
-    "to_review": true,
-    "score": 60.9,
-    "vol": 18.0,
-    "dd": -26.9,
-    "over_vol": true,
-    "over_dd": true,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui_reserve",
-     "bear": "opposition"
-    },
-    "dissent": true
-   },
-   {
-    "ticker": "QQQ",
-    "class": "etf_equity",
-    "sector": "Broad market (U.S. growth/tech-heavy)",
-    "fit": "partielle",
-    "confidence": "moyenne",
-    "to_review": true,
-    "score": 55.4,
-    "vol": 22.8,
-    "dd": -32.1,
-    "over_vol": true,
-    "over_dd": true,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui_reserve",
-     "bear": "opposition"
-    },
-    "dissent": true
-   },
-   {
-    "ticker": "GOOGL",
+    "ticker": "FTS.TO",
     "class": "equity",
-    "sector": "Communication Services",
+    "sector": "Utilities",
     "fit": "partielle",
     "confidence": "moyenne",
     "to_review": true,
-    "score": 55.4,
-    "vol": 32.3,
-    "dd": -39.5,
+    "score": 49.0,
+    "vol": 14.7,
+    "dd": -24.0,
+    "over_vol": false,
+    "over_dd": true,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui_reserve",
+     "bear": "opposition"
+    },
+    "dissent": true
+   },
+   {
+    "ticker": "ENB.TO",
+    "class": "equity",
+    "sector": "Energy",
+    "fit": "faible",
+    "confidence": "moyenne",
+    "to_review": true,
+    "score": 41.3,
+    "vol": 16.1,
+    "dd": -21.4,
+    "over_vol": false,
+    "over_dd": true,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui_reserve",
+     "bear": "opposition"
+    },
+    "dissent": true
+   },
+   {
+    "ticker": "TD.TO",
+    "class": "equity",
+    "sector": "Financials",
+    "fit": "faible",
+    "confidence": "moyenne",
+    "to_review": true,
+    "score": 39.2,
+    "vol": 17.7,
+    "dd": -26.1,
+    "over_vol": false,
+    "over_dd": true,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui_reserve",
+     "bear": "opposition"
+    },
+    "dissent": true
+   },
+   {
+    "ticker": "XOM",
+    "class": "equity",
+    "sector": "Energy",
+    "fit": "faible",
+    "confidence": "moyenne",
+    "to_review": true,
+    "score": 38.7,
+    "vol": 26.0,
+    "dd": -19.1,
     "over_vol": true,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui_reserve",
+     "bear": "opposition"
+    },
+    "dissent": true
+   },
+   {
+    "ticker": "RY.TO",
+    "class": "equity",
+    "sector": "Financials",
+    "fit": "faible",
+    "confidence": "moyenne",
+    "to_review": true,
+    "score": 36.6,
+    "vol": 15.5,
+    "dd": -21.2,
+    "over_vol": false,
     "over_dd": true,
     "stances": {
      "bull": "appui",
@@ -1017,6 +1435,78 @@
    }
   ],
   "rejected": [
+   [
+    "MFC.TO",
+    "contrainte"
+   ],
+   [
+    "CNQ.TO",
+    "contrainte"
+   ],
+   [
+    "CNR.TO",
+    "contrainte"
+   ],
+   [
+    "ATD.TO",
+    "contrainte"
+   ],
+   [
+    "SHOP.TO",
+    "contrainte"
+   ],
+   [
+    "CSU.TO",
+    "contrainte"
+   ],
+   [
+    "AAPL",
+    "contrainte"
+   ],
+   [
+    "MSFT",
+    "contrainte"
+   ],
+   [
+    "NVDA",
+    "contrainte"
+   ],
+   [
+    "GOOGL",
+    "contrainte"
+   ],
+   [
+    "AMZN",
+    "contrainte"
+   ],
+   [
+    "TSLA",
+    "contrainte"
+   ],
+   [
+    "JPM",
+    "contrainte"
+   ],
+   [
+    "PG",
+    "contrainte"
+   ],
+   [
+    "QQQ",
+    "contrainte"
+   ],
+   [
+    "ESGV",
+    "contrainte"
+   ],
+   [
+    "TLT",
+    "contrainte"
+   ],
+   [
+    "GLD",
+    "contrainte"
+   ],
    [
     "BTC-USD",
     "contrainte"
@@ -1043,13 +1533,13 @@
    "dd": -20.0
   },
   "weights": {
-   "croissance": 0.1,
-   "stabilite": 0.3,
-   "diversification": 0.15,
-   "esg": 0.05,
-   "qualite": 0.25,
-   "horizon": 0.1,
-   "preferences": 0.05
+   "croissance": 0.0,
+   "stabilite": 0.409089,
+   "diversification": 0.136364,
+   "esg": 0.045455,
+   "qualite": 0.227273,
+   "horizon": 0.136364,
+   "preferences": 0.045455
   },
   "constraints": {
    "max_weight_per_asset": 0.1,
@@ -1059,29 +1549,10 @@
    "speculatif": "signalé"
   },
   "status": "termine",
-  "headline": "10 pistes cohérentes avec votre profil, 2 écartées",
+  "headline": "10 pistes cohérentes avec votre profil, 20 écartées",
   "no_recommendation": false,
   "missing": [],
   "items": [
-   {
-    "ticker": "XIU.TO",
-    "class": "etf_equity",
-    "sector": "Broad market (Canada)",
-    "fit": "élevée",
-    "confidence": "moyenne",
-    "to_review": false,
-    "score": 67.4,
-    "vol": 13.1,
-    "dd": -16.4,
-    "over_vol": false,
-    "over_dd": false,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui",
-     "bear": "appui_reserve"
-    },
-    "dissent": true
-   },
    {
     "ticker": "ZST.TO",
     "class": "etf_bond",
@@ -1089,7 +1560,7 @@
     "fit": "élevée",
     "confidence": "élevée",
     "to_review": false,
-    "score": 66.9,
+    "score": 82.4,
     "vol": 0.6,
     "dd": -0.4,
     "over_vol": false,
@@ -1102,35 +1573,73 @@
     "dissent": false
    },
    {
-    "ticker": "SPY",
-    "class": "etf_equity",
-    "sector": "Broad market (U.S.)",
+    "ticker": "AGG",
+    "class": "etf_bond",
+    "sector": "Bonds (U.S. aggregate)",
     "fit": "élevée",
     "confidence": "moyenne",
-    "to_review": true,
-    "score": 65.5,
-    "vol": 16.7,
-    "dd": -22.2,
+    "to_review": false,
+    "score": 69.5,
+    "vol": 7.4,
+    "dd": -12.8,
     "over_vol": false,
-    "over_dd": true,
+    "over_dd": false,
     "stances": {
-     "bull": "appui",
+     "bull": "appui_reserve",
      "realist": "appui_reserve",
-     "bear": "opposition"
+     "bear": "appui_reserve"
     },
-    "dissent": true
+    "dissent": false
    },
    {
-    "ticker": "GLD",
-    "class": "etf_commodity",
-    "sector": "Gold",
+    "ticker": "XBB.TO",
+    "class": "etf_bond",
+    "sector": "Bonds (Canada aggregate)",
     "fit": "élevée",
     "confidence": "moyenne",
+    "to_review": false,
+    "score": 66.3,
+    "vol": 6.6,
+    "dd": -15.5,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui_reserve",
+     "realist": "appui_reserve",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "XIU.TO",
+    "class": "etf_equity",
+    "sector": "Broad market (Canada)",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 53.5,
+    "vol": 13.1,
+    "dd": -16.4,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "FTS.TO",
+    "class": "equity",
+    "sector": "Utilities",
+    "fit": "partielle",
+    "confidence": "moyenne",
     "to_review": true,
-    "score": 62.8,
-    "vol": 18.4,
-    "dd": -26.0,
-    "over_vol": true,
+    "score": 52.0,
+    "vol": 14.7,
+    "dd": -24.0,
+    "over_vol": false,
     "over_dd": true,
     "stances": {
      "bull": "appui",
@@ -1143,10 +1652,10 @@
     "ticker": "JNJ",
     "class": "equity",
     "sector": "Health Care",
-    "fit": "élevée",
+    "fit": "faible",
     "confidence": "moyenne",
     "to_review": true,
-    "score": 62.7,
+    "score": 46.0,
     "vol": 18.4,
     "dd": -15.5,
     "over_vol": true,
@@ -1159,93 +1668,74 @@
     "dissent": true
    },
    {
-    "ticker": "AGG",
-    "class": "etf_bond",
-    "sector": "Bonds (U.S. aggregate)",
-    "fit": "élevée",
-    "confidence": "moyenne",
-    "to_review": false,
-    "score": 61.4,
-    "vol": 7.4,
-    "dd": -12.8,
-    "over_vol": false,
-    "over_dd": false,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui",
-     "bear": "appui_reserve"
-    },
-    "dissent": true
-   },
-   {
-    "ticker": "XBB.TO",
-    "class": "etf_bond",
-    "sector": "Bonds (Canada aggregate)",
-    "fit": "élevée",
-    "confidence": "moyenne",
-    "to_review": false,
-    "score": 61.4,
-    "vol": 6.6,
-    "dd": -15.5,
-    "over_vol": false,
-    "over_dd": false,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui",
-     "bear": "appui_reserve"
-    },
-    "dissent": true
-   },
-   {
-    "ticker": "ESGV",
-    "class": "etf_equity",
-    "sector": "Broad market (U.S., ESG-screened)",
-    "fit": "élevée",
-    "confidence": "moyenne",
-    "to_review": true,
-    "score": 60.9,
-    "vol": 18.0,
-    "dd": -26.9,
-    "over_vol": true,
-    "over_dd": true,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui_reserve",
-     "bear": "opposition"
-    },
-    "dissent": true
-   },
-   {
-    "ticker": "QQQ",
-    "class": "etf_equity",
-    "sector": "Broad market (U.S. growth/tech-heavy)",
-    "fit": "partielle",
-    "confidence": "moyenne",
-    "to_review": true,
-    "score": 55.4,
-    "vol": 22.8,
-    "dd": -32.1,
-    "over_vol": true,
-    "over_dd": true,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui_reserve",
-     "bear": "opposition"
-    },
-    "dissent": true
-   },
-   {
-    "ticker": "GOOGL",
+    "ticker": "RY.TO",
     "class": "equity",
-    "sector": "Communication Services",
-    "fit": "partielle",
+    "sector": "Financials",
+    "fit": "faible",
     "confidence": "moyenne",
     "to_review": true,
-    "score": 55.4,
-    "vol": 32.3,
-    "dd": -39.5,
-    "over_vol": true,
+    "score": 38.3,
+    "vol": 15.5,
+    "dd": -21.2,
+    "over_vol": false,
     "over_dd": true,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui_reserve",
+     "bear": "opposition"
+    },
+    "dissent": true
+   },
+   {
+    "ticker": "ENB.TO",
+    "class": "equity",
+    "sector": "Energy",
+    "fit": "faible",
+    "confidence": "moyenne",
+    "to_review": true,
+    "score": 37.2,
+    "vol": 16.1,
+    "dd": -21.4,
+    "over_vol": false,
+    "over_dd": true,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui_reserve",
+     "bear": "opposition"
+    },
+    "dissent": true
+   },
+   {
+    "ticker": "TD.TO",
+    "class": "equity",
+    "sector": "Financials",
+    "fit": "faible",
+    "confidence": "moyenne",
+    "to_review": true,
+    "score": 33.6,
+    "vol": 17.7,
+    "dd": -26.1,
+    "over_vol": false,
+    "over_dd": true,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui_reserve",
+     "bear": "opposition"
+    },
+    "dissent": true
+   },
+   {
+    "ticker": "XOM",
+    "class": "equity",
+    "sector": "Energy",
+    "fit": "faible",
+    "confidence": "moyenne",
+    "to_review": true,
+    "score": 33.5,
+    "vol": 26.0,
+    "dd": -19.1,
+    "over_vol": true,
+    "over_dd": false,
     "stances": {
      "bull": "appui",
      "realist": "appui_reserve",
@@ -1255,6 +1745,78 @@
    }
   ],
   "rejected": [
+   [
+    "MFC.TO",
+    "contrainte"
+   ],
+   [
+    "CNQ.TO",
+    "contrainte"
+   ],
+   [
+    "CNR.TO",
+    "contrainte"
+   ],
+   [
+    "ATD.TO",
+    "contrainte"
+   ],
+   [
+    "SHOP.TO",
+    "contrainte"
+   ],
+   [
+    "CSU.TO",
+    "contrainte"
+   ],
+   [
+    "AAPL",
+    "contrainte"
+   ],
+   [
+    "MSFT",
+    "contrainte"
+   ],
+   [
+    "NVDA",
+    "contrainte"
+   ],
+   [
+    "GOOGL",
+    "contrainte"
+   ],
+   [
+    "AMZN",
+    "contrainte"
+   ],
+   [
+    "TSLA",
+    "contrainte"
+   ],
+   [
+    "JPM",
+    "contrainte"
+   ],
+   [
+    "PG",
+    "contrainte"
+   ],
+   [
+    "QQQ",
+    "contrainte"
+   ],
+   [
+    "ESGV",
+    "contrainte"
+   ],
+   [
+    "TLT",
+    "contrainte"
+   ],
+   [
+    "GLD",
+    "contrainte"
+   ],
    [
     "BTC-USD",
     "contrainte"
@@ -1281,12 +1843,12 @@
    "dd": -50.0
   },
   "weights": {
-   "croissance": 0.3,
-   "stabilite": 0.1,
+   "croissance": 0.45,
+   "stabilite": 0.05,
    "diversification": 0.2,
    "esg": 0.05,
    "qualite": 0.1,
-   "horizon": 0.1,
+   "horizon": 0.0,
    "preferences": 0.15
   },
   "constraints": {
@@ -1302,13 +1864,70 @@
   "missing": [],
   "items": [
    {
+    "ticker": "XOM",
+    "class": "equity",
+    "sector": "Energy",
+    "fit": "élevée",
+    "confidence": "élevée",
+    "to_review": false,
+    "score": 73.6,
+    "vol": 26.0,
+    "dd": -19.1,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "CNQ.TO",
+    "class": "equity",
+    "sector": "Energy",
+    "fit": "élevée",
+    "confidence": "élevée",
+    "to_review": false,
+    "score": 70.5,
+    "vol": 30.7,
+    "dd": -33.1,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "NVDA",
+    "class": "equity",
+    "sector": "Information Technology",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": true,
+    "score": 69.9,
+    "vol": 51.1,
+    "dd": -63.5,
+    "over_vol": true,
+    "over_dd": true,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui_reserve",
+     "bear": "opposition"
+    },
+    "dissent": true
+   },
+   {
     "ticker": "GLD",
     "class": "etf_commodity",
     "sector": "Gold",
     "fit": "élevée",
     "confidence": "élevée",
     "to_review": false,
-    "score": 65.2,
+    "score": 68.1,
     "vol": 18.4,
     "dd": -26.0,
     "over_vol": false,
@@ -1321,70 +1940,13 @@
     "dissent": false
    },
    {
-    "ticker": "SPY",
-    "class": "etf_equity",
-    "sector": "Broad market (U.S.)",
-    "fit": "élevée",
-    "confidence": "moyenne",
-    "to_review": false,
-    "score": 61.4,
-    "vol": 16.7,
-    "dd": -22.2,
-    "over_vol": false,
-    "over_dd": false,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui",
-     "bear": "appui_reserve"
-    },
-    "dissent": true
-   },
-   {
-    "ticker": "GOOGL",
-    "class": "equity",
-    "sector": "Communication Services",
-    "fit": "partielle",
-    "confidence": "moyenne",
-    "to_review": false,
-    "score": 60.7,
-    "vol": 32.3,
-    "dd": -39.5,
-    "over_vol": false,
-    "over_dd": false,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui",
-     "bear": "appui_reserve"
-    },
-    "dissent": true
-   },
-   {
-    "ticker": "QQQ",
-    "class": "etf_equity",
-    "sector": "Broad market (U.S. growth/tech-heavy)",
-    "fit": "partielle",
-    "confidence": "moyenne",
-    "to_review": false,
-    "score": 59.9,
-    "vol": 22.8,
-    "dd": -32.1,
-    "over_vol": false,
-    "over_dd": false,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui",
-     "bear": "appui_reserve"
-    },
-    "dissent": true
-   },
-   {
     "ticker": "JNJ",
     "class": "equity",
     "sector": "Health Care",
-    "fit": "partielle",
+    "fit": "élevée",
     "confidence": "élevée",
     "to_review": false,
-    "score": 59.2,
+    "score": 66.2,
     "vol": 18.4,
     "dd": -15.5,
     "over_vol": false,
@@ -1397,15 +1959,15 @@
     "dissent": false
    },
    {
-    "ticker": "XIU.TO",
-    "class": "etf_equity",
-    "sector": "Broad market (Canada)",
+    "ticker": "TD.TO",
+    "class": "equity",
+    "sector": "Financials",
     "fit": "partielle",
     "confidence": "moyenne",
     "to_review": false,
-    "score": 58.3,
-    "vol": 13.1,
-    "dd": -16.4,
+    "score": 59.6,
+    "vol": 17.7,
+    "dd": -26.1,
     "over_vol": false,
     "over_dd": false,
     "stances": {
@@ -1413,7 +1975,7 @@
      "realist": "appui",
      "bear": "appui_reserve"
     },
-    "dissent": true
+    "dissent": false
    },
    {
     "ticker": "MFC.TO",
@@ -1422,7 +1984,7 @@
     "fit": "partielle",
     "confidence": "élevée",
     "to_review": false,
-    "score": 57.8,
+    "score": 59.5,
     "vol": 21.6,
     "dd": -21.0,
     "over_vol": false,
@@ -1437,16 +1999,16 @@
   ],
   "rejected": [
    [
+    "SHOP.TO",
+    "contrainte"
+   ],
+   [
     "BTC-USD",
     "contrainte"
    ],
    [
     "ETH-USD",
     "contrainte"
-   ],
-   [
-    "NVDA",
-    "classement"
    ]
   ],
   "draft": {
@@ -1484,13 +2046,242 @@
    "speculatif": "exclu"
   },
   "status": "termine",
-  "headline": "Aucune piste à présenter pour ce profil : les preuves ne suffisent pas.",
-  "no_recommendation": true,
-  "missing": [
-   "Aucune recommandation : le critère le plus important de votre profil (ESG, 25 %) n'a aucune donnée à cette date (signaux ESG non encore sourcés)."
+  "headline": "10 pistes cohérentes avec votre profil, 12 écartées",
+  "no_recommendation": false,
+  "missing": [],
+  "items": [
+   {
+    "ticker": "ESGV",
+    "class": "etf_equity",
+    "sector": "Broad market (U.S., ESG-screened)",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 60.1,
+    "vol": 18.0,
+    "dd": -26.9,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "JNJ",
+    "class": "equity",
+    "sector": "Health Care",
+    "fit": "élevée",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 49.9,
+    "vol": 18.4,
+    "dd": -15.5,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "GLD",
+    "class": "etf_commodity",
+    "sector": "Gold",
+    "fit": "élevée",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 46.6,
+    "vol": 18.4,
+    "dd": -26.0,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "ZST.TO",
+    "class": "etf_bond",
+    "sector": "Bonds (Canada ultra short-term)",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 45.7,
+    "vol": 0.6,
+    "dd": -0.4,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "TD.TO",
+    "class": "equity",
+    "sector": "Financials",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 41.7,
+    "vol": 17.7,
+    "dd": -26.1,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "FTS.TO",
+    "class": "equity",
+    "sector": "Utilities",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 41.1,
+    "vol": 14.7,
+    "dd": -24.0,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "AGG",
+    "class": "etf_bond",
+    "sector": "Bonds (U.S. aggregate)",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 40.1,
+    "vol": 7.4,
+    "dd": -12.8,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui_reserve",
+     "realist": "appui_reserve",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "RY.TO",
+    "class": "equity",
+    "sector": "Financials",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 38.0,
+    "vol": 15.5,
+    "dd": -21.2,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "XBB.TO",
+    "class": "etf_bond",
+    "sector": "Bonds (Canada aggregate)",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 37.9,
+    "vol": 6.6,
+    "dd": -15.5,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui_reserve",
+     "realist": "appui_reserve",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "MFC.TO",
+    "class": "equity",
+    "sector": "Financials",
+    "fit": "faible",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 37.1,
+    "vol": 21.6,
+    "dd": -21.0,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui"
+    },
+    "dissent": false
+   }
   ],
-  "items": [],
   "rejected": [
+   [
+    "CNQ.TO",
+    "contrainte"
+   ],
+   [
+    "SHOP.TO",
+    "contrainte"
+   ],
+   [
+    "CSU.TO",
+    "contrainte"
+   ],
+   [
+    "AAPL",
+    "contrainte"
+   ],
+   [
+    "MSFT",
+    "contrainte"
+   ],
+   [
+    "NVDA",
+    "contrainte"
+   ],
+   [
+    "GOOGL",
+    "contrainte"
+   ],
+   [
+    "AMZN",
+    "contrainte"
+   ],
+   [
+    "TSLA",
+    "contrainte"
+   ],
+   [
+    "XOM",
+    "contrainte"
+   ],
    [
     "BTC-USD",
     "contrainte"
@@ -1537,60 +2328,22 @@
    "speculatif": "signalé"
   },
   "status": "termine",
-  "headline": "10 pistes cohérentes avec votre profil, 3 écartées",
+  "headline": "10 pistes cohérentes avec votre profil, 14 écartées",
   "no_recommendation": false,
   "missing": [],
   "items": [
    {
-    "ticker": "NVDA",
-    "class": "equity",
-    "sector": "Information Technology",
-    "fit": "élevée",
-    "confidence": "moyenne",
-    "to_review": true,
-    "score": 94.3,
-    "vol": 51.1,
-    "dd": -63.5,
-    "over_vol": true,
-    "over_dd": true,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui_reserve",
-     "bear": "opposition"
-    },
-    "dissent": true
-   },
-   {
     "ticker": "XOM",
     "class": "equity",
     "sector": "Energy",
-    "fit": "élevée",
+    "fit": "partielle",
     "confidence": "moyenne",
     "to_review": true,
-    "score": 89.4,
+    "score": 92.3,
     "vol": 26.0,
     "dd": -19.1,
     "over_vol": true,
     "over_dd": false,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui_reserve",
-     "bear": "opposition"
-    },
-    "dissent": true
-   },
-   {
-    "ticker": "CNQ.TO",
-    "class": "equity",
-    "sector": "Energy",
-    "fit": "élevée",
-    "confidence": "moyenne",
-    "to_review": true,
-    "score": 86.9,
-    "vol": 30.7,
-    "dd": -33.1,
-    "over_vol": true,
-    "over_dd": true,
     "stances": {
      "bull": "appui",
      "realist": "appui_reserve",
@@ -1605,7 +2358,7 @@
     "fit": "élevée",
     "confidence": "élevée",
     "to_review": false,
-    "score": 83.8,
+    "score": 86.7,
     "vol": 21.6,
     "dd": -21.0,
     "over_vol": false,
@@ -1618,51 +2371,13 @@
     "dissent": false
    },
    {
-    "ticker": "AAPL",
-    "class": "equity",
-    "sector": "Information Technology",
-    "fit": "élevée",
-    "confidence": "moyenne",
-    "to_review": true,
-    "score": 79.7,
-    "vol": 27.8,
-    "dd": -34.2,
-    "over_vol": true,
-    "over_dd": true,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui_reserve",
-     "bear": "opposition"
-    },
-    "dissent": true
-   },
-   {
-    "ticker": "JPM",
-    "class": "equity",
-    "sector": "Financials",
-    "fit": "élevée",
-    "confidence": "moyenne",
-    "to_review": true,
-    "score": 77.1,
-    "vol": 23.8,
-    "dd": -32.2,
-    "over_vol": true,
-    "over_dd": true,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui_reserve",
-     "bear": "opposition"
-    },
-    "dissent": true
-   },
-   {
     "ticker": "RY.TO",
     "class": "equity",
     "sector": "Financials",
     "fit": "élevée",
     "confidence": "moyenne",
     "to_review": false,
-    "score": 72.3,
+    "score": 79.0,
     "vol": 15.5,
     "dd": -21.2,
     "over_vol": false,
@@ -1672,16 +2387,35 @@
      "realist": "appui",
      "bear": "appui_reserve"
     },
+    "dissent": false
+   },
+   {
+    "ticker": "TD.TO",
+    "class": "equity",
+    "sector": "Financials",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": true,
+    "score": 75.6,
+    "vol": 17.7,
+    "dd": -26.1,
+    "over_vol": false,
+    "over_dd": true,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui_reserve",
+     "bear": "opposition"
+    },
     "dissent": true
    },
    {
     "ticker": "GLD",
     "class": "etf_commodity",
     "sector": "Gold",
-    "fit": "élevée",
+    "fit": "partielle",
     "confidence": "moyenne",
     "to_review": true,
-    "score": 70.2,
+    "score": 73.2,
     "vol": 18.4,
     "dd": -26.0,
     "over_vol": false,
@@ -1694,16 +2428,73 @@
     "dissent": true
    },
    {
-    "ticker": "GOOGL",
+    "ticker": "JNJ",
     "class": "equity",
-    "sector": "Communication Services",
+    "sector": "Health Care",
     "fit": "élevée",
+    "confidence": "élevée",
+    "to_review": false,
+    "score": 68.5,
+    "vol": 18.4,
+    "dd": -15.5,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "SPY",
+    "class": "etf_equity",
+    "sector": "Broad market (U.S.)",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 58.6,
+    "vol": 16.7,
+    "dd": -22.2,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "XIU.TO",
+    "class": "etf_equity",
+    "sector": "Broad market (Canada)",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 54.1,
+    "vol": 13.1,
+    "dd": -16.4,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "ESGV",
+    "class": "etf_equity",
+    "sector": "Broad market (U.S., ESG-screened)",
+    "fit": "faible",
     "confidence": "moyenne",
     "to_review": true,
-    "score": 67.7,
-    "vol": 32.3,
-    "dd": -39.5,
-    "over_vol": true,
+    "score": 48.4,
+    "vol": 18.0,
+    "dd": -26.9,
+    "over_vol": false,
     "over_dd": true,
     "stances": {
      "bull": "appui",
@@ -1713,15 +2504,15 @@
     "dissent": true
    },
    {
-    "ticker": "JNJ",
+    "ticker": "ENB.TO",
     "class": "equity",
-    "sector": "Health Care",
-    "fit": "partielle",
+    "sector": "Energy",
+    "fit": "faible",
     "confidence": "élevée",
     "to_review": false,
-    "score": 64.1,
-    "vol": 18.4,
-    "dd": -15.5,
+    "score": 43.2,
+    "vol": 16.1,
+    "dd": -21.4,
     "over_vol": false,
     "over_dd": false,
     "stances": {
@@ -1734,16 +2525,60 @@
   ],
   "rejected": [
    [
+    "CNQ.TO",
+    "contrainte"
+   ],
+   [
+    "SHOP.TO",
+    "contrainte"
+   ],
+   [
+    "CSU.TO",
+    "contrainte"
+   ],
+   [
+    "AAPL",
+    "contrainte"
+   ],
+   [
+    "MSFT",
+    "contrainte"
+   ],
+   [
+    "NVDA",
+    "contrainte"
+   ],
+   [
+    "GOOGL",
+    "contrainte"
+   ],
+   [
+    "AMZN",
+    "contrainte"
+   ],
+   [
+    "TSLA",
+    "contrainte"
+   ],
+   [
+    "JPM",
+    "contrainte"
+   ],
+   [
+    "QQQ",
+    "contrainte"
+   ],
+   [
+    "TLT",
+    "contrainte"
+   ],
+   [
     "BTC-USD",
     "contrainte"
    ],
    [
     "ETH-USD",
     "contrainte"
-   ],
-   [
-    "TD.TO",
-    "classement"
    ]
   ]
  },
@@ -1772,58 +2607,20 @@
    "speculatif": "exclu"
   },
   "status": "termine",
-  "headline": "10 pistes cohérentes avec votre profil, 2 écartées",
+  "headline": "10 pistes cohérentes avec votre profil, 12 écartées",
   "no_recommendation": false,
   "missing": [],
   "items": [
    {
-    "ticker": "XIU.TO",
-    "class": "etf_equity",
-    "sector": "Broad market (Canada)",
-    "fit": "élevée",
-    "confidence": "moyenne",
-    "to_review": false,
-    "score": 69.0,
-    "vol": 13.1,
-    "dd": -16.4,
-    "over_vol": false,
-    "over_dd": false,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui",
-     "bear": "appui_reserve"
-    },
-    "dissent": true
-   },
-   {
-    "ticker": "SPY",
-    "class": "etf_equity",
-    "sector": "Broad market (U.S.)",
-    "fit": "élevée",
-    "confidence": "moyenne",
-    "to_review": false,
-    "score": 67.0,
-    "vol": 16.7,
-    "dd": -22.2,
-    "over_vol": false,
-    "over_dd": false,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui",
-     "bear": "appui_reserve"
-    },
-    "dissent": true
-   },
-   {
-    "ticker": "GLD",
-    "class": "etf_commodity",
-    "sector": "Gold",
+    "ticker": "JNJ",
+    "class": "equity",
+    "sector": "Health Care",
     "fit": "élevée",
     "confidence": "élevée",
     "to_review": false,
     "score": 66.4,
     "vol": 18.4,
-    "dd": -26.0,
+    "dd": -15.5,
     "over_vol": false,
     "over_dd": false,
     "stances": {
@@ -1834,34 +2631,15 @@
     "dissent": false
    },
    {
-    "ticker": "ESGV",
-    "class": "etf_equity",
-    "sector": "Broad market (U.S., ESG-screened)",
-    "fit": "élevée",
-    "confidence": "moyenne",
-    "to_review": false,
-    "score": 65.9,
-    "vol": 18.0,
-    "dd": -26.9,
-    "over_vol": false,
-    "over_dd": false,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui",
-     "bear": "appui_reserve"
-    },
-    "dissent": true
-   },
-   {
-    "ticker": "JNJ",
-    "class": "equity",
-    "sector": "Health Care",
+    "ticker": "GLD",
+    "class": "etf_commodity",
+    "sector": "Gold",
     "fit": "élevée",
     "confidence": "élevée",
     "to_review": false,
     "score": 65.8,
     "vol": 18.4,
-    "dd": -15.5,
+    "dd": -26.0,
     "over_vol": false,
     "over_dd": false,
     "stances": {
@@ -1878,7 +2656,7 @@
     "fit": "partielle",
     "confidence": "élevée",
     "to_review": false,
-    "score": 63.2,
+    "score": 64.5,
     "vol": 0.6,
     "dd": -0.4,
     "over_vol": false,
@@ -1891,53 +2669,34 @@
     "dissent": false
    },
    {
-    "ticker": "QQQ",
-    "class": "etf_equity",
-    "sector": "Broad market (U.S. growth/tech-heavy)",
-    "fit": "partielle",
-    "confidence": "moyenne",
-    "to_review": true,
-    "score": 63.1,
-    "vol": 22.8,
-    "dd": -32.1,
-    "over_vol": false,
-    "over_dd": true,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui_reserve",
-     "bear": "opposition"
-    },
-    "dissent": true
-   },
-   {
-    "ticker": "GOOGL",
-    "class": "equity",
-    "sector": "Communication Services",
-    "fit": "partielle",
-    "confidence": "moyenne",
-    "to_review": true,
-    "score": 61.8,
-    "vol": 32.3,
-    "dd": -39.5,
-    "over_vol": true,
-    "over_dd": true,
-    "stances": {
-     "bull": "appui",
-     "realist": "appui_reserve",
-     "bear": "opposition"
-    },
-    "dissent": true
-   },
-   {
     "ticker": "AGG",
     "class": "etf_bond",
     "sector": "Bonds (U.S. aggregate)",
     "fit": "partielle",
     "confidence": "moyenne",
     "to_review": false,
-    "score": 58.6,
+    "score": 56.6,
     "vol": 7.4,
     "dd": -12.8,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui_reserve",
+     "realist": "appui_reserve",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "TD.TO",
+    "class": "equity",
+    "sector": "Financials",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 55.5,
+    "vol": 17.7,
+    "dd": -26.1,
     "over_vol": false,
     "over_dd": false,
     "stances": {
@@ -1945,7 +2704,26 @@
      "realist": "appui",
      "bear": "appui_reserve"
     },
-    "dissent": true
+    "dissent": false
+   },
+   {
+    "ticker": "FTS.TO",
+    "class": "equity",
+    "sector": "Utilities",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 54.6,
+    "vol": 14.7,
+    "dd": -24.0,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
    },
    {
     "ticker": "XBB.TO",
@@ -1954,9 +2732,28 @@
     "fit": "partielle",
     "confidence": "moyenne",
     "to_review": false,
-    "score": 58.3,
+    "score": 53.5,
     "vol": 6.6,
     "dd": -15.5,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui_reserve",
+     "realist": "appui_reserve",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "XIU.TO",
+    "class": "etf_equity",
+    "sector": "Broad market (Canada)",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 52.2,
+    "vol": 13.1,
+    "dd": -16.4,
     "over_vol": false,
     "over_dd": false,
     "stances": {
@@ -1964,10 +2761,88 @@
      "realist": "appui",
      "bear": "appui_reserve"
     },
-    "dissent": true
+    "dissent": false
+   },
+   {
+    "ticker": "RY.TO",
+    "class": "equity",
+    "sector": "Financials",
+    "fit": "partielle",
+    "confidence": "moyenne",
+    "to_review": false,
+    "score": 50.5,
+    "vol": 15.5,
+    "dd": -21.2,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui_reserve"
+    },
+    "dissent": false
+   },
+   {
+    "ticker": "MFC.TO",
+    "class": "equity",
+    "sector": "Financials",
+    "fit": "faible",
+    "confidence": "élevée",
+    "to_review": false,
+    "score": 49.2,
+    "vol": 21.6,
+    "dd": -21.0,
+    "over_vol": false,
+    "over_dd": false,
+    "stances": {
+     "bull": "appui",
+     "realist": "appui",
+     "bear": "appui"
+    },
+    "dissent": false
    }
   ],
   "rejected": [
+   [
+    "CNQ.TO",
+    "contrainte"
+   ],
+   [
+    "SHOP.TO",
+    "contrainte"
+   ],
+   [
+    "CSU.TO",
+    "contrainte"
+   ],
+   [
+    "AAPL",
+    "contrainte"
+   ],
+   [
+    "MSFT",
+    "contrainte"
+   ],
+   [
+    "NVDA",
+    "contrainte"
+   ],
+   [
+    "GOOGL",
+    "contrainte"
+   ],
+   [
+    "AMZN",
+    "contrainte"
+   ],
+   [
+    "TSLA",
+    "contrainte"
+   ],
+   [
+    "XOM",
+    "contrainte"
+   ],
    [
     "BTC-USD",
     "contrainte"
@@ -1982,51 +2857,46 @@
   "robert+TSLA": {
    "verdict": "incohérent avec le profil",
    "tensions": [
-    "Volatilité annualisée 59 % contre une médiane de 19 % pour les pistes retenues de votre profil.",
-    "Pire période glissante sur 3 ans -30 %, sous la médiane 13 % des pistes retenues.",
-    "Volatilité annualisée de 59 %, au-dessus du repère de 22 % retenu pour une tolérance au risque faible à modérée.",
-    "Perte maximale observée de 71 %, au-delà du repère de 25 % retenu pour une tolérance au risque faible à modérée."
+    "Volatilité annualisée 59 % contre une médiane de 18 % pour les pistes retenues de votre profil.",
+    "Pire période glissante sur 1 an -70 %, sous la médiane -12 % des pistes retenues.",
+    "Volatilité annualisée de 58,9 %, au-dessus du repère de 22 % retenu pour une tolérance au risque faible à modérée.",
+    "Perte maximale observée de 70,9 %, au-delà du repère de 25 % retenu pour une tolérance au risque faible à modérée."
    ],
-   "alternatives": [
-    "AMZN"
-   ]
+   "alternatives": []
   },
   "robert+NVDA": {
    "verdict": "incohérent avec le profil",
    "tensions": [
-    "Volatilité annualisée 51 % contre une médiane de 19 % pour les pistes retenues de votre profil.",
-    "Volatilité annualisée de 51 %, au-dessus du repère de 22 % retenu pour une tolérance au risque faible à modérée.",
-    "Perte maximale observée de 63 %, au-delà du repère de 25 % retenu pour une tolérance au risque faible à modérée."
+    "Volatilité annualisée 51 % contre une médiane de 18 % pour les pistes retenues de votre profil.",
+    "Pire période glissante sur 1 an -52 %, sous la médiane -12 % des pistes retenues.",
+    "Volatilité annualisée de 51,1 %, au-dessus du repère de 22 % retenu pour une tolérance au risque faible à modérée.",
+    "Perte maximale observée de 63,5 %, au-delà du repère de 25 % retenu pour une tolérance au risque faible à modérée."
    ],
-   "alternatives": [
-    "MSFT",
-    "AAPL"
-   ]
+   "alternatives": []
   },
   "robert+BTC-USD": {
    "verdict": "incohérent avec le profil",
    "tensions": [
     "Cryptoactif écarté : votre profil n'autorise aucune part en crypto.",
-    "Volatilité annualisée 50 % contre une médiane de 20 % pour les pistes retenues de votre profil.",
-    "Volatilité annualisée de 50 %, au-dessus du repère de 22 % retenu pour une tolérance au risque faible à modérée.",
-    "Perte maximale observée de 74 %, au-delà du repère de 25 % retenu pour une tolérance au risque faible à modérée."
+    "Volatilité annualisée 50 % contre une médiane de 18 % pour les pistes retenues de votre profil.",
+    "Pire période glissante sur 1 an -73 %, sous la médiane -12 % des pistes retenues.",
+    "Volatilité annualisée de 50,2 %, au-dessus du repère de 22 % retenu pour une tolérance au risque faible à modérée.",
+    "Perte maximale observée de 74,2 %, au-delà du repère de 25 % retenu pour une tolérance au risque faible à modérée."
    ],
    "alternatives": []
   },
   "amira+BTC-USD": {
-   "verdict": "incohérent avec le profil",
+   "verdict": "cohérent avec réserve",
    "tensions": [
-    "Volatilité annualisée 50 % contre une médiane de 21 % pour les pistes retenues de votre profil.",
-    "Volatilité annualisée de 50 %, au-dessus du repère de 45 % retenu pour une tolérance au risque élevée.",
-    "Perte maximale observée de 74 %, au-delà du repère de 50 % retenu pour une tolérance au risque élevée."
+    "Volatilité annualisée 50 % contre une médiane de 19 % pour les pistes retenues de votre profil.",
+    "Volatilité annualisée de 50,2 %, au-dessus du repère de 45 % retenu pour une tolérance au risque élevée.",
+    "Perte maximale observée de 74,2 %, au-delà du repère de 50 % retenu pour une tolérance au risque élevée."
    ],
    "alternatives": []
   },
   "robert+ZST.TO": {
-   "verdict": "cohérent avec réserve",
-   "tensions": [
-    "Pire période glissante sur 3 ans 12 %, sous la médiane 13 % des pistes retenues."
-   ],
+   "verdict": "cohérent",
+   "tensions": [],
    "alternatives": []
   }
  }

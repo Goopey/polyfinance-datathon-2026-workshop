@@ -189,7 +189,8 @@ def turn(agent, stance, *arguments):
 
 @pytest.mark.parametrize("stances, expected, dissent", [
     (("appui", "appui", "appui"), "élevé", False),
-    (("appui", "appui_reserve", "appui"), "moyen", True),
+    (("appui", "appui_reserve", "appui"), "moyen", False),  # une réserve n'est pas un désaccord
+    (("appui_reserve", "appui", "opposition"), "moyen", True),
     (("appui", "appui_reserve", "opposition"), "moyen", True),
     (("appui", "opposition", "opposition"), "faible", True),
     (("opposition", "opposition", "opposition"), "faible", False),

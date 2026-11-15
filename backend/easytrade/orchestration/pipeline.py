@@ -29,21 +29,31 @@ from typing import Any, Callable, Iterable, Optional
 import pandas as pd
 
 from easytrade.agents import simulated
-from easytrade.agents.debate.protocol import run_debate, step_name
+from easytrade.agents.debate.protocol import UNANSWERED, run_debate, step_name
 from easytrade.agents.explanation import explain
-from easytrade.agents.llm_client import CallInfo, LLMClient, make_client
+from easytrade.agents.llm_client import CallInfo, LLMClient, LLMOutputError, make_client
 from easytrade.agents.profile_weighting import SOURCE_PROFILE, WeightingResult, template_for, weigh_profile
 from easytrade.agents.research import run_research
 from easytrade.agents.tools import ResearchTools
 from easytrade.config import FUNDAMENTALS_ANNUAL_LAG_DAYS, Settings, load_settings
 from easytrade.data.fundamentals import latest_known, load_fundamentals
+from easytrade.data.calendar import align_prices
 from easytrade.data.point_in_time import DateLike, PointInTimeStore, to_timestamp
 from easytrade.data.sources_registry import SourcesRegistry
 from easytrade.engine import governance
 from easytrade.engine.coherence import evaluate_idea, limit_tensions, reference_medians, verdict_from
+from easytrade.engine.constraints import RULE_TOLERANCE, is_capped_class
+from easytrade.engine import esg
 from easytrade.engine.decision import apply_debate, decide
 from easytrade.engine.quality import quality_scores
-from easytrade.engine.signals import THEMES, build_signals, preference_signals, sector_counts
+from easytrade.engine.signals import (
+    THEMES,
+    build_signals,
+    correlation_diversification,
+    horizon_label,
+    horizon_metric,
+    preference_signals,
+)
 from easytrade.explain.evidence_ledger import EvidenceLedger
 from easytrade.explain.fidelity import FidelityReport, check_claim
 from easytrade.explain.trace import TraceRecorder
@@ -51,7 +61,7 @@ from easytrade.explain.wording import load_forbidden
 from easytrade.schemas.candidate import CandidateList, EvidencePack
 from easytrade.schemas.debate import AGENTS, Claim, DebateRecord
 from easytrade.schemas.decision import Decision
-from easytrade.schemas.evidence import EvidenceDraft
+from easytrade.schemas.evidence import EvidenceDraft, EvidenceWindow
 from easytrade.schemas.explanation import Alternative, CoherenceAnalysis, Explanation, RejectedItem
 from easytrade.schemas.profile import Profile
 from easytrade.schemas.trace import RunTrace, TraceStep
@@ -160,27 +170,44 @@ def make_run_id(as_of: date, profile_id: str, requested_ticker: Optional[str] = 
 # --- preuves ajoutées par le pipeline ---------------------------------------------------------
 def _add_signal_evidence(
     assets: pd.DataFrame, weighting: WeightingResult, signals: dict, evidence: dict,
-    ledger: EvidenceLedger, registry: SourcesRegistry,
+    ledger: EvidenceLedger, registry: SourcesRegistry, store: PointInTimeStore, min_common: int,
 ) -> None:
-    """Renseigne le critère `preferences` et donne une preuve aux critères `diversification` et
-    `preferences` (les autres critères sourcés ont déjà la preuve de leur indicateur)."""
+    """Renseigne les critères `diversification` (corrélation observée) et `preferences`, avec leur
+    preuve (les autres critères sourcés ont déjà la preuve de leur indicateur)."""
     as_of = ledger.as_of
-    universe_src = registry.require_used(SOURCE_UNIVERSE).as_evidence_source()
+    prices_src = registry.require_used(SOURCE_PRICES).as_evidence_source()
     hypothesis_src = registry.require_used(SOURCE_HYPOTHESES).as_evidence_source()
-    counts = sector_counts(assets)
     preferences = preference_signals(assets, weighting.preferred_themes, weighting.avoided_themes)
+    tickers = [str(t) for t in assets["ticker"]]
+    aligned = align_prices(store.prices(as_of, tickers), tickers, "adj_close_cad")
+    correlations = correlation_diversification(aligned, min_common)
+    others = len(tickers) - 1
     for _, row in assets.iterrows():
-        ticker, sector = str(row["ticker"]), str(row["sector"])
-        evidence[ticker]["diversification"] = ledger.add(EvidenceDraft(
-            type="metric", claim_kind="HYPOTHESE", subject=ticker,
-            statement=f"Nombre d'actifs du secteur « {sector} » dans l'univers analysé (repère de diversification)",
-            value=float(counts[sector]), unit="actif(s)", observed_at=as_of, published_at=as_of,
-            source=universe_src,
-            processing="Décompte des actifs de l'univers par secteur ; un secteur rare vaut un meilleur score",
-            produced_by=f"engine.signals.diversification@{VERSION}",
-            limits="Approximation de l'apport de diversification (hypothèse de l'équipe), à remplacer par la "
-                   "corrélation au panier. Univers choisi en 2026 : biais du survivant.",
-        )).evidence_id
+        ticker = str(row["ticker"])
+        found = correlations.get(ticker)
+        if found is None:  # historique commun trop court : critère manquant, jamais un bon score
+            signals[ticker]["diversification"] = None
+            evidence[ticker]["diversification"] = None
+        else:
+            mean_corr, n_returns = found
+            signals[ticker]["diversification"] = -mean_corr
+            evidence[ticker]["diversification"] = ledger.add(EvidenceDraft(
+                type="metric", claim_kind="FAIT", subject=ticker,
+                statement=(f"Corrélation moyenne des rendements quotidiens avec les {others} autres actifs "
+                           "de l'univers analysé"),
+                value=round(mean_corr, 2), unit="ratio", currency="CAD",
+                window=EvidenceWindow(start=aligned.index[0].date(), end=aligned.index[-1].date(),
+                                      observations=n_returns),
+                observed_at=aligned.index[-1].date(), published_at=aligned.index[-1].date(),
+                retrieved_at=registry.get(SOURCE_PRICES).date_extraction, source=prices_src,
+                processing=("adj_close en CAD ; rendements quotidiens sur les dates communes à tous les actifs "
+                            "(sans remplissage) ; moyenne des corrélations de Pearson avec chacun des autres "
+                            "actifs ; plus elle est basse, plus l'actif diversifie"),
+                produced_by=f"engine.signals.correlation_diversification@{VERSION}",
+                limits=("Décrit le passé sur la fenêtre indiquée, pas une prévision. Mesure la diversification "
+                        "par rapport à l'univers analysé, pas à un panier précis ; les corrélations varient "
+                        "dans le temps et montent souvent pendant les crises."),
+            )).evidence_id
         value, liked, disliked = preferences[ticker]
         if liked or disliked:
             parts = []
@@ -202,6 +229,39 @@ def _add_signal_evidence(
             produced_by=f"engine.signals.preferences@{VERSION}",
             limits="Rattachement par secteur, sans analyse de l'activité réelle de l'émetteur (hypothèse de l'équipe).",
         )).evidence_id
+
+
+SOURCE_MACRO_BOC = "starter_macro_boc"
+POLICY_RATE_SERIES = "V39079"  # taux cible du financement à un jour, Banque du Canada
+
+
+def _add_cash_evidence(store: PointInTimeStore, ledger: EvidenceLedger, registry: SourcesRegistry) -> Optional[str]:
+    """Placement sans risque de référence : taux directeur moyen de la Banque du Canada sur la fenêtre des
+    prix, avec les seules valeurs publiées à la date d'analyse. Sert aux agents (rendement « rémunéré » ?)."""
+    if SOURCE_MACRO_BOC not in registry or registry.get(SOURCE_MACRO_BOC).statut != "utilisé":
+        return None
+    as_of = ledger.as_of
+    prices = store.prices(as_of)
+    if prices.empty:
+        return None
+    start = prices["date"].min()
+    rates = store.macro(as_of, [POLICY_RATE_SERIES])
+    rates = rates[rates["observed_at"] >= start]
+    if rates.empty:
+        return None
+    end = rates["observed_at"].max()
+    return ledger.add(EvidenceDraft(
+        type="macro", claim_kind="FAIT", subject="CA",
+        statement="Taux directeur moyen de la Banque du Canada sur la période (placement sans risque de référence)",
+        value=round(float(rates["value"].mean()), 2), unit="%",
+        window=EvidenceWindow(start=start.date(), end=end.date(), observations=int(len(rates))),
+        observed_at=end.date(), published_at=rates["published_at"].max().date(),
+        retrieved_at=registry.get(SOURCE_MACRO_BOC).date_extraction,
+        source=registry.require_used(SOURCE_MACRO_BOC).as_evidence_source(),
+        processing=f"Série {POLICY_RATE_SERIES} ; moyenne simple des valeurs quotidiennes publiées sur la fenêtre des prix",
+        produced_by=f"orchestration.cash_rate@{VERSION}",
+        limits="Approximation du rendement d'un placement sans risque ; ne tient pas compte des frais ni de l'impôt.",
+    )).evidence_id
 
 
 def _fr(value: float, decimals: int) -> str:
@@ -264,18 +324,98 @@ def _add_quality_evidence(assets: pd.DataFrame, signals: dict, evidence: dict, l
         evidence[ticker]["qualite_composantes"] = tuple(ids)
 
 
+ESG_THRESHOLD_STATEMENT = "Seuil d'émetteur majeur retenu par EasyTrade (émissions directes de GES par an)"
+
+
+def _add_esg_evidence(assets: pd.DataFrame, signals: dict, evidence: dict, ledger: EvidenceLedger,
+                      registry: SourcesRegistry, reference_dir: Path) -> dict[str, esg.EsgAssessment]:
+    """Critère `esg` (engine.esg) : preuves ESG datées de chaque actif (mêmes preuves que l'outil
+    `preuves_esg`, réutilisées si la recherche les a déjà demandées), constat par actif et score
+    absolu. Un constat non concluant laisse le critère manquant, preuves visibles dans le dossier."""
+    tools = ResearchTools(assets, ledger.as_of, reference_dir, ledger, registry)
+    tickers = [str(t) for t in assets["ticker"]]
+    rows = {t: tools.preuves_esg(t) for t in tickers}
+    assessments = esg.assess(assets[["ticker", "sector"]].to_dict("records"), rows)
+    method_src = registry.require_used(SOURCE_HYPOTHESES).as_evidence_source()
+    as_of = ledger.as_of
+    threshold_id: Optional[str] = None
+    for ticker in tickers:
+        found = assessments.get(ticker)
+        if found is None:
+            continue
+        evidence[ticker]["esg_preuves"] = found.evidence_ids
+        basis = list(found.basis_ids)
+        if found.finding == "emetteur_majeur":
+            threshold_id = threshold_id or ledger.add(EvidenceDraft(
+                type="esg", claim_kind="HYPOTHESE", subject="EasyTrade", statement=ESG_THRESHOLD_STATEMENT,
+                value=esg.MAJOR_EMITTER_TONNES / 1_000_000, unit="Mt CO2e", observed_at=as_of, published_at=as_of,
+                source=method_src,
+                processing="Ordre de grandeur fixé par l'équipe, au-dessus des écarts de méthode entre sources (AR4, AR5)",
+                produced_by=f"engine.esg@{VERSION}",
+                limits="Choix de l'équipe, pas une norme ; les émissions documentées sont des bornes inférieures.",
+            )).evidence_id
+            basis.append(threshold_id)
+            statement = ("ESG (méthode EasyTrade) : émetteur majeur documenté, émissions directes déclarées "
+                         "au-dessus du seuil retenu")
+            processing = ("Plus grande borne inférieure documentée parmi les preuves d'émissions du titre, comparée "
+                          "au seuil d'émetteur majeur ; score ESG nul (préoccupation documentée)")
+        elif found.finding == "controverse":
+            statement = "ESG (méthode EasyTrade) : controverse documentée"
+            processing = "Preuve de type « Controverse » publiée à la date d'analyse ; score ESG nul"
+        elif found.finding == "filtre_esg":
+            row = assets[assets["ticker"] == ticker].iloc[0]
+            basis.append(ledger.add(EvidenceDraft(
+                type="esg", claim_kind="FAIT", subject=ticker,
+                statement=f"Fonds classé « {row['sector']} » dans l'univers analysé : il applique un filtre ESG",
+                observed_at=as_of, published_at=as_of,
+                retrieved_at=registry.get(SOURCE_UNIVERSE).date_extraction,
+                source=registry.require_used(SOURCE_UNIVERSE).as_evidence_source(),
+                processing="Classification sectorielle du fichier d'univers fourni par les organisateurs",
+                produced_by=f"engine.esg@{VERSION}",
+                limits=("Filtre et méthodologie de l'émetteur non vérifiés par l'équipe (composition non saisie) ; "
+                        "ne mesure pas les émissions du fonds."),
+            )).evidence_id)
+            statement = "ESG (méthode EasyTrade) : fonds à filtre ESG documenté"
+            processing = "Classification de l'univers (fonds à filtre ESG) ; score ESG maximal"
+        else:  # non concluant : critère manquant, preuves gardées pour le dossier
+            continue
+        signals[ticker]["esg"] = found.score
+        evidence[ticker]["esg"] = ledger.add(EvidenceDraft(
+            type="esg", claim_kind="HYPOTHESE", subject=ticker, statement=statement, value=found.score,
+            unit="score", observed_at=as_of, published_at=as_of, source=method_src, processing=processing,
+            produced_by=f"engine.esg@{VERSION}",
+            limits=("Méthode de l'équipe (hypothèse) ; dimension environnementale seulement (émissions directes) "
+                    "ou classification d'un fonds ; ni sociale ni gouvernance."),
+        )).evidence_id
+        evidence[ticker]["esg_composantes"] = tuple(dict.fromkeys(basis))
+    return assessments
+
+
+def _esg_sets(assessments: dict) -> tuple[frozenset[str], frozenset[str]]:
+    """(titres avec controverse documentée, émetteurs majeurs documentés) pour les contraintes dures."""
+    rules = esg.exclusions(assessments)
+    return (frozenset(t for t, r in rules.items() if r == esg.RULE_CONTROVERSY),
+            frozenset(t for t, r in rules.items() if r == esg.RULE_EMISSIONS))
+
+
 def _build_pack(ticker: str, assets_by_ticker: dict, metrics: pd.DataFrame, evidence: dict,
-                weighting: WeightingResult, candidates: CandidateList, ledger: EvidenceLedger) -> EvidencePack:
+                weighting: WeightingResult, candidates: CandidateList, ledger: EvidenceLedger,
+                cash_id: Optional[str] = None) -> EvidencePack:
     roles: dict[str, str] = {}
+    if cash_id:
+        roles[cash_id] = "macro:taux_directeur_moyen"
     rows = metrics[(metrics["ticker"] == ticker) & metrics["evidence_id"].notna()]
     for _, row in rows.iterrows():
         roles[row["evidence_id"]] = f"{row['metric']}:{row['window']}"
-    for criterion in ("diversification", "preferences", "qualite"):
+    for criterion in ("diversification", "preferences", "qualite", "esg"):
         evidence_id = evidence.get(ticker, {}).get(criterion)
         if evidence_id:
             roles[evidence_id] = f"signal:{criterion}"
     for evidence_id in evidence.get(ticker, {}).get("qualite_composantes", ()):
         roles[evidence_id] = "fondamentaux"
+    for key in ("esg_preuves", "esg_composantes"):
+        for evidence_id in evidence.get(ticker, {}).get(key, ()):
+            roles.setdefault(evidence_id, "esg")
     for candidate in candidates.candidates:
         if candidate.ticker == ticker:
             for evidence_id in candidate.evidence_ids:
@@ -295,17 +435,49 @@ def _build_pack(ticker: str, assets_by_ticker: dict, metrics: pd.DataFrame, evid
     )
 
 
+def _risk_table(metrics: pd.DataFrame) -> dict[str, tuple[Optional[float], Optional[float]]]:
+    """ticker → (volatilité annualisée %, perte maximale %) sur toute la période : entrées de la règle
+    de tolérance au risque (`engine.constraints`)."""
+    tickers = sorted(set(metrics["ticker"]))
+    return {t: (_metric(metrics, t, "annualized_volatility")[0], _metric(metrics, t, "max_drawdown")[0])
+            for t in tickers}
+
+
+def _horizon(weighting: WeightingResult) -> str:
+    """Indicateur du critère horizon selon l'horizon minimal déclaré du profil."""
+    return horizon_metric(weighting.profile.horizon_annees.min)
+
+
+def _tolerance_evidence(ticker: str, metrics: pd.DataFrame, weighting: WeightingResult) -> tuple[str, ...]:
+    """Preuves d'une exclusion par la tolérance : indicateurs de l'actif, repères et tolérance déclarée."""
+    ids = [_metric(metrics, ticker, "annualized_volatility")[1], _metric(metrics, ticker, "max_drawdown")[1],
+           weighting.limit_evidence.get("volatilite"), weighting.limit_evidence.get("perte_max")]
+    tolerance = weighting.fact("tolerance")
+    ids.append(tolerance.evidence_id if tolerance else None)
+    return tuple(dict.fromkeys(i for i in ids if i))
+
+
 def _rule_evidence(rule: str, weighting: WeightingResult) -> tuple[str, ...]:
     """Preuves d'une règle du profil : la valeur de la règle (hypothèse) et la phrase du profil qui la fonde."""
     name = {
         governance.RULE_SECTOR: "max_weight_per_sector",
         governance.RULE_CRYPTO: "max_weight_crypto",
+        esg.RULE_EMISSIONS: "esg_exclusion",
     }.get(rule, rule)
     ids = [weighting.constraint_evidence[name]] if name in weighting.constraint_evidence else []
     ids.extend(weighting.rationale_evidence(f"hard_constraints.{name}"))
     if not ids:  # règle sans valeur chiffrée ni phrase rattachée : on cite la tolérance déclarée
         tolerance = weighting.fact("tolerance")
         ids.extend([tolerance.evidence_id] if tolerance else [])
+    return tuple(dict.fromkeys(ids))
+
+
+def _rejection_evidence(ticker: str, rule: str, weighting: WeightingResult, evidence: dict) -> tuple[str, ...]:
+    """Preuves d'un rejet par une règle : celles de la règle, plus, pour une exclusion ESG, les preuves
+    datées du titre qui la fondent (émissions et seuil, ou controverse)."""
+    ids = list(_rule_evidence(rule, weighting))
+    if rule in (esg.RULE_CONTROVERSY, esg.RULE_EMISSIONS):
+        ids.extend(evidence.get(ticker, {}).get("esg_composantes", ()))
     return tuple(dict.fromkeys(ids))
 
 
@@ -319,14 +491,19 @@ def _metric(metrics: pd.DataFrame, ticker: str, metric: str, window: str = "full
 def _build_coherence(
     ticker: str, *, ws: Workspace, assets: pd.DataFrame, names: dict[str, str], metrics: pd.DataFrame,
     signals: dict, evidence: dict, weighting: WeightingResult, decision: Decision, ledger: EvidenceLedger,
-    ignore: tuple[str, ...], dropped: list[str],
+    ignore: tuple[str, ...], dropped: list[str], assessments: Optional[dict] = None,
 ) -> CoherenceAnalysis:
     """« Tester une idée » : tensions chiffrées et sourcées, verdict, effet sur le panier simulé, alternatives."""
     as_of = ledger.as_of
     weights = weighting.profile_weights
     prices_src = ws.registry.require_used(SOURCE_PRICES).as_evidence_source()
-    report = evaluate_idea(ticker, assets, signals, evidence, weights, as_of)
-    full = decide(assets, signals, evidence, weights, as_of)
+    risk = _risk_table(metrics)
+    window = horizon_label(_horizon(weighting))
+    controversial, emitters = _esg_sets(assessments or {})
+    report = evaluate_idea(ticker, assets, signals, evidence, weights, as_of, esg_controversial=controversial,
+                           esg_emitters=emitters, risk=risk, risk_level=weighting.risk_level, horizon_label=window)
+    full = decide(assets, signals, evidence, weights, as_of, esg_controversial=controversial,
+                  esg_emitters=emitters, risk=risk, risk_level=weighting.risk_level)
     medians = reference_medians(ticker, [c.ticker for c in full.ranking], signals)
 
     def median_evidence(key: str, statement: str) -> Optional[str]:
@@ -343,13 +520,16 @@ def _build_coherence(
 
     median_ids = {
         "volatilité": median_evidence("volatilite", "Médiane de la volatilité annualisée des actifs classés pour ce profil"),
-        "horizon": median_evidence("horizon", "Médiane de la pire période glissante de 3 ans des actifs classés pour ce profil"),
+        "horizon": median_evidence(
+            "horizon", f"Médiane de la pire période glissante de {window} des actifs classés pour ce profil"),
     }
     volatility, volatility_id = _metric(metrics, ticker, "annualized_volatility")
     drawdown, drawdown_id = _metric(metrics, ticker, "max_drawdown")
+    asset_class = str(assets.loc[assets["ticker"] == ticker, "asset_class"].iloc[0])
     all_tensions = list(report.tensions) + limit_tensions(
         level=weighting.risk_level, volatility=volatility, max_drawdown=drawdown,
         volatility_evidence=volatility_id, drawdown_evidence=drawdown_id, limit_evidence=weighting.limit_evidence,
+        capped_class=is_capped_class(asset_class, weights.constraints),
     )
 
     def verified(text: str, ids: Iterable[Optional[str]]) -> Optional[Claim]:
@@ -363,8 +543,8 @@ def _build_coherence(
     tensions: list[Claim] = []
     for tension in all_tensions:
         if tension.dimension == "contrainte":
-            rule = next((r.rule for r in decision.rejected if r.ticker == ticker), "")
-            ids: list[Optional[str]] = list(_rule_evidence(rule, weighting))
+            rule = next((r.rule for r in decision.rejected if r.ticker == ticker and r.rule != RULE_TOLERANCE), "")
+            ids: list[Optional[str]] = list(_rejection_evidence(ticker, rule, weighting, evidence))
         else:
             ids = [tension.evidence_id, *tension.evidence_ids, median_ids.get(tension.dimension)]
         claim = verified(tension.detail, ids)
@@ -452,6 +632,7 @@ class RunContext:
     signals: dict = field(default_factory=dict)
     evidence: dict = field(default_factory=dict)
     without_metrics: list = field(default_factory=list)
+    esg: dict = field(default_factory=dict)  # ticker → engine.esg.EsgAssessment
     decision: Optional[Decision] = None
     selection: Optional[governance.BasketSelection] = None
     packs: dict = field(default_factory=dict)
@@ -552,27 +733,39 @@ def stage_evidence_packs(ctx: RunContext, ws: Workspace, client: LLMClient) -> N
     weighting, candidates, metrics = ctx.weighting, ctx.candidates, ctx.metrics
     weights = weighting.profile_weights
     with ctx.trace.step("dossiers_de_preuves", "code", version=f"engine@{VERSION}") as step:
-        signals, evidence = build_signals(metrics, assets)
-        _add_signal_evidence(assets, weighting, signals, evidence, ctx.ledger, ws.registry)
+        signals, evidence = build_signals(metrics, assets, horizon=_horizon(weighting))
+        _add_signal_evidence(assets, weighting, signals, evidence, ctx.ledger, ws.registry, ws.store,
+                             ws.settings.quality.min_common_observations)
         _add_quality_evidence(assets, signals, evidence, ctx.ledger, ws.registry, ws.settings.reference_dir)
+        assessments = _add_esg_evidence(assets, signals, evidence, ctx.ledger, ws.registry, ws.settings.reference_dir)
+        controversial, emitters = _esg_sets(assessments)
         without_metrics = [t for t in candidates.tickers
                            if any(signals[t].get(c) is None for c in REQUIRED_SIGNALS)]
         classable = [t for t in candidates.tickers if t not in without_metrics]
-        decision = decide(assets, signals, evidence, weights, ctx.as_of, candidates=classable)
+        decision = decide(assets, signals, evidence, weights, ctx.as_of, candidates=classable,
+                          esg_controversial=controversial, esg_emitters=emitters,
+                          risk=_risk_table(metrics), risk_level=weighting.risk_level)
         selection = governance.select_basket(() if decision.no_recommendation else decision.ranking,
                                              weights.constraints)
         to_debate = list(dict.fromkeys(
             [*selection.tickers, *(r.ticker for r in selection.displaced),
              *([ctx.requested_ticker] if ctx.requested_ticker and ctx.requested_ticker in classable else [])]))
-        packs = {t: _build_pack(t, assets_by_ticker, metrics, evidence, weighting, candidates, ctx.ledger)
+        cash_id = _add_cash_evidence(ws.store, ctx.ledger, ws.registry) if to_debate else None
+        packs = {t: _build_pack(t, assets_by_ticker, metrics, evidence, weighting, candidates, ctx.ledger, cash_id)
                  for t in to_debate}
         step.set(outputs=tuple(to_debate))
         step.note(f"{len(decision.ranking)} candidats classés ; {len(to_debate)} dossiers de preuves.")
+        def found(kind: str) -> str:
+            return ", ".join(sorted(t for t, a in assessments.items() if a.finding == kind)) or "aucun"
+
+        step.note(f"Critère ESG — controverses documentées : {found('controverse')} ; émetteurs majeurs documentés : "
+                  f"{found('emetteur_majeur')} ; fonds à filtre ESG : {found('filtre_esg')} ; preuves non concluantes : "
+                  f"{found('non_concluant')} ; actifs sans preuve ESG : {len(assets) - len(assessments)}.")
     control = governance.control_pre_debate(
         universe=len(assets), rejected_by_rule=len(decision.rejected), without_evidence=len(without_metrics),
         candidates=len(decision.ranking))
     ctx.trace.control(control.name, control.passed, control.note)
-    ctx.signals, ctx.evidence, ctx.without_metrics = signals, evidence, without_metrics
+    ctx.signals, ctx.evidence, ctx.without_metrics, ctx.esg = signals, evidence, without_metrics, assessments
     ctx.decision, ctx.selection, ctx.packs = decision, selection, packs
     ctx.debate_started = ctx.trace.now()
 
@@ -600,6 +793,17 @@ def record_debate(ctx: RunContext, results: dict[str, tuple[DebateRecord, list[C
     """Rassemble les débats des candidats (dans l'ordre des dossiers) et les inscrit dans la trace."""
     trace, packs, started = ctx.trace, ctx.packs, ctx.debate_started
     records: dict[str, DebateRecord] = {}
+    # Une réponse invalide isolée est tolérée (agents.debate.protocol) ; un agent qui n'a répondu pour
+    # aucun candidat signale une panne systématique : le débat n'a pas eu lieu, l'analyse échoue.
+    if packs:
+        for agent in AGENTS:
+            silent = [t for t in packs if all(UNANSWERED in turn.open_questions
+                                               for turn in results[t][0].round1 if turn.agent == agent)]
+            if len(silent) == len(packs):
+                message = (f"LLMOutputError : Étape {step_name(agent, 1)} : réponses invalides pour tous les "
+                           f"candidats ({len(silent)}).")
+                record_debate_failure(ctx, message)
+                raise LLMOutputError(message.removeprefix("LLMOutputError : "))
     if packs:
         infos: list[CallInfo] = []
         for ticker in packs:
@@ -667,7 +871,7 @@ def stage_decision(ctx: RunContext, ws: Workspace, client: LLMClient) -> None:
             coherence = _build_coherence(
                 ctx.requested_ticker, ws=ws, assets=assets, names=names, metrics=ctx.metrics, signals=ctx.signals,
                 evidence=ctx.evidence, weighting=weighting, decision=decision, ledger=ctx.ledger, ignore=ignore,
-                dropped=dropped_claims)
+                dropped=dropped_claims, assessments=ctx.esg)
             step.note(f"Tester une idée — {ctx.requested_ticker} : {coherence.verdict}, "
                       f"{len(coherence.tensions)} tension(s).")
         step.set(outputs=decision.retained)
@@ -689,8 +893,12 @@ def stage_explanation(ctx: RunContext, ws: Workspace, client: LLMClient) -> None
     decision, weighting = ctx.decision, ctx.weighting
     rejected = [
         RejectedItem(ticker=r.ticker, reason=r.reason, kind="contrainte",
-                     evidence_ids=_rule_evidence(r.rule, weighting))
+                     evidence_ids=(_tolerance_evidence(r.ticker, ctx.metrics, weighting) if r.rule == RULE_TOLERANCE
+                                   else _rejection_evidence(r.ticker, r.rule, weighting, ctx.evidence)))
         for r in decision.rejected
+        # Le titre soumis par l'utilisateur n'est pas « écarté » en silence : l'analyse de cohérence
+        # (verdict, tensions chiffrées, alternatives) en rend compte en entier.
+        if not (r.rule == RULE_TOLERANCE and r.ticker == ctx.requested_ticker)
     ]
     if not decision.no_recommendation:
         rejected.extend(

@@ -5,10 +5,12 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Animated, StyleSheet, Text, View } from "react-native";
+import { Animated, Platform, StyleSheet, Text, View } from "react-native";
 import { createProfile, getProfile } from "../../src/api/profiles";
 import { Icon, type IconName } from "../../src/components/Icon";
-import { Button, Card, Collapsible, ErrorState, FadeIn, Loading, Row, Screen, Section, Tap } from "../../src/components/ui";
+import {
+  Button, Card, Collapsible, ErrorState, FadeIn, Loading, Row, Screen, Section, Tap, settle, webTransition,
+} from "../../src/components/ui";
 import { fmtWeight } from "../../src/format";
 import { useT } from "../../src/i18n";
 import { useTx } from "../../src/i18n/data";
@@ -61,6 +63,9 @@ export default function ResumeProfil() {
   const bump = (k: Criterion, d: number) =>
     setWeights({ ...weights, [k]: Math.max(0, Math.round((weights[k] + d) * 100) / 100) });
   const hc = pw.hard_constraints;
+  // Réponses contradictoires du questionnaire, tranchées par la lecture la plus prudente (backend, audit C1).
+  const conflicts = pw.rationale.filter((r) => r.field === "tolerance");
+  const reasons = pw.rationale.filter((r) => r.field !== "tolerance");
 
   return (
     <Screen>
@@ -68,6 +73,16 @@ export default function ResumeProfil() {
         <Text style={type.title}>{t.resume.title}</Text>
         <Text style={[type.body, { color: colors.textMuted }]}>{tx(pw.summary)}</Text>
       </FadeIn>
+
+      {conflicts.length > 0 ? (
+        <Card style={{ backgroundColor: colors.warnBg, borderColor: alpha(colors.warn, 0.4) }}>
+          <Row>
+            <Icon name="scale" size={18} color={colors.warn} />
+            <Text style={[type.h3, { color: colors.warn, flex: 1 }]}>{t.resume.conflictTitle}</Text>
+          </Row>
+          {conflicts.map((r) => <Text key={r.because} style={type.body}>{tx(r.because)}</Text>)}
+        </Card>
+      ) : null}
 
       <Section title={t.resume.rulesTitle}>
         <Card>
@@ -104,9 +119,9 @@ export default function ResumeProfil() {
         </Card>
       </Section>
 
-      {pw.rationale.length > 0 ? (
-        <Collapsible title={t.resume.whyTitle} summary={t.resume.whySummary(pw.rationale.length)} icon="info">
-          {pw.rationale.map((r) => (
+      {reasons.length > 0 ? (
+        <Collapsible title={t.resume.whyTitle} summary={t.resume.whySummary(reasons.length)} icon="info">
+          {reasons.map((r) => (
             <View key={r.field + r.because} style={styles.reason}>
               <View style={styles.reasonDot} />
               <Text style={[type.body, { flex: 1 }]}>{tx(r.because)}</Text>
@@ -165,8 +180,17 @@ function Stepper({ icon, onPress, a11y }: { icon: IconName; onPress: () => void;
 function WeightBar({ share }: { share: number }) {
   const v = useRef(new Animated.Value(share)).current;
   useEffect(() => {
-    Animated.spring(v, { toValue: share, useNativeDriver: false, speed: 18, bounciness: 6 }).start();
+    if (Platform.OS === "web") return;
+    settle(Animated.spring(v, { toValue: share, useNativeDriver: false, speed: 18, bounciness: 6 }), v, share);
   }, [v, share]);
+  if (Platform.OS === "web") {
+    // Web : largeur exacte et transition CSS (voir components/ui.tsx).
+    return (
+      <View style={styles.track}>
+        <View style={[styles.fill, { width: `${Math.max(0, Math.min(1, share)) * 100}%` }, webTransition]} />
+      </View>
+    );
+  }
   const width = v.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"], extrapolate: "clamp" });
   return (
     <View style={styles.track}>

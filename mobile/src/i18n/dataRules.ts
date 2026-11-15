@@ -45,6 +45,7 @@ const CRITERION: Record<string, string> = {
 
 const MISSING: Record<string, string> = {
   "signaux ESG non encore sourcés": "ESG signals not sourced yet",
+  "aucune preuve ESG concluante à cette date": "no conclusive ESG evidence as of this date",
   "fondamentaux (qualité) non publiés à cette date": "fundamentals (quality) not published as of this date",
   "correspondance aux préférences déclarées non encore modélisée": "match with stated preferences not modeled yet",
   "historique de prix insuffisant": "insufficient price history",
@@ -163,6 +164,35 @@ export const EN_EXACT: Record<string, string> = {
   "Aucun document réglementaire n'a été consulté pour ce titre.": "No regulatory filing was consulted for this security.",
   "Aucune preuve ESG datée n'est disponible pour ce titre.": "No dated ESG evidence is available for this security.",
   "Signaux ESG non encore sourcés.": "ESG signals not sourced yet.",
+  // Critère ESG (backend/easytrade/engine/esg.py, orchestration/pipeline.py)
+  "Aucune preuve ESG concluante à cette date.": "No conclusive ESG evidence as of this date.",
+  "Écarté : controverse ESG documentée, exclue par votre profil.":
+    "Excluded: documented ESG controversy, excluded by your profile.",
+  "Écarté : émissions directes de gaz à effet de serre documentées au-dessus du seuil d'émetteur majeur retenu par EasyTrade ; votre profil demande d'éviter les entreprises à fort impact environnemental.":
+    "Excluded: documented direct greenhouse gas emissions above the major-emitter threshold chosen by EasyTrade; your profile asks to avoid companies with a heavy environmental impact.",
+  "Seuil d'émetteur majeur retenu par EasyTrade (émissions directes de GES par an)":
+    "Major-emitter threshold chosen by EasyTrade (direct GHG emissions per year)",
+  "Ordre de grandeur fixé par l'équipe, au-dessus des écarts de méthode entre sources (AR4, AR5)":
+    "Order of magnitude set by the team, above the methodological gaps between sources (AR4, AR5)",
+  "Choix de l'équipe, pas une norme ; les émissions documentées sont des bornes inférieures.":
+    "Team choice, not a standard; documented emissions are lower bounds.",
+  "ESG (méthode EasyTrade) : émetteur majeur documenté, émissions directes déclarées au-dessus du seuil retenu":
+    "ESG (EasyTrade method): documented major emitter, reported direct emissions above the chosen threshold",
+  "Plus grande borne inférieure documentée parmi les preuves d'émissions du titre, comparée au seuil d'émetteur majeur ; score ESG nul (préoccupation documentée)":
+    "Largest documented lower bound among the security's emissions evidence, compared with the major-emitter threshold; ESG score of zero (documented concern)",
+  "ESG (méthode EasyTrade) : controverse documentée": "ESG (EasyTrade method): documented controversy",
+  "Preuve de type « Controverse » publiée à la date d'analyse ; score ESG nul":
+    "Evidence of the \"Controversy\" type published as of the analysis date; ESG score of zero",
+  "ESG (méthode EasyTrade) : fonds à filtre ESG documenté": "ESG (EasyTrade method): documented ESG-screened fund",
+  "Classification de l'univers (fonds à filtre ESG) ; score ESG maximal":
+    "Universe classification (ESG-screened fund); maximum ESG score",
+  "Classification sectorielle du fichier d'univers fourni par les organisateurs":
+    "Sector classification from the universe file provided by the organizers",
+  "Filtre et méthodologie de l'émetteur non vérifiés par l'équipe (composition non saisie) ; ne mesure pas les émissions du fonds.":
+    "Issuer's screen and methodology not verified by the team (holdings not entered); does not measure the fund's emissions.",
+  "Méthode de l'équipe (hypothèse) ; dimension environnementale seulement (émissions directes) ou classification d'un fonds ; ni sociale ni gouvernance.":
+    "Team method (assumption); environmental dimension only (direct emissions) or a fund's classification; neither social nor governance.",
+  EasyTrade: "EasyTrade",
   "Actif signalé comme hautement spéculatif par une règle de votre profil.": "Asset flagged as highly speculative by a rule of your profile.",
   "Cryptoactif écarté : votre profil n'autorise aucune part en crypto.": "Crypto asset excluded: your profile allows no share in crypto.",
   "Écarté faute d'indicateurs valides : historique de prix insuffisant à cette date.":
@@ -277,6 +307,41 @@ export const EN_EXACT: Record<string, string> = {
   "Classification sectorielle non datée (hypothèse : identique au 2026-11-12) ; ratios calculés par Finnhub, non audités ; pas de marge nette pour les banques":
     "Undated sector classification (assumption: same as on 2026-11-12); ratios computed by Finnhub, unaudited; no net margin for banks",
 
+  // Correctifs de l'audit : diversification mesurée, placement sans risque, tolérance au risque
+  "Mesure la diversification par rapport à l'univers analysé, pas à un panier précis":
+    "Measures diversification against the analyzed universe, not a specific portfolio",
+  "les corrélations varient dans le temps et montent souvent pendant les crises.":
+    "correlations change over time and often rise during crises.",
+  "adj_close en CAD ; rendements quotidiens sur les dates communes à tous les actifs (sans remplissage) ; moyenne des corrélations de Pearson avec chacun des autres actifs ; plus elle est basse, plus l'actif diversifie":
+    "adj_close in CAD; daily returns on the dates common to every asset (no filling); average Pearson correlation with each of the other assets; the lower it is, the more the asset diversifies",
+  "Taux directeur moyen de la Banque du Canada sur la période (placement sans risque de référence)":
+    "Average Bank of Canada policy rate over the period (risk-free reference)",
+  "Approximation du rendement d'un placement sans risque ; ne tient pas compte des frais ni de l'impôt.":
+    "Approximation of a risk-free investment's return; ignores fees and taxes.",
+  "Dépasse un repère de risque de votre profil : adéquation plafonnée à « partielle ».":
+    "Exceeds one of your profile's risk benchmarks: fit capped at \"partial\".",
+  "Position non exprimée : la réponse de l'agent était invalide après une relance.":
+    "Position not expressed: the agent's answer was invalid after one retry.",
+
+  // Preuves ESG (émissions de GES, EPA et ECCC ; scripts/ingest_esg.py)
+  "EPA — Greenhouse Gas Reporting Program (GHGRP), données 2023 et sociétés mères déclarées":
+    "EPA — Greenhouse Gas Reporting Program (GHGRP), 2023 data and reported parent companies",
+  "Environnement et Changement climatique Canada — Programme de déclaration des gaz à effet de serre (PDGES), données par installation":
+    "Environment and Climate Change Canada — Greenhouse Gas Reporting Program (GHGRP), facility-level data",
+  "émissions de GES par installation canadienne": "GHG emissions by Canadian facility",
+  "émissions directes de GES par installation américaine ; société mère et part de détention déclarées":
+    "direct GHG emissions by U.S. facility; reported parent company and ownership share",
+  "GHGRP : 2023 Data Summary Spreadsheets et Reported Parent Companies (EPA)":
+    "GHGRP: 2023 Data Summary Spreadsheets and Reported Parent Companies (EPA)",
+  "Greenhouse Gas (GHG) Emissions Data by Facility, 2004 à aujourd'hui (ECCC, PDGES)":
+    "Greenhouse Gas (GHG) Emissions Data by Facility, 2004 to present (ECCC, GHGRP)",
+  ...Object.fromEntries([
+    ["Installations américaines seulement : une société mondiale comme XOM n'est vue que pour sa part américaine ; émissions directes seulement (fournisseurs, injection de CO2 et CO2 biogénique exclus) ; potentiels de réchauffement AR4 alors que le Canada utilise AR5, donc non comparable directement ; valeur absolue, non rapportée au chiffre d'affaires ni à la production ; une société sans installation déclarante n'a pas de donnée (absence, pas zéro) ; année 2023, donc un décalage d'environ deux ans à la date d'analyse",
+      "U.S. facilities only: a global company like XOM is seen only through its U.S. share; direct emissions only (suppliers, CO2 injection and biogenic CO2 excluded); AR4 warming potentials whereas Canada uses AR5, so not directly comparable; absolute value, not scaled to revenue or production; a company without a reporting facility has no data (absence, not zero); year 2023, so about a two-year lag at the analysis date"],
+    ["Installations canadiennes seulement ; rattachement par le nom de l'exploitant, sans part de détention : une filiale sous un autre nom est omise (ex. Westcoast Energy pour Enbridge), donc borne inférieure ; coentreprises non réparties ; potentiels de réchauffement AR5 alors que l'EPA utilise AR4 ; CO2 de la biomasse publié à part ; valeur absolue, non rapportée au chiffre d'affaires ; date de publication du jeu 2024 à confirmer sur la fiche (hypothèse prudente : 2026-05-27)",
+      "Canadian facilities only; matched by operator name, without ownership share: a subsidiary under another name is missed (e.g. Westcoast Energy for Enbridge), so this is a lower bound; joint ventures not allocated; AR5 warming potentials whereas the EPA uses AR4; biomass CO2 published separately; absolute value, not scaled to revenue; publication date of the 2024 dataset to be confirmed on the dataset page (cautious assumption: 2026-05-27)"],
+  ].flatMap(([fr, en]) => [[fr, en], [`${fr}.`, `${en}.`]])),
+
   // Écran Données : contrôles qualité
   "Couverture du change sur toutes les dates utilisées": "Exchange-rate coverage on every date used",
   "Doublons (date, ticker)": "Duplicates (date, ticker)",
@@ -295,6 +360,50 @@ export const EN_EXACT: Record<string, string> = {
 const r = (pattern: string, out: string | ((...m: string[]) => string)): Rule => [tpl(pattern), out];
 
 export const EN_RULES: Rule[] = [
+  // Correctifs de l'audit
+  r("Corrélation moyenne de {n} avec les autres actifs analysés, un repère pour la diversification.",
+    "Average correlation of $1 with the other analyzed assets, a diversification benchmark."),
+  r("Corrélation moyenne des rendements quotidiens avec les {n} autres actifs de l'univers analysé",
+    "Average correlation of daily returns with the $1 other assets in the analyzed universe"),
+  r("Rendement annualisé observé de {n} %, positif mais sous le taux directeur moyen de la Banque du Canada ({n} %) sur la même période.",
+    "Observed annualized return of $1%, positive but below the Bank of Canada's average policy rate ($2%) over the same period."),
+  r("Rendement annualisé observé de {n} % sur toute la période disponible, au-dessus du taux directeur moyen de la Banque du Canada ({n} %) sur la période.",
+    "Observed annualized return of $1% over the whole available period, above the Bank of Canada's average policy rate ($2%) over the period."),
+  r("Sur la période, le rendement annualisé ({n} %) n'a pas dépassé le taux directeur moyen de la Banque du Canada ({n} %) : le risque pris n'a pas été rémunéré.",
+    "Over the period, the annualized return ($1%) did not beat the Bank of Canada's average policy rate ($2%): the risk taken was not rewarded."),
+  r("Série {t} ; moyenne simple des valeurs quotidiennes publiées sur la fenêtre des prix",
+    "Series $1; simple average of the daily values published over the price window"),
+  r("{s} : tolérance au risque retenue « {s} » au lieu de « {s} » déclarée.", (_m, why: string, applied: string, declared: string) =>
+    `${CONFLICT[why] ?? why}: risk tolerance applied "${lvl(applied)}" instead of the declared "${lvl(declared)}".`),
+  r("Écarté : risque au-delà de votre tolérance au risque {s} ({s}).", (_m, level: string, parts: string) =>
+    `Excluded: risk beyond your ${lvl(level)} risk tolerance (${parts.split(" ; ").map(sub).join("; ")}).`),
+  r("volatilité annualisée de {n} % pour un repère de {n} %", "annualized volatility of $1% against a $2% benchmark"),
+  r("perte maximale observée de {n} % pour un repère de {n} %", "observed maximum drawdown of $1% against a $2% benchmark"),
+  r("Pire période glissante de {n} an observée sur la période : {n} %.", "Worst rolling $1-year period observed: $2%."),
+  r("Pire période glissante sur {n} an {n} %, sous la médiane {n} % des pistes retenues.",
+    "Worst rolling $1-year period of $2%, below the $3% median of the selected ideas."),
+  r("Médiane de la pire période glissante de {n} an des actifs classés pour ce profil",
+    "Median worst rolling $1-year period of the assets ranked for this profile"),
+  r("Pire période glissante de {n} an (toute la période, {s})", "Worst rolling $1-year period (whole period, $2)"),
+
+  // Preuves ESG (émissions de GES)
+  [/^Émissions directes de GES : (.+?) CO2e déclarées en (\d{4}) par (\d+) installations? américaines? \(pondérées par la part de détention de la société mère\)\.$/,
+    (_m, qty: string, year: string, n: string) =>
+      `Direct GHG emissions: ${qty} CO2e reported for ${year} by ${n} U.S. facilit${n === "1" ? "y" : "ies"} (weighted by the parent company's ownership share).`],
+  [/^Émissions directes de GES : (.+?) CO2e déclarées en (\d{4}) par (\d+) installations? canadiennes? dont l'exploitant porte le nom de la société \(rattachement par le nom, sans part de détention\)\.$/,
+    (_m, qty: string, year: string, n: string) =>
+      `Direct GHG emissions: ${qty} CO2e reported for ${year} by ${n} Canadian facilit${n === "1" ? "y" : "ies"} whose operator bears the company's name (matched by name, without ownership share).`],
+  r("Extraction par script ({s}) depuis « {s} » ({s}) ; extrait : {s}", (_m, script: string, title: string, url: string, excerpt: string) =>
+    `Script extraction (${script}) from "${EN_EXACT[title] ?? title}" (${url}); excerpt: ${sentences(excerpt)}`),
+  r("Société mère déclarée : {s}", "Reported parent company: $1"),
+  r("Plus importante installation : {s} ({s} CO2e, part de détention {n} %).", "Largest facility: $1 ($2 CO2e, ownership share $3%)."),
+  r("{n} installation(s) liée(s) à la société mère sans émissions directes publiées (fournisseurs, injection de CO2), non comptée(s).",
+    "$1 facilit(ies) linked to the parent company with no published direct emissions (suppliers, CO2 injection), not counted."),
+  r("Exploitants retenus : {s}", (_m, list: string) => `Operators included: ${list.split(" ; ").join("; ")}`),
+  r("Information publiée par l'émetteur ou un tiers cité ; couverture ESG partielle. Limites de la source : {s}",
+    (_m, rest: string) => `Information published by the issuer or a cited third party; partial ESG coverage. Source limits: ${sub(rest)}`),
+  r("Limites de la source : {s}", (_m, rest: string) => `Source limits: ${sub(rest)}`),
+
   // Titres et profils
   r("{n} pistes cohérentes avec votre profil, {n} écartées", "$1 ideas consistent with your profile, $2 set aside"),
   r("{n} pistes cohérentes avec votre profil, {n} écartée", "$1 ideas consistent with your profile, $2 set aside"),
@@ -376,6 +485,15 @@ export const EN_RULES: Rule[] = [
   r("{n} candidats ; {n} arguments gardés, {n} supprimés (preuve absente ou nombre non étayé).",
     "$1 candidates; $2 arguments kept, $3 removed (missing evidence or unsupported number)."),
   r("{n} candidats classés ; {n} dossiers de preuves.", "$1 candidates ranked; $2 evidence packs."),
+  r("{n} candidats classés ; {n} dossiers de preuves. Critère ESG — controverses documentées : {s} ; émetteurs majeurs documentés : {s} ; fonds à filtre ESG : {s} ; preuves non concluantes : {s} ; actifs sans preuve ESG : {n}.",
+    (_m, ranked: string, packs: string, controversies: string, emitters: string, screened: string, inconclusive: string, none: string) => {
+      const list = (s: string) => (s === "aucun" ? "none" : s);
+      return `${ranked} candidates ranked; ${packs} evidence packs. ESG criterion — documented controversies: ${list(controversies)}; `
+        + `documented major emitters: ${list(emitters)}; ESG-screened funds: ${list(screened)}; inconclusive evidence: `
+        + `${list(inconclusive)}; assets without ESG evidence: ${none}.`;
+    }),
+  r("Fonds classé « {s} » dans l'univers analysé : il applique un filtre ESG",
+    (_m, sector: string) => `Fund classified as "${sector}" in the analyzed universe: it applies an ESG screen`),
   r("{n} actifs examinés ; {n} écartés par une règle du profil ; {n} écartés faute d'indicateurs valides ; {n} candidats classés.",
     "$1 assets reviewed; $2 excluded by a profile rule; $3 excluded for lack of valid indicators; $4 candidates ranked."),
   r("{n} candidats.", "$1 candidates."),
@@ -480,6 +598,17 @@ export const EN_RULES: Rule[] = [
   // Identifiants techniques (sujets de preuves, versions, fichiers) : identiques dans les deux langues.
   [/^engine@v\d+$|^validation@v\d+$|^data\/raw\/.+$|^(?:amira|mateo|robert|fictif)(?:_[0-9a-f]+)?$|^[A-Z0-9.\-]+→[A-Z0-9.\-]+$/, (m: string) => m],
 ];
+
+const CONFLICT: Record<string, string> = {
+  "Votre objectif est de préserver le capital": "Your goal is to preserve capital",
+  "Votre horizon est de moins de 5 ans": "Your horizon is under 5 years",
+};
+
+/** Suite de phrases (« A. B. ») : chaque phrase traduite si un gabarit la couvre. */
+function sentences(text: string): string {
+  const parts = text.split(/\.\s+(?=[A-Z0-9À-Ý])/);
+  return parts.map((p, i) => sub(i < parts.length - 1 ? `${p}.` : p)).join(" ");
+}
 
 const VERDICT: Record<string, string> = {
   "cohérent": "consistent", "cohérent avec réserve": "consistent with caveats", "incohérent avec le profil": "inconsistent with the profile",
