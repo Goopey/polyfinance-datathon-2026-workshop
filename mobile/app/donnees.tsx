@@ -12,7 +12,7 @@ import { Icon, type IconName } from "../src/components/Icon";
 import { Card, ErrorState, Loading, Pill, Row, Screen, Section } from "../src/components/ui";
 import { fmtDate } from "../src/format";
 import { useT } from "../src/i18n";
-import { useTx } from "../src/i18n/data";
+import { useDisplayId, useTx } from "../src/i18n/data";
 import { useProfileStore } from "../src/store/profile";
 import { alpha, colors, space } from "../src/theme/tokens";
 import { type } from "../src/theme/typography";
@@ -41,6 +41,7 @@ function evidenceIdsOf(r: Explanation): string[] {
 export default function Donnees() {
   const t = useT();
   const tx = useTx();
+  const displayName = useDisplayId();
   const { profileId, runs } = useProfileStore();
   const runId = profileId ? runs[profileId] : null;
   const overview = useQuery({ queryKey: ["data", runId], queryFn: () => getDataOverview(runId) });
@@ -112,7 +113,7 @@ export default function Donnees() {
                 </View>
                 <View style={{ flex: 1, gap: 4 }}>
                   <Text style={[type.caption, { color: colors.mint }]}>{fmtDate(e!.published_at)}</Text>
-                  <Text style={type.small}>{e!.subject} — {tx(e!.statement)}</Text>
+                  <Text style={type.small}>{displayName(e!.subject)} — {tx(e!.statement)}</Text>
                   <Row>
                     <ClaimTag kind={e!.claim_kind} />
                     <EvidenceChip id={e!.evidence_id} runId={run.data!.run_id} />

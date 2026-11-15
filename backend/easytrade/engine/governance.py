@@ -181,7 +181,9 @@ def control_diversification(selection: BasketSelection, minimum: int = MIN_DISTI
 
 def control_no_recommendation(no_recommendation: bool, reason: str) -> ControlResult:
     """Contrôle 2c : « aucune recommandation » est une sortie valide, jamais une piste forcée."""
-    note = f"Aucune recommandation : {reason}" if no_recommendation else "Des pistes sont présentées."
+    prefix = "Aucune recommandation : "
+    # La raison du moteur porte parfois déjà le préfixe (engine/decision.py) : ne pas le doubler.
+    note = (reason if reason.startswith(prefix) else f"{prefix}{reason}") if no_recommendation else "Des pistes sont présentées."
     return ControlResult("controle.aucune_recommandation", True, note)
 
 

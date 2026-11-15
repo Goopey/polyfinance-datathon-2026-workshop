@@ -47,7 +47,15 @@ export default function ResumeProfil() {
     },
   });
 
-  if (profile.isLoading || !weights) return profile.error ? <Screen><ErrorState error={profile.error} /></Screen> : <Loading />;
+  if (profile.isLoading || !weights) {
+    if (!profile.error) return <Loading />;
+    return (
+      <Screen>
+        <ErrorState error={profile.error} onRetry={() => profile.refetch()} />
+        <Button label={t.resume.chooseOther} variant="secondary" onPress={() => router.replace("/onboarding")} />
+      </Screen>
+    );
+  }
   const pw = profile.data!;
   const total = CRITERIA.reduce((s, k) => s + weights[k], 0) || 1;
   const bump = (k: Criterion, d: number) =>

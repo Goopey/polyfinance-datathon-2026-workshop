@@ -9,7 +9,8 @@ import time
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
-API = "http://127.0.0.1:8000"  # pas « localhost » : sous Windows, la résolution IPv6 coûte 2 s par appel
+# Pas « localhost » : sous Windows, la résolution IPv6 coûte 2 s par appel. 2e argument facultatif : port.
+API = f"http://127.0.0.1:{sys.argv[2] if len(sys.argv) > 2 else 8000}"
 OUT = sys.argv[1]
 
 def get(path):

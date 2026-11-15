@@ -260,7 +260,13 @@ async function main() {
     await click("Mateo, 41 ans");
     await click("Confirmer et voir les pistes");
     await visible("Aucune piste à explorer pour ce profil");
-    await step("Mateo : « aucune recommandation » (ESG non sourcé), sortie valide");
+    await visible("Le critère le plus important de votre profil (ESG");
+    await absent("Aucune recommandation :");
+    await visible("Ajuster les poids");
+    await step("Mateo : « aucune recommandation » (ESG non sourcé), raison claire, actions proposées");
+    await click("Voir les pistes sans le critère ESG");
+    await visible("pistes cohérentes avec votre profil", 60000);
+    await step("Mateo sans le critère ESG : pistes affichées, poids réparti");
   }
 
   if (problems.length) throw new Error(`Erreurs relevées pendant le parcours :\n${problems.join("\n")}`);

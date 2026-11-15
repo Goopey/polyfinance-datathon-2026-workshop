@@ -349,8 +349,11 @@ export const EN_RULES: Rule[] = [
   r("Aucune recommandation : le critère le plus important de votre profil ({s}, {n} %) n'a aucune donnée à cette date ({s}).",
     (_m, c: string, n: string, why: string) =>
       `No recommendation: your profile's most important criterion (${CRITERION[c] ?? c}, ${n}%) has no data as of this date (${MISSING[why] ?? why}).`),
+  r("Le critère le plus important de votre profil ({s}, {n} %) n'a aucune donnée à cette date ({s}).",
+    (_m, c: string, n: string, why: string) =>
+      `Your profile's most important criterion (${CRITERION[c] ?? c}, ${n}%) has no data as of this date (${MISSING[why] ?? why}).`),
   r("Aucune recommandation : {s}", (_m, rest: string) => `No recommendation: ${sub(rest)}`),
-  r("Aucun candidat à débattre : {s}", (_m, rest: string) => `No candidate to debate: ${sub(rest)}`),
+  r("Aucun candidat à débattre : {s}", (_m, rest: string) => `No candidate to debate: ${lcFirst(sub(ucFirst(rest)))}`),
   r("Confiance trop faible pour recommander : trop de poids de votre profil porte sur des critères non encore sourcés ({s}).",
     (_m, list: string) => `Confidence too low to recommend: too much of your profile's weight rests on criteria not sourced yet (${list.split(/,\s*/).map((c) => CRITERION[c] ?? c).join(", ")}).`),
   r("Titre absent de l'univers analysé : {t}", "Security not in the analyzed universe: $1"),
@@ -502,6 +505,9 @@ function horizon(h: string): string {
 function SECTOR_LABEL(s: string): string {
   return SECTORS_EN.includes(s) ? s : s;
 }
+
+const ucFirst = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const lcFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 
 /** Sous-phrase (« Aucune recommandation : … ») : traduite si connue. */
 function sub(s: string): string {

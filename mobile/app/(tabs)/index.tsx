@@ -2,8 +2,11 @@
  * Écran : Pistes à explorer (accueil) — rappel du profil, progression de l'analyse, cartes,
  * « Écartées et pourquoi », état « Aucune recommandation », raccourcis, bouton flottant « Tester une idée ».
  */
+import { useMutation } from "@tanstack/react-query";
 import { Redirect, router } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
+import { isNotFound } from "../../src/api/client";
+import { createProfile } from "../../src/api/profiles";
 import { EvidenceChip } from "../../src/components/EvidenceChip";
 import { Icon, type IconName } from "../../src/components/Icon";
 import { MoveCard } from "../../src/components/MoveCard";
@@ -17,12 +20,13 @@ import { useTx } from "../../src/i18n/data";
 import { useProfileStore } from "../../src/store/profile";
 import { alpha, colors, radius, space } from "../../src/theme/tokens";
 import { fontFamily, type } from "../../src/theme/typography";
-import type { Explanation, RejectedItem } from "../../src/types/contracts";
+import { blockingCriterion, stripNoRecoPrefix } from "../../src/noRecommendation";
+import type { Criterion, Explanation, RejectedItem } from "../../src/types/contracts";
 
 export default function Pistes() {
   const t = useT();
   const tx = useTx();
-  const { profileId, summary } = useProfileStore();
+  const { profileId, summary, reset } = useProfileStore();
   const { runId, query, startError, restart } = useBaseRun(profileId);
   if (!profileId) return <Redirect href="/onboarding" />;
   const run = query.data;
@@ -43,7 +47,17 @@ export default function Pistes() {
           <LinkText label={t.pistes.changeProfile} icon={null} onPress={() => router.push("/(tabs)/profil")} />
         </View>
 
-        {startError ? (
+        {startError && isNotFound(startError) ? (
+          // Profil créé avant un redémarrage de l'API (gardé en mémoire côté serveur) : il n'existe plus.
+          <Card style={{ borderColor: alpha(colors.warn, 0.4), backgroundColor: colors.warnBg }}>
+            <Row>
+              <Icon name="alert" size={20} color={colors.warn} />
+              <Text style={[type.h3, { flex: 1 }]}>{t.pistes.profileLostTitle}</Text>
+            </Row>
+            <Text style={type.body}>{t.pistes.profileLostBody}</Text>
+            <Button label={t.profil.change} icon="refresh" onPress={() => { reset(); router.replace("/onboarding"); }} />
+          </Card>
+        ) : startError ? (
           <ErrorState error={startError} onRetry={restart} />
         ) : query.error ? (
           <ErrorState error={query.error} onRetry={restart} />
@@ -117,18 +131,45 @@ function Results({ result, runId }: { result: Explanation; runId: string }) {
 function NoRecommendation({ result, runId }: { result: Explanation; runId: string }) {
   const t = useT();
   const tx = useTx();
+  const { profileId, setProfile } = useProfileStore();
+  // Critère prioritaire sans donnée (ex. ESG pour Mateo) : on propose de le retirer, sur demande explicite.
+  const blocking = result.missing.map(blockingCriterion).find((c): c is Criterion => c !== null) ?? null;
+  const without = useMutation({
+    mutationFn: () => createProfile({
+      base_persona: profileId!, objectif: "equilibre", horizon: "moyen", tolerance: "moderee",
+      preferences: [], exclusions: [], weights_override: { [blocking!]: 0 },
+    }),
+    onSuccess: (pw) => setProfile(pw),
+  });
   return (
     <>
-      <Card style={{ borderColor: alpha(colors.warn, 0.4), backgroundColor: colors.warnBg }}>
+      <Card style={{ borderColor: alpha(colors.warn, 0.4), backgroundColor: colors.warnBg, gap: space.md }}>
         <Row>
           <Icon name="ban" size={22} color={colors.warn} />
           <Text style={[type.h2, { flex: 1 }]} accessibilityRole="header">{t.pistes.noRecoTitle}</Text>
         </Row>
-        <Text style={type.body}>{t.pistes.noRecoBody}</Text>
-        {result.missing.map((m) => (
-          <Text key={m} style={type.body}>• {tx(m)}</Text>
-        ))}
-        <Button label={t.pistes.reviewRules} variant="secondary" onPress={() => router.push("/(tabs)/profil")} />
+        <View style={{ gap: space.xs }}>
+          <Text style={type.body}>{t.pistes.noRecoBody}</Text>
+          {result.missing.map((m) => (
+            <Text key={m} style={type.body}>• {tx(stripNoRecoPrefix(m))}</Text>
+          ))}
+        </View>
+        {without.error ? <ErrorState error={without.error} onRetry={() => without.mutate()} /> : null}
+        {blocking && profileId ? (
+          <View style={{ gap: space.xs }}>
+            <Button
+              label={without.isPending ? t.common.launching : t.pistes.withoutCriterion(t.criteria[blocking])}
+              icon={without.isPending ? undefined : "arrowRight"}
+              disabled={without.isPending}
+              onPress={() => without.mutate()}
+            />
+            <Text style={[type.caption, { textAlign: "center" }]}>{t.pistes.withoutCriterionHint}</Text>
+          </View>
+        ) : null}
+        {profileId ? (
+          <Button label={t.pistes.adjustWeights} variant="secondary" icon="sliders"
+            onPress={() => router.push({ pathname: "/onboarding/resume", params: { id: profileId } })} />
+        ) : null}
       </Card>
       <RejectedList rejected={result.rejected} runId={runId} initiallyOpen />
       <UnknownsBlock items={result.unknowns} />

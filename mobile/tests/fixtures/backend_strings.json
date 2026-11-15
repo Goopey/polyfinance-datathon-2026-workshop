@@ -1301,7 +1301,7 @@
   ]
  },
  {
-  "text": "Aucun candidat à débattre : Aucune recommandation : le critère le plus important de votre profil (ESG, 25 %) n'a aucune donnée à cette date (signaux ESG non encore sourcés).",
+  "text": "Aucun candidat à débattre : le critère le plus important de votre profil (ESG, 25 %) n'a aucune donnée à cette date (signaux ESG non encore sourcés).",
   "paths": [
    "trace.steps[].note"
   ]
@@ -1333,15 +1333,10 @@
   ]
  },
  {
-  "text": "Aucune recommandation : Aucune recommandation : le critère le plus important de votre profil (ESG, 25 %) n'a aucune donnée à cette date (signaux ESG non encore sourcés).",
-  "paths": [
-   "trace.steps[].note"
-  ]
- },
- {
   "text": "Aucune recommandation : le critère le plus important de votre profil (ESG, 25 %) n'a aucune donnée à cette date (signaux ESG non encore sourcés).",
   "paths": [
-   "run.result.missing[]"
+   "run.result.missing[]",
+   "trace.steps[].note"
   ]
  },
  {

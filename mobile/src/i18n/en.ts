@@ -192,7 +192,11 @@ export const en: Dict = {
     toReview: "Needs review",
     noRecoTitle: "No ideas to explore for this profile",
     noRecoBody: "Rather than force an idea, here's what's missing:",
-    reviewRules: "Review the profile rules",
+    profileLostTitle: "This profile is no longer available",
+    profileLostBody: "The server restarted since it was created. Choose it again or redo the questionnaire.",
+    withoutCriterion: (c) => `See ideas without the ${c} criterion`,
+    withoutCriterionHint: "Its weight is spread over the other criteria. You can restore it in your profile.",
+    adjustWeights: "Adjust the weights",
     rejectedTitle: (n) => `Set aside, and why (${n})`,
     rejectedSummary: (rules, ranked) =>
       [rules ? `${rules} by a rule` : "", ranked ? `${ranked} ranked lower` : ""].filter(Boolean).join(" · "),
@@ -350,7 +354,7 @@ export const en: Dict = {
 
   trail: {
     kind: { code: "Deterministic code", llm: "Agent (language model)", controle: "Governance check" },
-    header: (run, profile, date) => `Analysis ${run} · profile ${profile} · data as of ${date}`,
+    header: (profile, date) => `Profile ${profile} · data as of ${date}`,
     controls: "Governance checks",
     stepsTitle: "Steps",
     done: "Done",

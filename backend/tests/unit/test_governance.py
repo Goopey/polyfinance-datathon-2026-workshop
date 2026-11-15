@@ -84,6 +84,14 @@ def test_controle_avant_affichage():
     assert not bad.passed
 
 
+def test_aucune_recommandation_sans_prefixe_double():
+    deja = governance.control_no_recommendation(True, "Aucune recommandation : le critère le plus important manque.")
+    brut = governance.control_no_recommendation(True, "Preuves insuffisantes.")
+    assert deja.note == "Aucune recommandation : le critère le plus important manque."
+    assert brut.note == "Aucune recommandation : Preuves insuffisantes."
+    assert governance.control_no_recommendation(False, "").note == "Des pistes sont présentées."
+
+
 def scored(score, *criteria):
     return ScoredCandidate(ticker="A", name="A", sector="Energy", asset_class="equity", fit_score=score,
                            criteria=tuple(criteria))

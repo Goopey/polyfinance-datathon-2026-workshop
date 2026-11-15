@@ -195,7 +195,11 @@ export const fr = {
     toReview: "À examiner",
     noRecoTitle: "Aucune piste à explorer pour ce profil",
     noRecoBody: "Plutôt que de forcer une piste, voici ce qui manque :",
-    reviewRules: "Revoir les règles du profil",
+    profileLostTitle: "Ce profil n'est plus disponible",
+    profileLostBody: "Le serveur a redémarré depuis sa création. Choisissez-le de nouveau ou refaites le questionnaire.",
+    withoutCriterion: (c: string) => `Voir les pistes sans le critère ${c}`,
+    withoutCriterionHint: "Son poids est réparti sur les autres critères. Vous pourrez le rétablir dans votre profil.",
+    adjustWeights: "Ajuster les poids",
     rejectedTitle: (n: number) => `Écartées et pourquoi (${n})`,
     rejectedSummary: (rules: number, ranked: number) =>
       [rules ? `${rules} par une règle` : "", ranked ? `${ranked} moins bien classée${ranked > 1 ? "s" : ""}` : ""].filter(Boolean).join(" · "),
@@ -353,7 +357,7 @@ export const fr = {
 
   trail: {
     kind: { code: "Code déterministe", llm: "Agent (modèle de langage)", controle: "Contrôle de gouvernance" },
-    header: (run: string, profile: string, date: string) => `Analyse ${run} · profil ${profile} · données au ${date}`,
+    header: (profile: string, date: string) => `Profil ${profile} · données au ${date}`,
     controls: "Contrôles de gouvernance",
     stepsTitle: "Étapes",
     done: "Terminé",

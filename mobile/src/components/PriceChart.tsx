@@ -22,6 +22,7 @@ export function PriceChart({ series, runId }: { series: PriceSeries; runId?: str
   const [width, setWidth] = useState(0);
   const [hover, setHover] = useState<number | null>(null);
   const pts = series.points;
+  if (pts.length < 2) return null; // une courbe a besoin d'au moins deux points
   const values = pts.map((p) => p.value);
   const min = Math.min(...values);
   const max = Math.max(...values);

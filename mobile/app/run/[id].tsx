@@ -12,7 +12,7 @@ import { Icon, type IconName } from "../../src/components/Icon";
 import { Card, ErrorState, Loading, Pill, Row, Screen, Section } from "../../src/components/ui";
 import { durationMs, fmtDate, fmtSeconds } from "../../src/format";
 import { useT } from "../../src/i18n";
-import { useTx } from "../../src/i18n/data";
+import { useDisplayId, useTx } from "../../src/i18n/data";
 import { useSettings } from "../../src/store/settings";
 import { alpha, colors, space } from "../../src/theme/tokens";
 import { AGENT_COLOR } from "../../src/components/DebateSummary";
@@ -24,6 +24,8 @@ const KIND_ICON: Record<TraceStep["kind"], IconName> = { code: "sliders", llm: "
 export default function ParcoursAnalyse() {
   const t = useT();
   const tx = useTx();
+  const displayName = useDisplayId();
+  const advanced = useSettings((s) => s.mode === "avance");
   const { id } = useLocalSearchParams<{ id: string }>();
   const q = useQuery({ queryKey: ["trace", id], queryFn: () => getTrace(id!), enabled: !!id });
   if (q.isLoading) return <Loading />;
@@ -33,7 +35,9 @@ export default function ParcoursAnalyse() {
 
   return (
     <Screen>
-      <Text style={type.caption}>{t.trail.header(tr.run_id, tr.profile_id, fmtDate(tr.as_of))}</Text>
+      <Text style={type.caption}>
+        {t.trail.header(displayName(tr.profile_id), fmtDate(tr.as_of))}{advanced ? ` · ${tr.run_id}` : ""}
+      </Text>
 
       <Section title={t.trail.controls}>
         <Card style={{ gap: space.md }}>

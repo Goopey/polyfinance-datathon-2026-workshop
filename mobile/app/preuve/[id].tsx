@@ -13,7 +13,7 @@ import { Icon } from "../../src/components/Icon";
 import { Button, Card, ErrorState, Loading, Row, Screen, Tap } from "../../src/components/ui";
 import { fmtDate, fmtValue } from "../../src/format";
 import { useT } from "../../src/i18n";
-import { useTx } from "../../src/i18n/data";
+import { useDisplayId, useTx } from "../../src/i18n/data";
 import { useSettings } from "../../src/store/settings";
 import { alpha, colors, space } from "../../src/theme/tokens";
 import { fontFamily, type } from "../../src/theme/typography";
@@ -21,6 +21,7 @@ import { fontFamily, type } from "../../src/theme/typography";
 export default function Preuve() {
   const t = useT();
   const tx = useTx();
+  const displayName = useDisplayId();
   const { id, run } = useLocalSearchParams<{ id: string; run?: string }>();
   const advanced = useSettings((s) => s.mode === "avance");
   const q = useQuery({ queryKey: ["evidence", run ?? null, id], queryFn: () => getEvidence(id!, run), enabled: !!id });
@@ -34,7 +35,7 @@ export default function Preuve() {
     <Screen>
       <Row>
         <ClaimTag kind={e.claim_kind} showFact />
-        <Text style={type.small}>{t.preuve.typeLabel[e.type] ?? e.type} · {e.subject}</Text>
+        <Text style={type.small}>{t.preuve.typeLabel[e.type] ?? e.type} · {displayName(e.subject)}</Text>
       </Row>
       <Text style={type.h2}>{tx(e.statement)}</Text>
       {e.value !== null ? (

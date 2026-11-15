@@ -621,7 +621,8 @@ def record_debate(ctx: RunContext, results: dict[str, tuple[DebateRecord, list[C
                 )
     else:
         trace.record("debat", "llm", "ignore",
-                     note="Aucun candidat à débattre : " + (ctx.decision.reason or "aucun dossier."))
+                     note="Aucun candidat à débattre : "
+                          + (ctx.decision.reason or "aucun dossier.").removeprefix("Aucune recommandation : "))
     ctx.records = ctx.result.debate = records
 
 
