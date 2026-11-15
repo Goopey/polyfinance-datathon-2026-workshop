@@ -158,3 +158,44 @@ Valeurs dans `backend/easytrade/config.py`. Ce sont des choix de l'équipe (`HYP
 | Concentration sectorielle | Hors P1 | Dépend d'un portefeuille, donc du moteur (P2) |
 
 Rapport généré : `data/curated/quality_report.json` (commande `python scripts/bootstrap_data.py`). Résultat sur le jeu de départ : 6 contrôles sans remarque, 2 avertissements (volume nul de ZST.TO le 2022-07-06 ; anomalie CNQ.TO du 2022-08-22).
+
+## 10. Fondamentaux et sociétés comparables (Finnhub, 2026-11-15)
+
+Instantané de l'offre gratuite Finnhub, produit par `python scripts/fetch_finnhub.py` (clé `FINNHUB_API_KEY` dans
+`.env`) et versionné. L'application et les Lambda lisent les fichiers, jamais l'API (pas de clé sur AWS, démonstration
+reproductible, ADR 0002).
+
+| Fichier | Contenu | Date utilisée |
+|---|---|---|
+| `data/reference/graph_edges.csv` | 90 arêtes `CONCURRENT` : jusqu'à 5 sociétés comparables par action, une arête par paire | `document_date` = 2026-11-12, claim `HYPOTHESE` : la classification n'est pas datée par Finnhub ; on suppose qu'elle était la même à la date d'analyse ; la date réelle du relevé est dans l'extrait |
+| `data/reference/fundamentals.csv` | Séries annuelles `roe`, `totalDebtToEquity`, `netMargin` depuis 2018 (471 points) | Fin d'exercice ; publication supposée 90 jours plus tard (`FUNDAMENTALS_ANNUAL_LAG_DAYS`, config.py) |
+
+- Couverture : les 20 actions. Les 10 canadiennes passent par leur cotation américaine (RY, TD, MFC, ENB, CNQ, CNI,
+  FTS, SHOP, ANCTF, CNSWF) : accès gratuit, alors que le symbole de Toronto est payant. Ni FNB ni crypto.
+- Comparables hors univers (BMO, AMD…) : nœuds de contexte du graphe, sans métriques. Une seule arête relie deux
+  actifs de l'univers (RY.TO ↔ TD.TO) ; des liens de corrélation calculés sur nos prix pourront compléter le graphe
+  (nouveau type de relation : changement du contrat mobile).
+- Non disponible gratuitement chez Finnhub : scores ESG, chaînes d'approvisionnement, sentiment des nouvelles,
+  historique de cours. Disponible et non encore utilisé : nouvelles d'entreprise récentes, recommandations
+  d'analystes (mensuelles), sentiment des initiés (actions américaines).
+- Pour rafraîchir : relancer le script, puis `python scripts/seed_aws.py` et redéployer, et vider les analyses
+  précalculées (elles ne se mettent pas à jour seules).
+
+## 11. Sentiment et cours affichés dans la fiche (2026-11-15)
+
+**Sentiment** : `data/reference/sentiment.csv`, instantané `python scripts/fetch_finnhub.py --only sentiment`.
+
+| Mesure | Couverture | Date de publication supposée |
+|---|---|---|
+| Recommandations d'analystes (achat fort … vente forte, mensuelles) | 20 actions ; l'offre gratuite ne donne que les 4 derniers mois | fin du mois (`SENTIMENT_ANALYST_LAG_DAYS`) |
+| Indice de sentiment des initiés (MSPR, de -100 à +100) | 10 actions américaines (les dirigeants des sociétés canadiennes ne déposent pas de formulaire 4) | fin du mois + 5 jours (`SENTIMENT_INSIDER_LAG_DAYS`) |
+
+- Lecture : `data/sentiment.py` ; l'API ne sert que le dernier mois publié à la date de la fiche
+  (`AssetSheet.sentiment`), chaque chiffre devient une preuve `FAIT` du registre.
+- Libellé « plutôt positif / neutre / plutôt négatif » : solde des analystes ≥ 0,5 / < 0,1 (hypothèse : les
+  analystes penchent vers l'achat) ; l'indice des initiés sert seulement sans analyste.
+- **Affichage seulement** : le sentiment n'entre ni dans le score ni dans la décision. FNB et crypto : `null`.
+
+**Cours** : `GET /assets/{ticker}/prices`, calculé à partir du jeu de départ (aucune source nouvelle) : clôtures
+ajustées converties en CAD jusqu'à la date d'analyse, dernier jour de cotation de chaque semaine (≈ 260 points sur
+5 ans), variation sur la période et preuve du rendement annualisé sur la même fenêtre. Couvre les 31 actifs.

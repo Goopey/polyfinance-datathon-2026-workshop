@@ -72,7 +72,7 @@ describe("schéma des contrats", () => {
 
   it("les types servis par l'API sont tous dans le schéma", () => {
     for (const type of ["Persona", "ProfileWeights", "ProfileDraft", "RunRequest", "RunStatus", "Explanation", "Trace",
-      "AssetSummary", "AssetSheet", "DependencyGraph", "Evidence", "DataOverview"]) {
+      "AssetSummary", "AssetSheet", "PriceSeries", "DependencyGraph", "Evidence", "DataOverview"]) {
       assert.ok(schema.definitions[type], type);
     }
   });
@@ -129,11 +129,20 @@ describe("serveur fictif conforme au contrat", () => {
     assert.ok((status.result?.coherence?.tensions.length ?? 0) > 0);
   });
 
-  it("GET /assets, /assets/{ticker}, /assets/{ticker}/graph, /data", async () => {
+  it("GET /assets, /assets/{ticker}, /assets/{ticker}/graph, /assets/{ticker}/prices, /data", async () => {
     const assets = await api.assets();
     for (const a of assets) {
       conforms("AssetSummary", a);
-      conforms("AssetSheet", await api.asset(a.ticker, "robert"), `fiche ${a.ticker}`);
+      const sheet = await api.asset(a.ticker, "robert");
+      conforms("AssetSheet", sheet, `fiche ${a.ticker}`);
+      // Sentiment : actions seulement ; chaque chiffre renvoie à une preuve consultable.
+      assert.equal(sheet.sentiment === null, a.asset_class !== "equity", `sentiment ${a.ticker}`);
+      for (const id of [sheet.sentiment?.analysts?.evidence_id, sheet.sentiment?.insiders?.evidence_id].filter(Boolean)) {
+        conforms("Evidence", await api.evidence(id as string), `preuve ${id}`);
+      }
+      const prices = await api.prices(a.ticker);
+      conforms("PriceSeries", prices, `cours ${a.ticker}`);
+      assert.ok(prices.points.length > 50 && prices.points.every((pt) => pt.day <= prices.as_of), `cours datés ${a.ticker}`);
       conforms("DependencyGraph", await api.graph(a.ticker), `graphe ${a.ticker}`);
     }
     conforms("DataOverview", await api.dataOverview());

@@ -1,11 +1,11 @@
 /**
- * GET /assets, GET /assets/{ticker}, GET /assets/{ticker}/graph, GET /evidence/{id}, GET /data.
+ * GET /assets, GET /assets/{ticker}, GET /assets/{ticker}/graph, GET /assets/{ticker}/prices, GET /evidence/{id}, GET /data.
  *
  * `runId` : les identifiants de preuves sont propres à une analyse (`EV-000412` ne désigne pas la
  * même preuve dans deux runs). La fiche, le graphe et la preuve sont donc demandés pour le run
  * consulté ; sans run, l'API répond depuis son registre « hors analyse ».
  */
-import type { AssetSheet, AssetSummary, DataOverview, DependencyGraph, Evidence } from "../types/contracts";
+import type { AssetSheet, AssetSummary, DataOverview, DependencyGraph, Evidence, PriceSeries } from "../types/contracts";
 import { mockApi } from "../mocks/server";
 import { USE_MOCKS, http, mocked } from "./client";
 
@@ -30,6 +30,11 @@ export const getGraph = (ticker: string, runId?: string | null) =>
   USE_MOCKS
     ? mocked(() => mockApi.graph(ticker))
     : http.get<DependencyGraph>(`/assets/${enc(ticker)}/graph${query({ run_id: runId })}`);
+
+export const getPrices = (ticker: string, runId?: string | null) =>
+  USE_MOCKS
+    ? mocked(() => mockApi.prices(ticker))
+    : http.get<PriceSeries>(`/assets/${enc(ticker)}/prices${query({ run_id: runId })}`);
 
 export const getEvidence = (id: string, runId?: string | null) =>
   USE_MOCKS ? mocked(() => mockApi.evidence(id)) : http.get<Evidence>(`/evidence/${enc(id)}${query({ run_id: runId })}`);

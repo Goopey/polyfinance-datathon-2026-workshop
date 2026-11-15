@@ -93,6 +93,7 @@ Champs transverses, présents partout :
 | GET | `/assets` | Univers d'actifs (liste de « Tester une idée ») |
 | GET | `/assets/{ticker}?profile_id=&run_id=` | Fiche : indicateurs situés dans l'univers et comparés aux repères du profil, signaux |
 | GET | `/assets/{ticker}/graph?run_id=` | Graphe de dépendances sourcé |
+| GET | `/assets/{ticker}/prices?run_id=` | Cours ajustés en CAD jusqu'à la date d'analyse, un point par semaine (graphique de la fiche) — ajout 2026-11-15 |
 | GET | `/evidence/{id}?run_id=` | Une preuve : source, dates, traitement |
 | GET | `/data?run_id=` | Sources et contrôles qualité (écran « Données ») |
 

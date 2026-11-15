@@ -15,6 +15,7 @@ import math
 from typing import Optional
 
 from easytrade.schemas.candidate import Asset, CriterionScore, ScoredCandidate
+from easytrade.engine.signals import applicable
 from easytrade.schemas.weights import CRITERIA
 
 
@@ -53,10 +54,11 @@ def fit_level(candidate: ScoredCandidate) -> str:
     Le score est rapporté au poids des critères réellement couverts pour ce candidat : un
     critère sans donnée ne fait pas baisser le libellé (il baisse la confiance, affichée à part).
     """
-    covered = sum(c.weight for c in candidate.criteria if not c.missing)
+    applicable_weight = sum(c.weight for c in candidate.criteria if c.applicable)
+    covered = sum(c.weight for c in candidate.criteria if c.applicable and not c.missing)
     if covered <= 0:
         return "faible"
-    relative = candidate.fit_score / covered
+    relative = candidate.fit_score * applicable_weight / covered  # fit_score est déjà rapporté aux critères applicables
     if relative >= FIT_HIGH:
         return "élevée"
     return "partielle" if relative >= FIT_PARTIAL else "faible"
@@ -87,28 +89,35 @@ def score_candidates(
     for asset in eligible:
         criteria_scores: list[CriterionScore] = []
         missing: list[str] = []
+        # Critère non applicable à la classe d'actifs : retiré, poids réparti sur les autres critères.
+        applicable_weight = sum(float(weights[c]) for c in CRITERIA if applicable(c, asset.asset_class))
+        scale = 1.0 / applicable_weight if applicable_weight > 0 else 0.0
         fit = 0.0
         for criterion in CRITERIA:
             weight = float(weights[criterion])
             signal = signals.get(asset.ticker, {}).get(criterion)
-            rank = ranks[criterion].get(asset.ticker)
-            if rank is None:
+            is_applicable = applicable(criterion, asset.asset_class)
+            rank = ranks[criterion].get(asset.ticker) if is_applicable else None
+            if not is_applicable:
+                score, is_missing = 0.0, False
+            elif rank is None:
                 score = 0.0
                 missing.append(criterion)
                 is_missing = True
             else:
                 score = float(rank)
                 is_missing = False
-            contribution = weight * score
+            contribution = weight * score * scale if is_applicable else 0.0
             fit += contribution
             criteria_scores.append(CriterionScore(
                 criterion=criterion,
-                signal=None if not _is_number(signal) else float(signal),
+                signal=None if not _is_number(signal) or not is_applicable else float(signal),
                 score=score,
                 weight=weight,
                 contribution=contribution,
                 missing=is_missing,
-                evidence_id=evidence.get(asset.ticker, {}).get(criterion),
+                evidence_id=evidence.get(asset.ticker, {}).get(criterion) if is_applicable else None,
+                applicable=is_applicable,
             ))
         scored.append(ScoredCandidate(
             ticker=asset.ticker,

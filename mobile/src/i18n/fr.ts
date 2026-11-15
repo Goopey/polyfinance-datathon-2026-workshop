@@ -260,6 +260,28 @@ export const fr = {
     noSignals: "Aucun signal ESG ni nouvelle datée pour cet actif. C'est une information manquante, pas un bon score.",
     ranking: "Pourquoi ce classement",
     defaultLimit: "Fenêtre de 5 ans ; biais du survivant de l'univers.",
+    prices: "Cours observés",
+    sentiment: "Sentiment du marché",
+  },
+
+  priceChart: {
+    period: (from: string, to: string) => `du ${from} au ${to}`,
+    low: (v: string, cur: string) => `plus bas ${v} ${cur}`,
+    high: (v: string, cur: string) => `plus haut ${v} ${cur}`,
+    note: "Cours de clôture ajustés, convertis en CAD, jusqu'à la date d'analyse. Décrit le passé, ne prédit rien.",
+    a11y: (ticker: string, change: string, from: string, to: string) => `Cours de ${ticker} : ${change} du ${from} au ${to}`,
+  },
+
+  sentiment: {
+    none: "Pas de sentiment pour cet actif : les recommandations d'analystes et les déclarations d'initiés ne concernent que les actions. C'est une information sans objet, pas un mauvais signe.",
+    displayOnly: "À titre d'information : n'entre pas dans le score.",
+    label: { positif: "Plutôt positif", neutre: "Neutre", "négatif": "Plutôt négatif" } as Record<"positif" | "neutre" | "négatif", string>,
+    analysts: (month: string) => `Recommandations d'analystes, ${month}`,
+    insiders: (month: string) => `Achats et ventes des dirigeants (indice MSPR), ${month}`,
+    bucket: { strong_buy: "Achat fort", buy: "Achat", hold: "Conserver", sell: "Vente", strong_sell: "Vente forte" },
+    balance: (v: string) => `Solde : ${v} (de -1 à +1)`,
+    mspr: (v: string) => `Indice : ${v} (de -100, ventes, à +100, achats)`,
+    a11y: (buy: number, hold: number, sell: number) => `${buy} achat, ${hold} conserver, ${sell} vente`,
   },
 
   riskMeter: {
@@ -287,6 +309,8 @@ export const fr = {
     pts: (c: string, w?: string) => (w !== undefined ? `${c} pts / ${w}` : `${c} pts`),
     a11y: (label: string, c: string, w?: string) => `${label} : ${c} points${w !== undefined ? ` sur ${w} possibles` : ""}`,
     caption: "Poids du profil et critères : choix de l'équipe, à calibrer. Le débat ne modifie pas le score.",
+    notApplicable: "sans objet",
+    notApplicableNote: (labels: string) => `${labels} : sans objet pour ce type d'actif (pas de comptes de société). Son poids est réparti sur les autres critères, sans pénalité ni bonus.`,
   },
 
   debate: {

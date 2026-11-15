@@ -37,6 +37,15 @@ MACRO_DAILY_LAG_DAYS: dict[str, int] = {
     "DGS2": 1,
     "DGS10": 1,
 }
+# Fondamentaux annuels (Finnhub, docs/04_DONNEES.md) : date de publication supposée = fin de
+# l'exercice + ce délai. Hypothèse prudente (comptes annuels déposés en général sous 60 à 90 jours) :
+# un exercice n'est utilisé que s'il était très probablement public à la date d'analyse.
+FUNDAMENTALS_ANNUAL_LAG_DAYS = 90
+# Sentiment mensuel (Finnhub, docs/04_DONNEES.md section 11) : un mois n'est connu qu'une fois terminé
+# (recommandations d'analystes), plus un délai pour les déclarations d'initiés (formulaires 4, 2 jours
+# ouvrables, agrégés par Finnhub). Hypothèses prudentes.
+SENTIMENT_ANALYST_LAG_DAYS = 0
+SENTIMENT_INSIDER_LAG_DAYS = 5
 
 
 @dataclass(frozen=True)

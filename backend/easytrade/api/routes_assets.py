@@ -1,4 +1,4 @@
-"""GET /assets, GET /assets/{ticker}, GET /assets/{ticker}/graph, GET /evidence/{id}, GET /data.
+"""GET /assets, GET /assets/{ticker}, GET /assets/{ticker}/graph, GET /assets/{ticker}/prices, GET /evidence/{id}, GET /data.
 
 Conception : docs/01_ARCHITECTURE.md
 `run_id` : les identifiants de preuves sont propres à une analyse. Le mobile le transmet pour que
@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends
 
 from easytrade.api.deps import get_service
 from easytrade.api.service import ApiService
-from easytrade.schemas.api import AssetSheet, AssetSummary, DataOverview, DependencyGraph
+from easytrade.schemas.api import AssetSheet, AssetSummary, DataOverview, DependencyGraph, PriceSeries
 from easytrade.schemas.evidence import Evidence
 
 router = APIRouter(tags=["actifs et preuves"])
@@ -37,6 +37,12 @@ def get_asset(ticker: str, profile_id: Optional[str] = None, run_id: Optional[st
 def get_graph(ticker: str, run_id: Optional[str] = None, service: ApiService = Depends(get_service)) -> DependencyGraph:
     """Graphe de dépendances sourcé, profondeur 1."""
     return service.graph(ticker, run_id=run_id)
+
+
+@router.get("/assets/{ticker}/prices", response_model=PriceSeries)
+def get_prices(ticker: str, run_id: Optional[str] = None, service: ApiService = Depends(get_service)) -> PriceSeries:
+    """Cours ajustés en CAD jusqu'à la date d'analyse, un point par semaine (graphique de la fiche)."""
+    return service.price_series(ticker, run_id=run_id)
 
 
 @router.get("/evidence/{evidence_id}", response_model=Evidence)

@@ -94,8 +94,14 @@ def test_s03_5_pistes_par_defaut_etablies_sans_crypto(run):
     crypto = [r for r in run.explanation.rejected if r.ticker in ("BTC-USD", "ETH-USD")]
     assert len(crypto) == 2 and all(r.kind == "contrainte" for r in crypto)
     # Actifs établis : entreprises établies, fonds indiciels diversifiés, obligations ou or.
+    # Décision de l'équipe (2026-11-15) : depuis le critère « qualité », une société rentable et peu
+    # endettée classée « technologies » par la table des thèmes (GOOGL) est une piste légitime pour
+    # Robert. On exige donc une majorité d'actifs établis, aucun actif spéculatif. La présence de QQQ
+    # (indice à forte pondération technologique, 10e piste) est suivie dans la tâche de calibrage C7.
     established = {"entreprises_etablies", "indiciel_diversifie", "obligations", "or"}
-    assert all(established & set(asset_themes(i.asset_class, i.sector)) for i in items)
+    settled = [i for i in items if established & set(asset_themes(i.asset_class, i.sector))]
+    assert len(settled) > len(items) / 2, [i.ticker for i in items if i not in settled]
+    assert not any("spéculatif" in flag for i in items for flag in getattr(i, "flags", ()))
 
 
 @pytest.mark.scenario("S3")

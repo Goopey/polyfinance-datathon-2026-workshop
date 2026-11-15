@@ -35,12 +35,14 @@ from easytrade.agents.llm_client import CallInfo, LLMClient, make_client
 from easytrade.agents.profile_weighting import SOURCE_PROFILE, WeightingResult, template_for, weigh_profile
 from easytrade.agents.research import run_research
 from easytrade.agents.tools import ResearchTools
-from easytrade.config import Settings, load_settings
+from easytrade.config import FUNDAMENTALS_ANNUAL_LAG_DAYS, Settings, load_settings
+from easytrade.data.fundamentals import latest_known, load_fundamentals
 from easytrade.data.point_in_time import DateLike, PointInTimeStore, to_timestamp
 from easytrade.data.sources_registry import SourcesRegistry
 from easytrade.engine import governance
 from easytrade.engine.coherence import evaluate_idea, limit_tensions, reference_medians, verdict_from
 from easytrade.engine.decision import apply_debate, decide
+from easytrade.engine.quality import quality_scores
 from easytrade.engine.signals import THEMES, build_signals, preference_signals, sector_counts
 from easytrade.explain.evidence_ledger import EvidenceLedger
 from easytrade.explain.fidelity import FidelityReport, check_claim
@@ -59,6 +61,7 @@ VERSION = "v1"
 SOURCE_UNIVERSE = "starter_universe"
 SOURCE_PRICES = "starter_prices"
 SOURCE_HYPOTHESES = "easytrade_hypotheses"
+SOURCE_FUNDAMENTALS = "finnhub"
 STARTER_INPUTS = ("data/raw/starter/prices_daily.csv", "data/raw/starter/fx_usdcad_daily.csv",
                   "data/raw/starter/corporate_actions.csv")
 REQUIRED_SIGNALS = ("croissance", "stabilite")  # sans eux, un candidat n'a pas d'indicateurs valides
@@ -201,16 +204,78 @@ def _add_signal_evidence(
         )).evidence_id
 
 
+def _fr(value: float, decimals: int) -> str:
+    return f"{value:.{decimals}f}".replace(".", ",")
+
+
+QUALITY_PARTS = (  # (composante, libellé, unité, facteur d'affichage, décimales)
+    ("roe", "Rentabilité des fonds propres (ROE)", "%", 100.0, 1),
+    ("leverage", "Dette / fonds propres", "ratio", 1.0, 2),
+    ("margin", "Marge nette", "%", 100.0, 1),
+)
+
+
+def _add_quality_evidence(assets: pd.DataFrame, signals: dict, evidence: dict, ledger: EvidenceLedger,
+                          registry: SourcesRegistry, reference_dir: Path) -> None:
+    """Critère `qualite` des actions (engine.quality) : une preuve FAIT par chiffre Finnhub publié à la
+    date d'analyse, et une preuve HYPOTHESE pour le score (méthode de l'équipe). FNB et crypto : non
+    applicable. Source absente ou non « utilisé » : le critère reste manquant."""
+    if SOURCE_FUNDAMENTALS not in registry or registry.get(SOURCE_FUNDAMENTALS).statut != "utilisé":
+        return
+    scores = quality_scores(assets, latest_known(load_fundamentals(reference_dir), ledger.as_of))
+    if not scores:
+        return
+    facts_src = registry.require_used(SOURCE_FUNDAMENTALS).as_evidence_source()
+    method_src = registry.require_used(SOURCE_HYPOTHESES).as_evidence_source()
+    for ticker, quality in scores.items():
+        parts, ids, published = [], [], []
+        for attribute, label, unit, factor, decimals in QUALITY_PARTS:
+            point = getattr(quality, attribute)
+            if point is None:
+                continue
+            value = round(point.value * factor, decimals)
+            ids.append(ledger.add(EvidenceDraft(
+                type="metric", claim_kind="FAIT", subject=ticker,
+                statement=f"{label}, exercice clos le {point.period_end}", value=value, unit=unit,
+                observed_at=point.period_end, published_at=point.published_at, retrieved_at=point.retrieved_at,
+                source=facts_src,
+                processing=(f"Finnhub, série annuelle « {point.metric} » ({point.document_url}) ; publication "
+                            f"supposée {FUNDAMENTALS_ANNUAL_LAG_DAYS} jours après la clôture de l'exercice"),
+                produced_by=f"data.fundamentals@{VERSION}",
+                limits="Ratio calculé par Finnhub, non audité ; décrit l'exercice indiqué, pas l'avenir.",
+            )).evidence_id)
+            published.append(point.published_at)
+            text = f"{label.split(' (')[0].lower()} {_fr(value, decimals)}{' %' if unit == '%' else ''}"
+            if attribute == "leverage" and quality.leverage_position is not None:
+                rank = f"{quality.leverage_position}{'er' if quality.leverage_position == 1 else 'e'}"
+                text += f" ({rank} plus faible sur {quality.sector_peers} dans le secteur « {quality.sector} »)"
+            parts.append(text)
+        statement = "Qualité (méthode EasyTrade) : " + " ; ".join(parts)
+        composite = ledger.add(EvidenceDraft(
+            type="metric", claim_kind="HYPOTHESE", subject=ticker, statement=statement,
+            observed_at=max(published), published_at=max(published), source=method_src,
+            processing=("Moyenne des rangs centiles : ROE parmi les actions de l'univers ; dette / fonds propres "
+                        "dans le secteur seulement (au moins deux actions) ; marge nette quand elle existe"),
+            produced_by=f"engine.quality@{VERSION}",
+            limits="Méthode de l'équipe (hypothèse) ; ne compare pas les modèles d'affaires ; pas de FNB ni de crypto.",
+        )).evidence_id
+        signals[ticker]["qualite"] = quality.score
+        evidence[ticker]["qualite"] = composite
+        evidence[ticker]["qualite_composantes"] = tuple(ids)
+
+
 def _build_pack(ticker: str, assets_by_ticker: dict, metrics: pd.DataFrame, evidence: dict,
                 weighting: WeightingResult, candidates: CandidateList, ledger: EvidenceLedger) -> EvidencePack:
     roles: dict[str, str] = {}
     rows = metrics[(metrics["ticker"] == ticker) & metrics["evidence_id"].notna()]
     for _, row in rows.iterrows():
         roles[row["evidence_id"]] = f"{row['metric']}:{row['window']}"
-    for criterion in ("diversification", "preferences"):
+    for criterion in ("diversification", "preferences", "qualite"):
         evidence_id = evidence.get(ticker, {}).get(criterion)
         if evidence_id:
             roles[evidence_id] = f"signal:{criterion}"
+    for evidence_id in evidence.get(ticker, {}).get("qualite_composantes", ()):
+        roles[evidence_id] = "fondamentaux"
     for candidate in candidates.candidates:
         if candidate.ticker == ticker:
             for evidence_id in candidate.evidence_ids:
@@ -489,6 +554,7 @@ def stage_evidence_packs(ctx: RunContext, ws: Workspace, client: LLMClient) -> N
     with ctx.trace.step("dossiers_de_preuves", "code", version=f"engine@{VERSION}") as step:
         signals, evidence = build_signals(metrics, assets)
         _add_signal_evidence(assets, weighting, signals, evidence, ctx.ledger, ws.registry)
+        _add_quality_evidence(assets, signals, evidence, ctx.ledger, ws.registry, ws.settings.reference_dir)
         without_metrics = [t for t in candidates.tickers
                            if any(signals[t].get(c) is None for c in REQUIRED_SIGNALS)]
         classable = [t for t in candidates.tickers if t not in without_metrics]

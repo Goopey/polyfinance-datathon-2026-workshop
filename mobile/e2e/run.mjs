@@ -10,6 +10,7 @@
  * introuvable, champ absent) se voit donc ici.
  *
  * E2E_SHOTS=<dossier existant> enregistre une capture d'écran par étape.
+ * E2E_HEIGHT=<pixels> agrandit la fenêtre (900 par défaut) pour capturer une page entière.
  *
  * Prérequis : Chrome ou Edge (variable CHROME_PATH pour un autre emplacement) ; en mode api,
  * l'environnement Python du backend (variable EASYTRADE_PYTHON, sinon backend/.venv, sinon `python`).
@@ -117,7 +118,7 @@ async function main() {
   // 3. Navigateur.
   browser = await puppeteer.launch({ executablePath: findChrome(), headless: true, args: ["--window-size=430,900"] });
   const page = await browser.newPage();
-  await page.setViewport({ width: 430, height: 900 });
+  await page.setViewport({ width: 430, height: Number(process.env.E2E_HEIGHT) || 900 });
   const problems = [];
   page.on("console", (m) => { if (m.type() === "error") problems.push(`console : ${m.text()}`); });
   page.on("pageerror", (e) => problems.push(`exception : ${e}`));

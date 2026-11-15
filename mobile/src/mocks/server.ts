@@ -13,11 +13,12 @@ import {
   type AssetMetric, type AssetSheet, type AssetSummary, type Claim, type CoherenceAnalysis, type Confidence,
   type Criterion, type CriterionMap, type DataOverview, type DebatePosition, type DependencyGraph, type Evidence,
   type Explanation, type ExplanationItem, type Fit, type Persona, type ProfileDraft, type ProfileWeights,
-  type RejectedItem, type RunRequest, type RunStatus, type Stance, type Trace, type TraceStep, type Verdict,
+  type PriceSeries, type RejectedItem, type RunRequest, type RunStatus, type Stance, type Trace, type TraceStep,
+  type Verdict,
 } from "../types/contracts";
 import {
   ASSETS, EVIDENCE, EV_CONTROVERSE_F, EV_ESG_H, EV_NEWS_G, GRAPHS, MOCK_AS_OF, QUALITY, SOURCES,
-  assetByTicker, evId, profileEvidence, scenarioEvidence, type MetricKey, type MockAsset,
+  assetByTicker, evId, mockPrices, mockSentiment, profileEvidence, scenarioEvidence, type MetricKey, type MockAsset,
 } from "./fixtures";
 
 export class MockNotFound extends Error {}
@@ -172,12 +173,18 @@ function getMockProfile(id: string): MockProfile {
 
 const tickerName = (t: string) => assetByTicker(t)?.name ?? t;
 
+/** Critères sans objet pour la classe d'actifs, comme le moteur (engine/signals.py, NOT_APPLICABLE). */
+const notApplicableOf = (a: MockAsset): Criterion[] => (a.asset_class === "equity" ? [] : ["qualite"]);
+
 function scoreOf(a: MockAsset, p: MockProfile): { contributions: CriterionMap; total: number } {
   const s: CriterionMap = { ...a.s, preferences: a.pref[p.prefKey] };
+  const na = notApplicableOf(a);
+  // Poids d'un critère sans objet réparti sur les autres : contributions rapportées aux poids applicables.
+  const applicable = CRITERIA.reduce((sum, k) => sum + (na.includes(k) ? 0 : p.pw.weights[k]), 0) || 1;
   const contributions = {} as CriterionMap;
   let total = 0;
   for (const k of CRITERIA) {
-    contributions[k] = Math.round(p.pw.weights[k] * s[k] * 1000) / 1000;
+    contributions[k] = na.includes(k) ? 0 : Math.round((p.pw.weights[k] * s[k] * 1000) / applicable) / 1000;
     total += contributions[k];
   }
   return { contributions, total };
@@ -393,6 +400,7 @@ function buildItem(c: Candidate, p: MockProfile): ExplanationItem {
     to_review: debate.find((d) => d.agent === "bear")!.stance === "opposition" && overVol,
     why,
     contributions: c.contributions,
+    not_applicable: notApplicableOf(a),
     debate,
     debate_summary: { bull: stance("bull"), realist: stance("realist"), bear: stance("bear"), dissent: opp && sup },
     risks,
@@ -597,7 +605,15 @@ export const mockApi = {
         metric("rendement_annualise", "Rendement annualisé observé", "5 ans", null, true),
       ],
       signals,
+      sentiment: mockSentiment(a),
     };
+  },
+
+  async prices(ticker: string): Promise<PriceSeries> {
+    await sleep(150);
+    const a = assetByTicker(ticker);
+    if (!a) throw new MockNotFound(`Actif ${ticker} absent de l'univers`);
+    return mockPrices(a);
   },
 
   async graph(ticker: string): Promise<DependencyGraph> {

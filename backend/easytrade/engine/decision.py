@@ -20,12 +20,12 @@ from easytrade.engine.constraints import screen_assets
 from easytrade.engine.scoring import score_candidates
 from easytrade.schemas.debate import AGENT_LABELS, STANCE_LABELS, DebateRecord
 from easytrade.schemas.decision import Confidence, Decision
-from easytrade.schemas.weights import CRITERIA, ProfileWeights
+from easytrade.schemas.weights import CRITERIA, CRITERION_LABELS, ProfileWeights
 
 # Libellés lisibles des critères non couverts, pour « ce que nous ne savons pas ».
 MISSING_LABELS = {
     "esg": "signaux ESG non encore sourcés",
-    "qualite": "fondamentaux (qualité) non encore sourcés",
+    "qualite": "fondamentaux (qualité) non publiés à cette date",
     "preferences": "correspondance aux préférences déclarées non encore modélisée",
     "croissance": "historique de prix insuffisant",
     "stabilite": "historique de prix insuffisant",
@@ -102,10 +102,22 @@ def decide(
     confidence = _confidence(missing_weight)
     missing_info = tuple(MISSING_LABELS.get(c, c) for c in missing_for_all)
 
+    # Critère prioritaire du profil (poids le plus élevé) sans aucune donnée : on ne recommande pas
+    # sans ce que le profil juge le plus important (décision de l'équipe, 2026-11-15 ; ex. Mateo et l'ESG).
+    top_weight = max(float(w) for w in weights.values())
+    top_missing = [c for c in missing_for_all if float(weights[c]) == top_weight]
+
     all_scores_null = all(candidate.fit_score == 0.0 for candidate in ranking)
-    no_recommendation = all_scores_null or confidence == "faible"
+    no_recommendation = all_scores_null or confidence == "faible" or bool(top_missing)
     if all_scores_null:
         reason = "Preuves insuffisantes : aucun critère exploitable sur les actifs admissibles."
+    elif top_missing:
+        criterion = top_missing[0]
+        reason = (
+            f"Aucune recommandation : le critère le plus important de votre profil "
+            f"({CRITERION_LABELS.get(criterion, criterion)}, {top_weight * 100:.0f} %) n'a aucune donnée "
+            f"à cette date ({MISSING_LABELS.get(criterion, criterion)})."
+        )
     elif confidence == "faible":
         reason = (
             "Confiance trop faible pour recommander : trop de poids de votre profil porte sur "

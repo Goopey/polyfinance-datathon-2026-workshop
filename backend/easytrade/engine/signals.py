@@ -9,9 +9,16 @@ Couverture actuelle (socle de départ) :
 - croissance, stabilite, horizon : dérivés de la table d'indicateurs (P1).
 - diversification : approximation par la rareté sectorielle dans l'univers (proxy assumé,
   à remplacer par la corrélation au panier quand le graphe de dépendances sera saisi — bloc G).
-- esg, qualite : non encore sourcés → signal manquant (None), jamais un bon score.
+- esg : non encore sourcé → signal manquant (None), jamais un bon score.
+- qualite : manquant ici ; le pipeline le renseigne pour les actions avec `engine.quality`
+  (fondamentaux Finnhub publiés à la date d'analyse). « Non applicable » aux FNB et à la crypto.
 - preferences : manquant ici ; le pipeline (P3) le renseigne avec `preference_signals`, à partir
   des thèmes que l'agent de pondération a lus dans le profil.
+
+« Manquant » et « non applicable » sont distincts : un critère manquant compte 0 et baisse la
+confiance (l'information existe, on ne l'a pas) ; un critère non applicable n'a pas de sens pour la
+classe d'actifs (pas de comptes de société pour un FNB) : il est retiré du score de cet actif et son
+poids est réparti sur les autres critères, sans pénalité ni bonus (scoring.py).
 """
 from __future__ import annotations
 
@@ -28,8 +35,18 @@ METRIC_SIGNALS: dict[str, tuple[str, str, int]] = {
     "stabilite": ("annualized_volatility", "full", -1),
     "horizon": ("worst_rolling_3y", "full", +1),
 }
-# Critères sans source déterministe dans le socle de départ : signal manquant.
+# Critères sans source déterministe dans la table d'indicateurs : signal manquant ici, renseigné
+# (ou non) par le pipeline.
 UNSOURCED = ("esg", "qualite", "preferences")
+# Critère → classes d'actifs pour lesquelles il n'a pas de sens (décision de l'équipe, 2026-11-15).
+NOT_APPLICABLE: dict[str, frozenset[str]] = {
+    "qualite": frozenset({"etf_equity", "etf_bond", "etf_commodity", "crypto"}),
+}
+
+
+def applicable(criterion: str, asset_class: str) -> bool:
+    """Le critère a-t-il un sens pour cette classe d'actifs ? (sinon : retiré du score, sans pénalité)"""
+    return asset_class not in NOT_APPLICABLE.get(criterion, frozenset())
 
 
 def _is_number(value: object) -> bool:

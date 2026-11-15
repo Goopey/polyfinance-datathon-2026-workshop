@@ -32,6 +32,14 @@ export function fmtDate(iso: string | null): string {
   return d.toLocaleDateString(locale(), { year: "numeric", month: "long", day: "numeric" });
 }
 
+/** Mois et année (« octobre 2026 », « October 2026 »). */
+export function fmtMonth(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(`${iso.slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(locale(), { year: "numeric", month: "long" });
+}
+
 export function fmtSeconds(ms: number): string {
   return (ms / 1000).toLocaleString(locale(), { maximumFractionDigits: 1 });
 }

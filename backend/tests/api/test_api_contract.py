@@ -370,7 +370,8 @@ def test_routes_exposees():
 
     routes = sorted((method.upper(), path) for path, methods in app.openapi()["paths"].items() for method in methods)
     assert routes == [
-        ("GET", "/assets"), ("GET", "/assets/{ticker}"), ("GET", "/assets/{ticker}/graph"), ("GET", "/data"),
+        ("GET", "/assets"), ("GET", "/assets/{ticker}"), ("GET", "/assets/{ticker}/graph"),
+        ("GET", "/assets/{ticker}/prices"), ("GET", "/data"),
         ("GET", "/evidence/{evidence_id}"), ("GET", "/health"), ("GET", "/personas"),
         ("GET", "/profiles/{profile_id}"), ("GET", "/runs/{run_id}"), ("GET", "/runs/{run_id}/trace"),
         ("POST", "/profiles"), ("POST", "/runs"),
@@ -400,3 +401,47 @@ def test_le_validateur_du_contrat_refuse_un_ecart(contract, finished_run):
                            ("champ en trop dans une piste", nested_extra)):
         with pytest.raises(AssertionError, match="non conforme"):
             contract("RunStatus", payload, label)
+
+
+# --- cours et sentiment (fiche d'un actif, 2026-11-15) -------------------------------------------
+def test_cours_conformes_dates_et_relies_a_une_preuve(api, contract, finished_run):
+    status = finished_run("robert")
+    run_id = status["run_id"]
+    for ticker in ("AAPL", "RY.TO", "XBB.TO", "BTC-USD"):
+        series = api.get(f"/assets/{ticker}/prices", params={"run_id": run_id}).json()
+        contract("PriceSeries", series, f"cours {ticker}")
+        days = [p["day"] for p in series["points"]]
+        assert series["as_of"] == status["as_of"] and days == sorted(days) and len(days) > 200, ticker
+        assert days[-1] == series["end"] <= series["as_of"], ticker  # jamais après la date d'analyse
+        assert series["currency"] == "CAD"
+        evidence = api.get(f"/evidence/{series['evidence_id']}", params={"run_id": run_id}).json()
+        assert evidence["subject"] == ticker and "Rendement annualisé" in evidence["statement"]
+    assert api.get("/assets/NOPE/prices").status_code == 404
+
+
+def test_sentiment_des_actions_seulement_chiffres_de_la_preuve(api, contract, finished_run):
+    status = finished_run("robert")
+    run_id = status["run_id"]
+    for asset in api.get("/assets").json():
+        sheet = api.get(f"/assets/{asset['ticker']}", params={"run_id": run_id}).json()
+        contract("AssetSheet", sheet, f"fiche {asset['ticker']}")
+        sentiment = sheet["sentiment"]
+        if asset["asset_class"] != "equity":
+            assert sentiment is None, asset["ticker"]
+            continue
+        assert sentiment is not None and sentiment["label"] in ("positif", "neutre", "négatif"), asset["ticker"]
+        analysts = sentiment["analysts"]
+        if analysts:
+            evidence = api.get(f"/evidence/{analysts['evidence_id']}", params={"run_id": run_id}).json()
+            assert evidence["value"] == analysts["balance"] and evidence["published_at"] <= status["as_of"]
+            assert analysts["period"] < status["as_of"][:7] + "-01"  # mois terminé avant la date d'analyse
+        if sentiment["insiders"]:
+            evidence = api.get(f"/evidence/{sentiment['insiders']['evidence_id']}", params={"run_id": run_id}).json()
+            assert evidence["value"] == sentiment["insiders"]["mspr"] and evidence["published_at"] <= status["as_of"]
+
+
+def test_sentiment_a_une_date_passee_sans_fuite_du_futur(service):
+    """À une date antérieure à l'instantané, aucun mois de sentiment n'est encore publié : pas de bloc."""
+    from easytrade.data.sentiment import latest_sentiment
+
+    assert latest_sentiment(service._sentiment_table, "AAPL", "2024-06-30") == (None, None)

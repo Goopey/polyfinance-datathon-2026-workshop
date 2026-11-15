@@ -4,7 +4,7 @@
 > En cas d'interruption : joindre ce fichier dans une nouvelle conversation et reprendre à la **première tâche non cochée** de la section 4.
 > **Règle : ne jamais recommencer une étape marquée ✅.**
 
-Dernière mise à jour : 2026-11-15 — étape 4 (P4) **déployée** sur le compte d'atelier (us-east-1) : 3 piles CDK, API en ligne, premières analyses réelles sur AWS terminées (amira, mateo, robert ; ~2 min chacune ; vérificateur de fidélité passé) ; coût mesuré ≈ 0,35 $ par analyse ; précalcul : 3 / 96. Avant, le 2026-11-14 : code AWS prêt à déployer (CDK, 8 Lambda, Step Functions, API sur DynamoDB / S3), résultat identique au local vérifié par `tests/aws` ; client Bedrock corrigé pour les modèles Claude actuels ; restent le déploiement et le premier run sur le compte d'atelier (E4, D8). Avant : étape 3 (P3) terminée en local : agents, débat, explication, vérificateur de fidélité, pipeline complet (`scripts/run_local.py`) ; S1, S3, S6, S11 au vert, S8 partiel. Les agents tournent en mode **simulé** (règles Python, aucun modèle) : le client Bedrock est écrit mais n'a pas été exécuté contre AWS (A2 non levé). C6 fait avec P3 ; C7 (calibrage) reste ouvert. Étape 5 (P5) : F9 fait, l'application est branchée sur l'API réelle en local (`backend/easytrade/api/`), contrat vérifié par des tests des deux côtés et par un parcours complet dans un navigateur ; restent l'essai sur téléphone et le déploiement (P4)
+Dernière mise à jour : 2026-11-15 (soir) — graphe sourcé (G1, S10 ✅), critère qualité (G3), cours et sentiment dans la fiche (F11, H7) faits et testés **en local, pas encore déployés** ; les analyses précalculées sur AWS sont à refaire. Avant, le même jour : étape 4 (P4) **déployée** sur le compte d'atelier (us-east-1) : 3 piles CDK, API en ligne, premières analyses réelles sur AWS terminées (amira, mateo, robert ; ~2 min chacune ; vérificateur de fidélité passé) ; coût mesuré ≈ 0,35 $ par analyse ; précalcul : 3 / 96. Avant, le 2026-11-14 : code AWS prêt à déployer (CDK, 8 Lambda, Step Functions, API sur DynamoDB / S3), résultat identique au local vérifié par `tests/aws` ; client Bedrock corrigé pour les modèles Claude actuels ; restent le déploiement et le premier run sur le compte d'atelier (E4, D8). Avant : étape 3 (P3) terminée en local : agents, débat, explication, vérificateur de fidélité, pipeline complet (`scripts/run_local.py`) ; S1, S3, S6, S11 au vert, S8 partiel. Les agents tournent en mode **simulé** (règles Python, aucun modèle) : le client Bedrock est écrit mais n'a pas été exécuté contre AWS (A2 non levé). C6 fait avec P3 ; C7 (calibrage) reste ouvert. Étape 5 (P5) : F9 fait, l'application est branchée sur l'API réelle en local (`backend/easytrade/api/`), contrat vérifié par des tests des deux côtés et par un parcours complet dans un navigateur ; restent l'essai sur téléphone et le déploiement (P4)
 
 ---
 
@@ -16,7 +16,7 @@ Dernière mise à jour : 2026-11-15 — étape 4 (P4) **déployée** sur le comp
 | 1 | Socle données (P1) | ✅ terminée | S5, S7, S9 verts ; `pytest` : 42 réussis, 14 en attente (P2 et suivantes) |
 | 2 | Moteur de décision (P2) | 🟦 en cours | S4, S12 verts ; C6 fait avec P3 ; reste C7 (calibrage) |
 | 3 | Agents et explicabilité (P3) | ✅ terminée en local (agents simulés) ; exécution sur Bedrock à faire dès A2 | S1, S3, S6, S11 verts ; `pytest` : 195 réussis, 4 en attente |
-| 4 | AWS (P4) | 🟨 déployé : E1 à E5 ✅ ; E6 (précalcul) 3 / 96 ; D8 (rejouer S1, S3, S6 sur Bedrock) en cours | `cdk synth` réussi (3 piles) ; `tests/aws` : machine d'états = pipeline local ; `pytest` : 261 réussis, 3 en attente |
+| 4 | AWS (P4) | 🟨 déployé le 2026-11-15 : E1 à E5 ✅ ; **à redéployer** (graphe, qualité, cours, sentiment ajoutés depuis : `python build_lambda.py` puis `cdk deploy`) ; E6 (précalcul) 3 / 96, périmées ; D8 (rejouer S1, S3, S6 sur Bedrock) en cours | `cdk synth` réussi (3 piles) ; `tests/aws` : machine d'états = pipeline local ; `pytest` : 261 réussis, 3 en attente |
 | 5 | Mobile (P5) | 🟨 F1 à F9 ✅ : application branchée sur l'API réelle en local ; restent l'essai sur téléphone et l'API déployée (P4) | `npm run e2e:api` : parcours complet sur l'API réelle, 14 étapes, aucune erreur ; `pytest` : 247 réussis, 3 en attente ; `npm test` : 20 réussis |
 | 6 | Mateo / ESG + extras (P6) | ⬜ à faire | S2 |
 | 7 | Livrables (P7) | ⬜ à faire | Vidéo, documentation, one-pager, README |
@@ -311,11 +311,11 @@ Définitions : `docs/09_SCENARIOS_TEST.md`. Commande : `cd backend && pytest tes
 | S7 | Comparabilité (devises, calendriers, ajustements) | ✅ passe | 4 tests : CAD et dernier taux connu, adj_close, 7 fractionnements non réappliqués, 252 contre 365 |
 | S8 | Formulation et cadre de simulation | ✅ passe | `test_s08` : aucune formulation refusée dans les sorties, le débat et la trace de 5 runs ; mention de simulation dans chaque `Explanation` ; point 3 vérifié sur les routes réelles (deux écritures seulement : profil fictif, analyse simulée ; aucun champ de transaction) |
 | S9 | Exactitude et déterminisme des calculs | ✅ passe | Exécutions identiques ; XIU.TO, AAPL, BTC-USD recoupés par calcul sans pandas (tolérance relative 1e-9) |
-| S10 | Graphe sourcé | ⏳ non exécuté | Test en attente ; aucune arête saisie |
+| S10 | Graphe sourcé | ✅ passe | `test_s10` (3 tests) : chaque arête affichée par l'API a une preuve datée (comparables Finnhub, `HYPOTHESE`), nœuds hors univers en contexte, aucune arête avant sa date |
 | S11 | Désaccord conservé | ✅ passe | `test_s11` (5 tests, positions divergentes imposées par un faux client) : désaccord recopié dans `Decision.disagreements` et dans l'explication, confiance jamais « élevée », classement inchangé, arguments sans preuve valide supprimés ; si le débat s'oppose à toutes les pistes, aucune recommandation |
 | S12 | Adaptation au profil | ✅ passe | `test_s12` : même univers (8 actifs réels), classements différents pour Amira et Robert, contributions alignées sur les poids, déterministe |
 
-**Bilan : 10 passent (S1, S3, S4, S5, S6, S7, S8, S9, S11, S12), 0 échoue, 2 non exécutés (S2, S10).** S1, S3 et S6 passent en local avec des agents simulés ; ils sont à rejouer avec Bedrock.
+**Bilan : 11 passent (S1, S3, S4, S5, S6, S7, S8, S9, S10, S11, S12), 0 échoue, 1 non exécuté (S2).** S1, S3 et S6 passent en local avec des agents simulés ; ils sont à rejouer avec Bedrock.
 
 ### Tests techniques
 
@@ -359,7 +359,7 @@ Cocher au fur et à mesure. Les blocs A et F peuvent avancer en parallèle des a
 - [x] C4. `engine/decision.py` + « aucune recommandation ». → **S4**
 - [x] C5. `engine/coherence.py` (« Tester une idée »).
 - [x] C6. `orchestration/pipeline.py` sans LLM (débat simulé) ; `scripts/run_local.py`. Fait avec P3 (agents simulés).
-- [ ] C7. Calibrer poids et contraintes de `personas.json` sur les résultats. Poids et contraintes inchangés en P3. À regarder : aucune piste crypto pour Amira (BTC et ETH sont mal classés sur 5 ans) ; NVDA déclassée au profit de QQQ et GOOGL ; repères de risque et seuils d'adéquation posés en P3 (`docs/03_DECISION_ENGINE.md`).
+- [ ] C7. Calibrer poids et contraintes de `personas.json` sur les résultats. Poids et contraintes inchangés en P3. À regarder : aucune piste crypto pour Amira (BTC et ETH sont mal classés sur 5 ans) ; NVDA déclassée au profit de QQQ et GOOGL ; repères de risque et seuils d'adéquation posés en P3 (`docs/03_DECISION_ENGINE.md`). Depuis le critère « qualité » (2026-11-15) : QQQ (indice à forte pondération technologique) est la 10e piste de Robert, à revoir.
 
 ### D. Agents et explicabilité — P3
 
@@ -378,7 +378,7 @@ Cocher au fur et à mesure. Les blocs A et F peuvent avancer en parallèle des a
 - [x] E2. `PipelineStack` : 8 Lambda (`orchestration/handlers/*`), machine d'états en série + `Map` du débat, droits Bedrock. Pipeline découpé en étapes (`stage_*`, `RunContext`), même code qu'en local.
 - [x] E3. `ApiStack` : API Gateway HTTP + Lambda API ; `api/aws_service.py` (runs dans DynamoDB, lancement Step Functions, résultat sur S3, profils fictifs dans la table).
 - [x] E4. Déployé le 2026-11-15 (`npx.cmd aws-cdk deploy --all`, sortie `EasyTradeApi.ApiUrl`) ; `/health` répond ; trois analyses complètes sur AWS en ~2 min chacune. Captures du graphe Step Functions pour la vidéo : à faire si ce n'est pas déjà fait (les exécutions restent visibles dans la console).
-- [ ] E6. Précalculer les analyses sur AWS (`python scripts/precompute.py`, URL dans `EASYTRADE_API_URL` du `.env`) : **3 / 96 faites** (vues des 3 profils + analyses par défaut). Coût mesuré (CloudWatch, prix publics Anthropic) : 1,06 $ pour 3 analyses + 3 vues (Haiku 1 675 926 jetons en entrée / 275 932 en sortie ; Sonnet 270 153 / 21 540) ; ≈ 0,35 $ par analyse ⇒ ≈ 33 à 40 $ pour les 93 restantes. Reste : `python scripts/precompute.py --concurrency 5` (≈ 45 à 70 min).
+- [ ] E6. Précalculer les analyses sur AWS (`python scripts/precompute.py`, URL dans `EASYTRADE_API_URL` du `.env`) : **3 / 96 faites, périmées depuis le critère qualité (2026-11-15 soir) : à supprimer puis refaire après le redéploiement** (vues des 3 profils + analyses par défaut). Coût mesuré (CloudWatch, prix publics Anthropic) : 1,06 $ pour 3 analyses + 3 vues (Haiku 1 675 926 jetons en entrée / 275 932 en sortie ; Sonnet 270 153 / 21 540) ; ≈ 0,35 $ par analyse ⇒ ≈ 33 à 40 $ pour les 93 restantes. Reste : `python scripts/precompute.py --concurrency 5` (≈ 45 à 70 min).
 - [x] E5. Un rôle IAM par fonction (compartiment, table, Bedrock seulement si besoin) ; aucun secret nécessaire (rôle de la fonction) ; étiquettes `projet`, `evenement`, `environnement`.
 
 ### F. Mobile — P5 (démarre tout de suite avec les données fictives)
@@ -394,16 +394,19 @@ Cocher au fur et à mesure. Les blocs A et F peuvent avancer en parallèle des a
 - [x] F9. Brancher l'API réelle : fait en local (`EXPO_PUBLIC_USE_MOCKS=false`, `uvicorn easytrade.api.app:app`). Contrat vérifié par `pytest tests/api`, `npm test` et `npm run e2e:api`.
 - [ ] F9b. Essai sur téléphone avec Expo Go (URL de l'API : adresse IP locale de l'ordinateur), puis sur l'API déployée (E3).
 - [ ] F10. Remplacer les données fictives de la vidéo par des runs réels (aucun chiffre fictif à l'écran).
+- [x] F11. Graphique des cours dans la fiche (2026-11-15) : `GET /assets/{ticker}/prices` (clôtures ajustées en CAD jusqu'à la date d'analyse, un point par semaine, preuve du rendement annualisé), type `PriceSeries` du contrat, composant `PriceChart` (SVG, thème actuel, FR / EN), données fictives du serveur de démonstration. Vérifié : tests des deux côtés, parcours e2e fictif et sur l'API, capture d'écran de la fiche de Tesla.
 
 ### G. Graphe et ESG — P1 / P6
 
-- [ ] G1. Saisir les arêtes sourcées de 5 à 8 sociétés dans `graph_edges.csv` ; `graph/*`. → `test_graph_edges`, **S10**
-- [ ] G2. Saisir les preuves ESG dans `esg_evidence.csv` ; `ingestion/esg.py`. → **S2**
-- [ ] G3. `ingestion/edgar.py` : fondamentaux pour le critère `qualite`.
+- [x] G1. Graphe : 90 arêtes `CONCURRENT` (sociétés comparables Finnhub, 20 actions, une arête par paire, claim `HYPOTHESE` daté au 2026-11-12) dans `graph_edges.csv`, produites par `scripts/fetch_finnhub.py` ; servies par l'API existante (`tools.relations`, `service.graph`) sans changement du mobile. → `test_graph_edges` (3), **S10** (3). Reste possible : liens de corrélation (nouveau type de relation, contrat mobile).
+- [ ] G2. Saisir les preuves ESG dans `esg_evidence.csv` ; `ingestion/esg.py`. → **S2**. En attendant, Mateo : « aucune recommandation » par la règle du critère prioritaire (`docs/03_DECISION_ENGINE.md`).
+- [x] G3. Critère `qualite` des 20 actions (2026-11-15) : `data/fundamentals.csv` (Finnhub, séries annuelles, publication supposée fin d'exercice + 90 j), `engine/quality.py` (ROE, endettement comparé au secteur, marge), « non applicable » aux FNB et à la crypto (`signals.NOT_APPLICABLE`, poids réparti). Règle ajoutée : critère le plus important du profil sans donnée ⇒ aucune recommandation. → `test_quality` (8). EDGAR (dates de dépôt exactes) non utilisé : amélioration possible.
+- [x] G4. Affichage d'un critère « non applicable » (2026-11-15) : champ `not_applicable` d'`ExplanationItem` (contrat, `schemas/explanation.py`, `agents/explanation.py`, serveur fictif, `explanation.exemple.json`) ; `ContributionBars` affiche « sans objet » avec l'explication et rapporte les poids aux critères applicables (Robert, FNB : stabilité 40 au lieu de 30). Vérifié par capture de la fiche de XIU.TO.
 
 ### H. Extras (seulement si S1, S3, S5, S6 passent ; ordre de `docs/10_PLAN.md`)
 
 - [ ] H1. Comparaison de deux profils. · H2. Sensibilité. · H3. Guardrails. · H4. Tour 2 du débat. · H5. Version web hébergée. · H6. Graphe animé. · H7. Jauge de sentiment. · H8. Knowledge Bases, Athena.
+- [x] H7 (version minimale, 2026-11-15) : sentiment du marché dans la fiche des actions — recommandations d'analystes (20 actions) et indice des initiés (10 actions américaines), instantané Finnhub `data/reference/sentiment.csv`, dernier mois publié à la date de la fiche, preuves `FAIT`, composant `SentimentGauge`. Affichage seulement, sans effet sur le score. Reste possible : ton de la presse (nouvelles Finnhub notées par l'agent, au précalcul).
 
 ### I. Livrables — P7
 

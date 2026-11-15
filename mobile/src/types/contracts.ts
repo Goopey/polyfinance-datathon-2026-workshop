@@ -173,6 +173,7 @@ export interface ExplanationItem {
   to_review: boolean; // proposé (P5) : drapeau « à examiner » (opposition du Bear liée à une contrainte)
   why: Claim[];
   contributions: CriterionMap;
+  not_applicable: Criterion[]; // critères sans objet pour ce type d'actif (ex. qualité d'un FNB) : poids réparti sur les autres
   debate: DebatePosition[]; // proposé (P5) : positions complètes pour la fiche
   debate_summary: { bull: string; realist: string; bear: string; dissent: boolean };
   risks: string[];
@@ -262,10 +263,58 @@ export interface AssetMetric {
   advanced: boolean; // affiché seulement en mode Avancé
 }
 
+export type SentimentLabel = "positif" | "neutre" | "négatif";
+
+/** Recommandations d'analystes du dernier mois publié à la date de la fiche (Finnhub). */
+export interface AnalystSentiment {
+  period: string;
+  strong_buy: number;
+  buy: number;
+  hold: number;
+  sell: number;
+  strong_sell: number;
+  balance: number; // (achats − ventes) ÷ total, dans [-1, 1]
+  evidence_id: string;
+}
+
+/** Indice de sentiment des initiés (MSPR, de -100 à +100), actions américaines seulement. */
+export interface InsiderSentiment {
+  period: string;
+  mspr: number;
+  evidence_id: string;
+}
+
+/** Affichage seulement : n'entre ni dans le score ni dans la décision. */
+export interface SentimentView {
+  label: SentimentLabel;
+  analysts: AnalystSentiment | null;
+  insiders: InsiderSentiment | null;
+}
+
 export interface AssetSheet extends AssetSummary {
   as_of: string;
   metrics: AssetMetric[];
   signals: Claim[]; // ESG, nouvelles datées
+  sentiment: SentimentView | null; // actions seulement ; null pour les FNB et la crypto
+}
+
+// ---------- Cours (GET /assets/{ticker}/prices) ----------
+
+export interface PricePoint {
+  day: string;
+  value: number;
+}
+
+/** Cours de clôture ajustés en CAD jusqu'à la date d'analyse, un point par semaine. */
+export interface PriceSeries {
+  ticker: string;
+  currency: string;
+  as_of: string;
+  start: string;
+  end: string;
+  points: PricePoint[];
+  change_pct: number; // variation sur la période affichée, en %
+  evidence_id: string | null; // rendement annualisé sur la même période
 }
 
 // ---------- Graphe (docs/04_DONNEES.md §6) ----------

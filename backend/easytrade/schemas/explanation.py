@@ -54,6 +54,7 @@ class ExplanationItem(BaseModel):
     to_review: bool = False
     why: tuple[Claim, ...] = ()
     contributions: dict[str, float] = Field(default_factory=dict)
+    not_applicable: tuple[str, ...] = ()  # critères sans objet pour ce type d'actif (ex. qualité d'un FNB) : poids réparti
     debate: tuple[DebatePosition, ...] = ()
     debate_summary: DebateSummary
     risks: tuple[str, ...] = ()

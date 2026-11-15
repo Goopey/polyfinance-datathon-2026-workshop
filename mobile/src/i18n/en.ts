@@ -257,6 +257,28 @@ export const en: Dict = {
     noSignals: "No ESG signal or dated news for this asset. That's missing information, not a good score.",
     ranking: "Why this ranking",
     defaultLimit: "5-year window; survivorship bias in the universe.",
+    prices: "Observed prices",
+    sentiment: "Market sentiment",
+  },
+
+  priceChart: {
+    period: (from, to) => `from ${from} to ${to}`,
+    low: (v, cur) => `low ${v} ${cur}`,
+    high: (v, cur) => `high ${v} ${cur}`,
+    note: "Adjusted closing prices, converted to CAD, up to the analysis date. Describes the past; predicts nothing.",
+    a11y: (ticker, change, from, to) => `${ticker} price: ${change} from ${from} to ${to}`,
+  },
+
+  sentiment: {
+    none: "No sentiment for this asset: analyst recommendations and insider filings only cover stocks. This information doesn't apply here; it isn't a bad sign.",
+    displayOnly: "For information only: not part of the score.",
+    label: { positif: "Leaning positive", neutre: "Neutral", "négatif": "Leaning negative" },
+    analysts: (month) => `Analyst recommendations, ${month}`,
+    insiders: (month) => `Insider buying and selling (MSPR index), ${month}`,
+    bucket: { strong_buy: "Strong buy", buy: "Buy", hold: "Hold", sell: "Sell", strong_sell: "Strong sell" },
+    balance: (v) => `Balance: ${v} (from -1 to +1)`,
+    mspr: (v) => `Index: ${v} (from -100, selling, to +100, buying)`,
+    a11y: (buy, hold, sell) => `${buy} buy, ${hold} hold, ${sell} sell`,
   },
 
   riskMeter: {
@@ -284,6 +306,8 @@ export const en: Dict = {
     pts: (c, w) => (w !== undefined ? `${c} pts / ${w}` : `${c} pts`),
     a11y: (label, c, w) => `${label}: ${c} points${w !== undefined ? ` out of ${w} possible` : ""}`,
     caption: "Profile weights and criteria: team choices, to be calibrated. The debate does not change the score.",
+    notApplicable: "not applicable",
+    notApplicableNote: (labels) => `${labels}: not applicable to this type of asset (no company accounts). Its weight is spread over the other criteria, with no penalty or bonus.`,
   },
 
   debate: {

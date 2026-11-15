@@ -127,10 +127,61 @@ class AssetMetricView(BaseModel):
     advanced: bool = False
 
 
+SentimentLabel = Literal["positif", "neutre", "négatif"]
+
+
+class AnalystSentiment(BaseModel):
+    """Recommandations d'analystes du dernier mois publié (Finnhub)."""
+
+    period: date
+    strong_buy: int
+    buy: int
+    hold: int
+    sell: int
+    strong_sell: int
+    balance: float              # (achats − ventes) ÷ total, dans [-1, 1]
+    evidence_id: str
+
+
+class InsiderSentiment(BaseModel):
+    """Indice de sentiment des initiés (MSPR, de -100 à +100) du dernier mois publié."""
+
+    period: date
+    mspr: float
+    evidence_id: str
+
+
+class SentimentView(BaseModel):
+    """Affichage seulement : n'entre ni dans le score ni dans la décision."""
+
+    label: SentimentLabel
+    analysts: Optional[AnalystSentiment] = None
+    insiders: Optional[InsiderSentiment] = None
+
+
 class AssetSheet(AssetSummary):
     as_of: date
     metrics: list[AssetMetricView] = Field(default_factory=list)
     signals: list[Claim] = Field(default_factory=list)
+    sentiment: Optional[SentimentView] = None  # actions seulement ; null pour les FNB et la crypto
+
+
+class PricePoint(BaseModel):
+    day: date
+    value: float
+
+
+class PriceSeries(BaseModel):
+    """Cours de clôture ajustés en CAD jusqu'à la date d'analyse, un point par semaine (graphique)."""
+
+    ticker: str
+    currency: str = "CAD"
+    as_of: date
+    start: date
+    end: date
+    points: list[PricePoint] = Field(default_factory=list)
+    change_pct: float           # variation sur la période affichée, en %
+    evidence_id: Optional[str] = None  # rendement annualisé sur la même période (preuve)
 
 
 # --- graphe -----------------------------------------------------------------------------------

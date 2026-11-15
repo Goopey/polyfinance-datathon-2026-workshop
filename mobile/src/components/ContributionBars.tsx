@@ -1,20 +1,31 @@
 /**
  * Composant ContributionBars — Contribution de chaque critère au score d'adéquation (w_k · s_k).
  * La barre claire est le poids du critère (maximum possible), la barre pleine ce que l'actif en obtient.
+ * Critère « sans objet » pour la classe d'actifs (ex. qualité d'un FNB) : pas de barre, la mention le dit, et
+ * les poids affichés des autres critères sont rapportés aux critères applicables (comme le score).
  */
 import { StyleSheet, Text, View } from "react-native";
 import { fmtNum } from "../format";
 import { useT } from "../i18n";
 import { alpha, colors, radius, space } from "../theme/tokens";
 import { fontFamily, type } from "../theme/typography";
-import { CRITERIA, type CriterionMap } from "../types/contracts";
+import { CRITERIA, type Criterion, type CriterionMap } from "../types/contracts";
 import { ClaimTag } from "./ClaimTag";
 
-export function ContributionBars({ contributions, weights }: { contributions: CriterionMap; weights?: CriterionMap }) {
+export function ContributionBars({ contributions, weights: profileWeights, notApplicable = [] }: {
+  contributions: CriterionMap; weights?: CriterionMap; notApplicable?: Criterion[];
+}) {
   const t = useT();
+  const na = new Set(notApplicable);
+  const applicable = CRITERIA.filter((k) => !na.has(k));
   const total = CRITERIA.reduce((s, k) => s + contributions[k], 0);
-  const maxW = weights ? Math.max(...CRITERIA.map((k) => weights[k])) : Math.max(...CRITERIA.map((k) => contributions[k]));
-  const rows = [...CRITERIA].sort((a, b) => contributions[b] - contributions[a]);
+  // Poids rapportés aux critères applicables : le score de l'actif l'est aussi (engine/scoring.py).
+  const share = profileWeights ? applicable.reduce((s, k) => s + profileWeights[k], 0) || 1 : 1;
+  const weights = profileWeights
+    ? (Object.fromEntries(CRITERIA.map((k) => [k, na.has(k) ? 0 : profileWeights[k] / share])) as CriterionMap)
+    : undefined;
+  const maxW = weights ? Math.max(...applicable.map((k) => weights[k])) : Math.max(...applicable.map((k) => contributions[k]));
+  const rows = [...applicable].sort((a, b) => contributions[b] - contributions[a]);
   return (
     <View style={{ gap: space.md }}>
       <View style={styles.scoreRow}>
@@ -42,6 +53,15 @@ export function ContributionBars({ contributions, weights }: { contributions: Cr
           </View>
         );
       })}
+      {[...na].map((k) => (
+        <View key={k} style={styles.labelRow} accessibilityLabel={`${t.criteria[k]} : ${t.contributions.notApplicable}`}>
+          <Text style={[type.label, { color: colors.textMuted }]}>{t.criteria[k]}</Text>
+          <Text style={type.small}>{t.contributions.notApplicable}</Text>
+        </View>
+      ))}
+      {na.size > 0 ? (
+        <Text style={type.caption}>{t.contributions.notApplicableNote([...na].map((k) => t.criteria[k]).join(", "))}</Text>
+      ) : null}
       <View style={styles.labelRow}>
         <Text style={[type.caption, { flex: 1 }]}>{t.contributions.caption}</Text>
         <ClaimTag kind="HYPOTHESE" />

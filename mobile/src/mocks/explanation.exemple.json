@@ -43,10 +43,13 @@
         "stabilite": 0.07,
         "diversification": 0.17,
         "esg": 0.025,
-        "qualite": 0.075,
+        "qualite": 0,
         "horizon": 0.075,
         "preferences": 0.075
       },
+      "not_applicable": [
+        "qualite"
+      ],
       "debate": [
         {
           "agent": "bull",
@@ -152,6 +155,7 @@
         "horizon": 0.035,
         "preferences": 0.143
       },
+      "not_applicable": [],
       "debate": [
         {
           "agent": "bull",
@@ -261,10 +265,13 @@
         "stabilite": 0.065,
         "diversification": 0.15,
         "esg": 0.048,
-        "qualite": 0.07,
+        "qualite": 0,
         "horizon": 0.065,
         "preferences": 0.06
       },
+      "not_applicable": [
+        "qualite"
+      ],
       "debate": [
         {
           "agent": "bull",
@@ -368,10 +375,13 @@
         "stabilite": 0.005,
         "diversification": 0.13,
         "esg": 0.008,
-        "qualite": 0.02,
+        "qualite": 0,
         "horizon": 0.005,
         "preferences": 0.128
       },
+      "not_applicable": [
+        "qualite"
+      ],
       "debate": [
         {
           "agent": "bull",

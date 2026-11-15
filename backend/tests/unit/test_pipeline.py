@@ -105,6 +105,6 @@ def test_artefacts_enregistres(pipeline_run, tmp_path):
     assert {"run_id", "as_of", "profile_id", "headline", "no_recommendation", "missing", "items", "rejected",
             "coherence", "unknowns", "disclaimer"} == set(explanation)
     assert {"ticker", "name", "asset_class", "sector", "fit", "confidence", "to_review", "why", "contributions",
-            "debate", "debate_summary", "risks", "limits", "unknowns"} == set(explanation["items"][0])
+            "not_applicable", "debate", "debate_summary", "risks", "limits", "unknowns"} == set(explanation["items"][0])
     cited = {i for item in explanation["items"] for claim in item["why"] for i in claim["evidence_ids"]}
     assert cited and cited <= evidence

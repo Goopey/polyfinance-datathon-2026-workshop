@@ -95,9 +95,34 @@ Sortie valide et attendue dans ces cas :
 
 - aucun candidat ne passe les contraintes dures ;
 - preuves insuffisantes (métriques manquantes, fenêtre trop courte) ;
-- confiance faible sur tous les candidats.
+- confiance faible sur tous les candidats ;
+- **le critère le plus important du profil n'a aucune donnée** (ajout du 2026-11-15) : on ne recommande pas
+  sans ce que le profil juge prioritaire. Exemple : Mateo (ESG à 25 %) tant que l'ESG n'est pas sourcé.
 
 Le résultat explique alors ce qui manque.
+
+## Qualité (réalisation, 2026-11-15)
+
+Source : instantané Finnhub (`scripts/fetch_finnhub.py`, `data/reference/fundamentals.csv`, voir `04_DONNEES.md`
+section 10). Code : `engine/quality.py`, branché dans l'étape « dossiers de preuves ».
+
+| Composante | Calcul |
+|---|---|
+| Rentabilité des fonds propres (ROE) | Rang centile parmi les actions de l'univers |
+| Endettement (dette / fonds propres, plus bas = mieux) | Rang centile **dans le secteur seulement** (une banque emprunte par nature) ; omis si le secteur compte moins de deux actions |
+| Marge nette | Rang centile parmi les actions qui en ont une (pas de marge pour les banques) |
+| **Score** | Moyenne des composantes disponibles |
+
+Preuves : une preuve `FAIT` par chiffre Finnhub (exercice, date de publication supposée) et une preuve `HYPOTHESE`
+pour le score (méthode de l'équipe), dont l'énoncé reprend les chiffres.
+
+**Non applicable** (distinct de « manquant ») : pour les FNB et la crypto, la qualité n'a pas de sens (pas de comptes
+de société). Le critère est retiré du score de l'actif et son poids réparti sur les autres critères, sans pénalité ni
+bonus ; il ne baisse pas la confiance (`engine/signals.py`, `NOT_APPLICABLE`). Un critère manquant, lui, compte 0 et
+baisse la confiance.
+
+Effets observés : Robert gagne en confiance (« élevé ») ; GOOGL (ROE 33 %, peu d'endettement) entre dans ses pistes,
+jugée légitime pour un profil attaché à la qualité ; QQQ (10e piste) est suivi dans la tâche de calibrage C7.
 
 ## Sensibilité
 

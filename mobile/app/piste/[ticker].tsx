@@ -1,12 +1,12 @@
 /**
- * Écran : Fiche d'une piste — dans l'ordre : aperçu, graphe de dépendances, risque, débat, signaux,
- * pourquoi ce classement, ce que nous ne savons pas. Conception : docs/07_UX_UI.md §3.
+ * Écran : Fiche d'une piste — dans l'ordre : aperçu, graphe de dépendances, cours observés, risque, débat,
+ * signaux, sentiment du marché, pourquoi ce classement, ce que nous ne savons pas. Conception : docs/07_UX_UI.md §3.
  * Paramètres : `ticker`, `run` (facultatif : l'analyse dont la piste est issue).
  */
 import { useQuery } from "@tanstack/react-query";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { Text, View } from "react-native";
-import { getAsset, getGraph } from "../../src/api/assets";
+import { getAsset, getGraph, getPrices } from "../../src/api/assets";
 import { getProfile } from "../../src/api/profiles";
 import { useRun } from "../../src/api/runs";
 import { ContributionBars } from "../../src/components/ContributionBars";
@@ -14,7 +14,9 @@ import { DebateSummary } from "../../src/components/DebateSummary";
 import { ClaimLine, EvidenceChip } from "../../src/components/EvidenceChip";
 import { ConfidenceBadge, FitBadge } from "../../src/components/FitBadge";
 import { Icon } from "../../src/components/Icon";
+import { PriceChart } from "../../src/components/PriceChart";
 import { RiskMeter } from "../../src/components/RiskMeter";
+import { SentimentGauge } from "../../src/components/SentimentGauge";
 import { SupplyChainGraph } from "../../src/components/SupplyChainGraph";
 import { UnknownsBlock } from "../../src/components/UnknownsBlock";
 import { Button, Card, ErrorState, Loading, Pill, Row, Screen, Section } from "../../src/components/ui";
@@ -33,6 +35,7 @@ export default function FichePiste() {
   const profileId = run.data?.profile_id ?? currentProfile ?? undefined;
   const sheet = useQuery({ queryKey: ["asset", ticker, profileId, runParam], queryFn: () => getAsset(ticker!, { profileId, runId: runParam }), enabled: !!ticker });
   const graph = useQuery({ queryKey: ["graph", ticker, runParam], queryFn: () => getGraph(ticker!, runParam), enabled: !!ticker });
+  const prices = useQuery({ queryKey: ["prices", ticker, runParam], queryFn: () => getPrices(ticker!, runParam), enabled: !!ticker });
   const profile = useQuery({ queryKey: ["profile", profileId], queryFn: () => getProfile(profileId!), enabled: !!profileId });
 
   if (sheet.isLoading || (runParam && run.isLoading)) return <Loading />;
@@ -90,7 +93,14 @@ export default function FichePiste() {
         <Text style={type.caption}>{t.fiche.ecosystemNote}</Text>
       </Section>
 
-      {/* 3. Risque */}
+      {/* 3. Cours observés */}
+      <Section title={t.fiche.prices}>
+        <Card>
+          {prices.isLoading ? <Loading /> : prices.error ? <ErrorState error={prices.error} onRetry={() => prices.refetch()} /> : <PriceChart series={prices.data!} runId={runParam} />}
+        </Card>
+      </Section>
+
+      {/* 4. Risque */}
       <Section title={t.fiche.risk}>
         <Card style={{ paddingVertical: space.sm }}>
           {metrics.map((m) => <RiskMeter key={m.metric} m={m} runId={runParam} />)}
@@ -107,14 +117,14 @@ export default function FichePiste() {
         ) : null}
       </Section>
 
-      {/* 4. Débat */}
+      {/* 5. Débat */}
       {item ? (
         <Section title={t.fiche.debate}>
           <DebateSummary debate={item.debate} dissent={item.debate_summary.dissent} runId={runParam} />
         </Section>
       ) : null}
 
-      {/* 5. Signaux */}
+      {/* 6. Signaux */}
       <Section title={t.fiche.signals}>
         <Card style={{ gap: space.md }}>
           {a.signals.length === 0 ? (
@@ -125,16 +135,23 @@ export default function FichePiste() {
         </Card>
       </Section>
 
-      {/* 6. Pourquoi ce classement */}
+      {/* 7. Sentiment du marché (affichage seulement) */}
+      <Section title={t.fiche.sentiment}>
+        <Card>
+          <SentimentGauge sentiment={a.sentiment} runId={runParam} />
+        </Card>
+      </Section>
+
+      {/* 8. Pourquoi ce classement */}
       {item ? (
         <Section title={t.fiche.ranking}>
           <Card>
-            <ContributionBars contributions={item.contributions} weights={profile.data?.weights} />
+            <ContributionBars contributions={item.contributions} weights={profile.data?.weights} notApplicable={item.not_applicable} />
           </Card>
         </Section>
       ) : null}
 
-      {/* 7. Ce que nous ne savons pas */}
+      {/* 9. Ce que nous ne savons pas */}
       <UnknownsBlock items={[...(item?.unknowns ?? []), ...(item?.limits ?? [t.fiche.defaultLimit])]} />
 
       {runParam ? (

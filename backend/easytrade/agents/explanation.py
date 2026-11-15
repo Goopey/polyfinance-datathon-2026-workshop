@@ -141,6 +141,7 @@ def _item(candidate: ScoredCandidate, why: tuple[Claim, ...], decision: Decision
         to_review=candidate.ticker in decision.to_review,
         why=why,
         contributions={c.criterion: c.contribution for c in candidate.criteria},
+        not_applicable=tuple(c.criterion for c in candidate.criteria if not c.applicable),
         debate=positions,
         debate_summary=_debate_summary(record),
         risks=tuple(r for r in risks if is_clean(r, forbidden)),

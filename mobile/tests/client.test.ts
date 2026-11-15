@@ -50,11 +50,13 @@ describe("client HTTP (EXPO_PUBLIC_USE_MOCKS=false)", () => {
     await assets.getEvidence("EV-000412", "run_2026-11-12_robert_TSLA");
     await assets.getAsset("XIU.TO", { profileId: "robert", runId: "run_2026-11-12_robert" });
     await assets.getGraph("BTC-USD", "run_2026-11-12_amira");
+    await assets.getPrices("RY.TO", "run_2026-11-12_robert");
     await assets.getDataOverview("run_2026-11-12_amira");
     assert.deepEqual(calls.map((c) => c.url), [
       "http://api.test/evidence/EV-000412?run_id=run_2026-11-12_robert_TSLA",
       "http://api.test/assets/XIU.TO?profile_id=robert&run_id=run_2026-11-12_robert",
       "http://api.test/assets/BTC-USD/graph?run_id=run_2026-11-12_amira",
+      "http://api.test/assets/RY.TO/prices?run_id=run_2026-11-12_robert",
       "http://api.test/data?run_id=run_2026-11-12_amira",
     ]);
   });

@@ -37,6 +37,7 @@ from easytrade.explain.evidence_ledger import EvidenceLedger
 from easytrade.orchestration.pipeline import RunResult, Workspace, make_run_id, run_pipeline
 from easytrade.schemas.api import (
     RUN_STEPS,
+    AnalystSentiment,
     AssetMetricView,
     AssetSheet,
     AssetSummary,
@@ -45,6 +46,9 @@ from easytrade.schemas.api import (
     GraphEdge,
     GraphNode,
     HardConstraintsView,
+    InsiderSentiment,
+    PricePoint,
+    PriceSeries,
     ProfileDraft,
     ProfileWeightsView,
     QualityCheck,
@@ -52,9 +56,12 @@ from easytrade.schemas.api import (
     RunRequest,
     RunStatusView,
     RunStepView,
+    SentimentView,
     SourceInfo,
 )
+from easytrade.data.sentiment import latest_sentiment, load_sentiment, sentiment_label
 from easytrade.schemas.debate import Claim
+from easytrade.schemas.evidence import EvidenceDraft
 from easytrade.schemas.evidence import Evidence
 from easytrade.schemas.profile import Profile
 from easytrade.schemas.trace import RunTrace, TraceStep
@@ -103,6 +110,15 @@ SIGNAL_TYPES = ("esg", "news", "filing")
 RELATIONS = ("FOURNISSEUR", "CLIENT", "CONCURRENT", "PARTENAIRE")
 QUALITY_STATUS = {"pass": "ok", "warn": "avertissement", "fail": "erreur"}
 MAX_QUALITY_DETAILS = 8
+
+
+SOURCE_SENTIMENT = "finnhub"
+MONTHS_FR = ("janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre",
+             "novembre", "décembre")
+
+
+def _month_fr(day: date) -> str:
+    return f"{MONTHS_FR[day.month - 1]} {day.year}"
 
 
 class NotFound(LookupError):
@@ -162,6 +178,7 @@ class ApiService:
         self._contexts: dict[date, EvidenceContext] = {}
         self._profile_views: dict[str, ProfileWeightsView] = {}
         self._quality: dict[date, list[QualityCheck]] = {}
+        self._sentiment_table = load_sentiment(self.ws.settings.reference_dir)
         self._lock = threading.RLock()
         self._executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="easytrade-run")
 
@@ -457,7 +474,68 @@ class ApiService:
             if evidence.subject == ticker and evidence.type in SIGNAL_TYPES
         ]
         summary = self._summary(row)
-        return AssetSheet(**summary.model_dump(), as_of=context.as_of, metrics=metrics, signals=signals)
+        return AssetSheet(**summary.model_dump(), as_of=context.as_of, metrics=metrics, signals=signals,
+                          sentiment=self._sentiment(ticker, context))
+
+    # --- sentiment et cours -------------------------------------------------------------------
+    def _sentiment(self, ticker: str, context: EvidenceContext) -> Optional[SentimentView]:
+        """Dernier mois publié à la date de la fiche ; chaque chiffre devient une preuve du registre."""
+        if SOURCE_SENTIMENT not in self.ws.registry or self.ws.registry.get(SOURCE_SENTIMENT).statut != "utilisé":
+            return None
+        analysts, insiders = latest_sentiment(self._sentiment_table, ticker, context.as_of)
+        if analysts is None and insiders is None:
+            return None
+        source = self.ws.registry.require_used(SOURCE_SENTIMENT).as_evidence_source()
+        analyst_view = insider_view = None
+        if analysts is not None:
+            c = analysts.counts
+            evidence = context.ledger.add(EvidenceDraft(
+                type="metric", claim_kind="FAIT", subject=ticker,
+                statement=(f"Recommandations d'analystes, {_month_fr(analysts.period)} : {c['strong_buy']} achat fort, "
+                           f"{c['buy']} achat, {c['hold']} conserver, {c['sell']} vente, {c['strong_sell']} vente forte"),
+                value=round(analysts.balance, 2), unit="ratio", observed_at=analysts.period,
+                published_at=analysts.published_at, retrieved_at=analysts.retrieved_at, source=source,
+                processing=(f"Finnhub ({analysts.document_url}) ; solde = (achats − ventes) ÷ total des "
+                            "recommandations ; mois connu une fois terminé"),
+                produced_by="data.sentiment@v1",
+                limits="Opinions d'analystes, pas une prévision ; affiché seulement, sans effet sur le score.",
+            ))
+            analyst_view = AnalystSentiment(period=analysts.period, **c, balance=round(analysts.balance, 2),
+                                            evidence_id=evidence.evidence_id)
+        if insiders is not None:
+            evidence = context.ledger.add(EvidenceDraft(
+                type="metric", claim_kind="FAIT", subject=ticker,
+                statement=f"Indice de sentiment des initiés (MSPR, de -100 à +100), {_month_fr(insiders.period)}",
+                value=round(insiders.mspr, 1), unit="indice", observed_at=insiders.period,
+                published_at=insiders.published_at, retrieved_at=insiders.retrieved_at, source=source,
+                processing=(f"Finnhub ({insiders.document_url}) ; achats et ventes des dirigeants déclarés "
+                            "(formulaires 4), agrégés par mois"),
+                produced_by="data.sentiment@v1",
+                limits="Sociétés américaines seulement ; une vente d'initié a souvent une raison personnelle.",
+            ))
+            insider_view = InsiderSentiment(period=insiders.period, mspr=round(insiders.mspr, 1),
+                                            evidence_id=evidence.evidence_id)
+        return SentimentView(label=sentiment_label(analysts, insiders), analysts=analyst_view, insiders=insider_view)
+
+    def price_series(self, ticker: str, run_id: Optional[str] = None) -> PriceSeries:
+        """Cours ajustés en CAD jusqu'à la date d'analyse : dernier jour de cotation de chaque semaine."""
+        self._asset_row(ticker)
+        context = self._context(run_id)
+        prices = self.ws.store.prices(context.as_of, [ticker])
+        series = prices.set_index("date")["adj_close_cad"].dropna().sort_index()
+        if series.empty:
+            raise NotFound(f"Aucun cours publié pour {ticker} au {context.as_of}")
+        weekly = series.groupby(series.index.to_period("W-FRI")).tail(1)  # vraies dates, jamais après as_of
+        if weekly.index[-1] != series.index[-1]:
+            weekly = pd.concat([weekly, series.iloc[-1:]])
+        rows = context.metrics[(context.metrics["ticker"] == ticker) & (context.metrics["metric"] == "annualized_return")
+                               & (context.metrics["window"] == "full") & context.metrics["evidence_id"].notna()]
+        return PriceSeries(
+            ticker=ticker, as_of=context.as_of, start=weekly.index[0].date(), end=weekly.index[-1].date(),
+            points=[PricePoint(day=d.date(), value=round(float(v), 4)) for d, v in weekly.items()],
+            change_pct=round((float(series.iloc[-1]) / float(series.iloc[0]) - 1.0) * 100.0, 2),
+            evidence_id=str(rows.iloc[0]["evidence_id"]) if len(rows) else None,
+        )
 
     def graph(self, ticker: str, run_id: Optional[str] = None) -> DependencyGraph:
         """Sous-graphe de profondeur 1. Une arête n'est servie que si elle a une preuve (scénario S10)."""

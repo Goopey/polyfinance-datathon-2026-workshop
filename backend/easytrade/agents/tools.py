@@ -26,7 +26,8 @@ from easytrade.schemas.evidence import EvidenceDraft
 VERSION = "v1"
 ESG_FILE, ESG_DATE = "esg_evidence.csv", "document_date"
 EDGES_FILE, EDGES_DATE = "graph_edges.csv", "document_date"
-EDGES_SOURCE_BY_TYPE = {"10-K": "sec_edgar", "10-Q": "sec_edgar", "8-K": "sec_edgar", "SEDAR+": "sedar_plus"}
+EDGES_SOURCE_BY_TYPE = {"10-K": "sec_edgar", "10-Q": "sec_edgar", "8-K": "sec_edgar", "SEDAR+": "sedar_plus",
+                        "finnhub_peers": "finnhub"}  # instantané scripts/fetch_finnhub.py
 
 TOOL_DESCRIPTIONS: dict[str, str] = {
     "lister_univers": "Actifs analysables : ticker, nom, classe d'actifs, secteur, devise. Aucun chiffre.",

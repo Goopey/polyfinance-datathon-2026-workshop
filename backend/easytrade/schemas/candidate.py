@@ -42,10 +42,11 @@ class CriterionScore(BaseModel):
     criterion: str
     signal: Optional[float]      # signal orienté (plus haut = meilleur), None si manquant
     score: float                 # rang centile dans l'univers, [0, 1] ; 0 si manquant
-    weight: float
-    contribution: float          # weight × score
+    weight: float                # poids du profil (tel que déclaré)
+    contribution: float          # weight × score ÷ poids des critères applicables (= weight × score si tous le sont)
     missing: bool = False
     evidence_id: Optional[str] = None
+    applicable: bool = True      # False : critère sans objet pour la classe d'actifs (ex. qualité d'un FNB)
 
 
 class ScoredCandidate(BaseModel):

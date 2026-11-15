@@ -1,6 +1,47 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "definitions": {
+    "AnalystSentiment": {
+      "additionalProperties": false,
+      "description": "Recommandations d'analystes du dernier mois publié à la date de la fiche (Finnhub).",
+      "properties": {
+        "balance": {
+          "type": "number"
+        },
+        "buy": {
+          "type": "number"
+        },
+        "evidence_id": {
+          "type": "string"
+        },
+        "hold": {
+          "type": "number"
+        },
+        "period": {
+          "type": "string"
+        },
+        "sell": {
+          "type": "number"
+        },
+        "strong_buy": {
+          "type": "number"
+        },
+        "strong_sell": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "period",
+        "strong_buy",
+        "buy",
+        "hold",
+        "sell",
+        "strong_sell",
+        "balance",
+        "evidence_id"
+      ],
+      "type": "object"
+    },
     "AssetMetric": {
       "additionalProperties": false,
       "properties": {
@@ -79,6 +120,16 @@
             "null"
           ]
         },
+        "sentiment": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/SentimentView"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "signals": {
           "items": {
             "$ref": "#/definitions/Claim"
@@ -96,6 +147,7 @@
         "metrics",
         "name",
         "sector",
+        "sentiment",
         "signals",
         "ticker"
       ],
@@ -648,6 +700,12 @@
         "name": {
           "type": "string"
         },
+        "not_applicable": {
+          "items": {
+            "$ref": "#/definitions/Criterion"
+          },
+          "type": "array"
+        },
         "risks": {
           "items": {
             "type": "string"
@@ -689,6 +747,7 @@
         "to_review",
         "why",
         "contributions",
+        "not_applicable",
         "debate",
         "debate_summary",
         "risks",
@@ -757,6 +816,27 @@
         "id",
         "label",
         "in_universe"
+      ],
+      "type": "object"
+    },
+    "InsiderSentiment": {
+      "additionalProperties": false,
+      "description": "Indice de sentiment des initiés (MSPR, de -100 à +100), actions américaines seulement.",
+      "properties": {
+        "evidence_id": {
+          "type": "string"
+        },
+        "mspr": {
+          "type": "number"
+        },
+        "period": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "period",
+        "mspr",
+        "evidence_id"
       ],
       "type": "object"
     },
@@ -879,6 +959,69 @@
         "max_weight_crypto",
         "esg_exclusion",
         "speculatif"
+      ],
+      "type": "object"
+    },
+    "PricePoint": {
+      "additionalProperties": false,
+      "properties": {
+        "day": {
+          "type": "string"
+        },
+        "value": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "day",
+        "value"
+      ],
+      "type": "object"
+    },
+    "PriceSeries": {
+      "additionalProperties": false,
+      "description": "Cours de clôture ajustés en CAD jusqu'à la date d'analyse, un point par semaine.",
+      "properties": {
+        "as_of": {
+          "type": "string"
+        },
+        "change_pct": {
+          "type": "number"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "end": {
+          "type": "string"
+        },
+        "evidence_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "points": {
+          "items": {
+            "$ref": "#/definitions/PricePoint"
+          },
+          "type": "array"
+        },
+        "start": {
+          "type": "string"
+        },
+        "ticker": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ticker",
+        "currency",
+        "as_of",
+        "start",
+        "end",
+        "points",
+        "change_pct",
+        "evidence_id"
       ],
       "type": "object"
     },
@@ -1232,6 +1375,49 @@
         "explication"
       ],
       "type": "string"
+    },
+    "SentimentLabel": {
+      "enum": [
+        "positif",
+        "neutre",
+        "négatif"
+      ],
+      "type": "string"
+    },
+    "SentimentView": {
+      "additionalProperties": false,
+      "description": "Affichage seulement : n'entre ni dans le score ni dans la décision.",
+      "properties": {
+        "analysts": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/AnalystSentiment"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "insiders": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/InsiderSentiment"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "label": {
+          "$ref": "#/definitions/SentimentLabel"
+        }
+      },
+      "required": [
+        "label",
+        "analysts",
+        "insiders"
+      ],
+      "type": "object"
     },
     "SourceInfo": {
       "additionalProperties": false,
