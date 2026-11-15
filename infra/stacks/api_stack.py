@@ -41,7 +41,15 @@ class ApiStack(Stack):
             architecture=lambda_.Architecture.X86_64,
             handler="easytrade.api.app.handler",
             code=lambda_.Code.from_asset(str(BUILD / "app")),
-            layers=[pipeline.layer],
+            # Couche propre à cette pile (même paquet que la pile du pipeline) : partager la couche entre
+            # deux piles crée un export CloudFormation qui bloque tout redéploiement après reconstruction.
+            layers=[lambda_.LayerVersion(
+                self, "Dependances",
+                code=lambda_.Code.from_asset(str(BUILD / "layer")),
+                compatible_runtimes=[lambda_.Runtime.PYTHON_3_12],
+                compatible_architectures=[lambda_.Architecture.X86_64],
+                description="pandas, numpy, pydantic, fastapi, mangum (infra/build_lambda.py)",
+            )],
             memory_size=2048,
             timeout=Duration.seconds(29),  # limite d'une intégration API Gateway HTTP
             environment=environment,
