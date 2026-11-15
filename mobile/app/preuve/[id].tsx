@@ -6,19 +6,21 @@
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import type { ReactNode } from "react";
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { Linking, StyleSheet, Text, View } from "react-native";
 import { getEvidence } from "../../src/api/assets";
 import { ClaimTag } from "../../src/components/ClaimTag";
 import { Icon } from "../../src/components/Icon";
-import { Button, Card, ErrorState, Loading, Row, Screen } from "../../src/components/ui";
+import { Button, Card, ErrorState, Loading, Row, Screen, Tap } from "../../src/components/ui";
 import { fmtDate, fmtValue } from "../../src/format";
 import { useT } from "../../src/i18n";
+import { useTx } from "../../src/i18n/data";
 import { useSettings } from "../../src/store/settings";
 import { alpha, colors, space } from "../../src/theme/tokens";
 import { fontFamily, type } from "../../src/theme/typography";
 
 export default function Preuve() {
   const t = useT();
+  const tx = useTx();
   const { id, run } = useLocalSearchParams<{ id: string; run?: string }>();
   const advanced = useSettings((s) => s.mode === "avance");
   const q = useQuery({ queryKey: ["evidence", run ?? null, id], queryFn: () => getEvidence(id!, run), enabled: !!id });
@@ -34,7 +36,7 @@ export default function Preuve() {
         <ClaimTag kind={e.claim_kind} showFact />
         <Text style={type.small}>{t.preuve.typeLabel[e.type] ?? e.type} · {e.subject}</Text>
       </Row>
-      <Text style={type.h2}>{e.statement}</Text>
+      <Text style={type.h2}>{tx(e.statement)}</Text>
       {e.value !== null ? (
         <Text style={styles.value}>
           {fmtValue(e.value, e.unit)}
@@ -45,12 +47,12 @@ export default function Preuve() {
       <Card style={{ gap: 0, paddingVertical: space.sm }}>
         <Field label={t.preuve.source}>
           {e.source.url ? (
-            <Pressable onPress={() => Linking.openURL(e.source.url!)} accessibilityRole="link" style={styles.srcLink}>
-              <Text style={[type.body, { color: colors.link, textDecorationLine: "underline" }]}>{e.source.name}</Text>
+            <Tap onPress={() => Linking.openURL(e.source.url!)} accessibilityRole="link" scaleTo={0.97} style={styles.srcLink}>
+              <Text style={[type.body, { color: colors.link, textDecorationLine: "underline" }]}>{tx(e.source.name)}</Text>
               <Icon name="arrowRight" size={14} color={colors.link} />
-            </Pressable>
+            </Tap>
           ) : (
-            <Text style={type.body}>{e.source.name}</Text>
+            <Text style={type.body}>{tx(e.source.name)}</Text>
           )}
         </Field>
         {w.start || w.end ? (
@@ -67,11 +69,11 @@ export default function Preuve() {
           <Text style={type.body}>{t.preuve.retrieved} {fmtDate(e.retrieved_at)}</Text>
         </Field>
         <Field label={t.preuve.processing}>
-          <Text style={type.body}>{e.processing}</Text>
+          <Text style={type.body}>{tx(e.processing)}</Text>
         </Field>
         {e.limits ? (
           <Field label={t.preuve.limits}>
-            <Text style={type.body}>{e.limits}</Text>
+            <Text style={type.body}>{tx(e.limits)}</Text>
           </Field>
         ) : null}
         {advanced ? (

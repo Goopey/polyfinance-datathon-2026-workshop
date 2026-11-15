@@ -1,50 +1,56 @@
 /**
- * Composant SupplyChainGraph — Graphe de dépendances, version radiale fixe (repli prévu par docs/07_UX_UI.md).
+ * Composant SupplyChainGraph — Graphe de dépendances servi par l'API (GET /assets/{ticker}/graph), version radiale.
  *
  * - Nœud central : la société de la fiche ; voisins à 1 niveau, répartis sur un cercle.
- * - Trait plein = fait sourcé ; pointillé = hypothèse. Couleur ET style de trait par relation, et légende toujours visible.
- * - Toucher une arête : ouvre la preuve. Toucher un nœud : mini-fiche (accès à la fiche si l'actif est dans l'univers).
- * - Nœuds hors univers grisés, sans indicateurs.
- * - La liste des relations sous le graphe donne le même contenu sans dépendre du dessin (accessibilité).
- * Version animée (d3-force) : extra n° 7 de docs/10_PLAN.md.
+ * - Trait plein = fait sourcé ; pointillé = hypothèse. Couleur par relation ; la légende ne montre que
+ *   ce qui figure dans le graphe.
+ * - Toucher un nœud : il est mis en avant (ses liens restent vifs, les autres s'estompent) et une mini-fiche
+ *   s'ouvre (accès à la fiche si l'actif est dans l'univers, preuve du lien).
+ * - Nœuds hors univers en pointillé, sans indicateurs.
+ * - Graphe sans arête : rien n'est affiché (la fiche masque la section).
  */
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from "react-native";
+import { Platform, StyleSheet, Text, View, type LayoutChangeEvent } from "react-native";
 import Svg, { Circle, Defs, G, Line, RadialGradient, Stop, Text as SvgText } from "react-native-svg";
 import { useT } from "../i18n";
 import { alpha, colors, palette, radius, space } from "../theme/tokens";
 import { type } from "../theme/typography";
 import type { DependencyGraph, GraphEdge, GraphNode, Relation } from "../types/contracts";
 import { ClaimTag } from "./ClaimTag";
-import { EvidenceChip, openEvidence } from "./EvidenceChip";
-import { Button } from "./ui";
+import { EvidenceChip } from "./EvidenceChip";
+import { Icon } from "./Icon";
+import { Button, Collapsible, FadeIn, Tap } from "./ui";
 
 const REL_COLOR: Record<Relation, string> = {
   FOURNISSEUR: colors.info,
   CLIENT: colors.good,
-  CONCURRENT: colors.bad,
+  CONCURRENT: colors.hypothesis,
   PARTENAIRE: colors.warn,
 };
 const REL_ICON: Record<Relation, string> = { FOURNISSEUR: "→", CLIENT: "←", CONCURRENT: "⇄", PARTENAIRE: "∞" };
-const HEIGHT = 320;
+const HEIGHT = 300;
 const FONT = Platform.OS === "web" ? "Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif" : undefined;
 const GREY = "#5F7F6E";
 
-function shortLabel(s: string, max = 16) {
+function shortLabel(s: string, max = 14) {
   return s.length > max ? `${s.slice(0, max - 1)}…` : s;
+}
+
+export function hasGraph(graph: DependencyGraph | undefined | null) {
+  return !!graph && graph.edges.length > 0;
 }
 
 export function SupplyChainGraph({ graph, runId }: { graph: DependencyGraph; runId?: string | null }) {
   const t = useT();
   const [width, setWidth] = useState(320);
-  const [selected, setSelected] = useState<GraphNode | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
 
   const layout = useMemo(() => {
     const cx = width / 2;
     const cy = HEIGHT / 2;
-    const r = Math.min(width, HEIGHT) / 2 - 48;
+    const r = Math.min(width, HEIGHT) / 2 - 44;
     const neighbours = graph.nodes.filter((n) => n.id !== graph.center);
     const pos = new Map<string, { x: number; y: number }>([[graph.center, { x: cx, y: cy }]]);
     neighbours.forEach((n, i) => {
@@ -54,22 +60,16 @@ export function SupplyChainGraph({ graph, runId }: { graph: DependencyGraph; run
     return pos;
   }, [graph, width]);
 
+  if (graph.edges.length === 0) return null;
+
   const center = graph.nodes.find((n) => n.id === graph.center);
-  const relationsOf = (id: string) => graph.edges.filter((e) => e.source === id || e.target === id);
-
-  if (graph.edges.length === 0) {
-    return (
-      <View style={styles.empty}>
-        <Text style={type.body}>{t.graph.emptyTitle}</Text>
-        <Text style={type.small}>{t.graph.emptyBody}</Text>
-      </View>
-    );
-  }
-
-  const onEdge = (e: GraphEdge) => {
-    if (e.evidence_id) openEvidence(e.evidence_id, runId);
-    else setSelected(graph.nodes.find((n) => n.id === (e.source === graph.center ? e.target : e.source)) ?? null);
-  };
+  const selected = graph.nodes.find((n) => n.id === selectedId) ?? null;
+  const touches = (e: GraphEdge, id: string) => e.source === id || e.target === id;
+  const relations = [...new Set(graph.edges.map((e) => e.relation))];
+  const hasHypothesis = graph.edges.some((e) => e.claim_kind === "HYPOTHESE");
+  const hasFact = graph.edges.some((e) => e.claim_kind !== "HYPOTHESE");
+  const hasOutside = graph.nodes.some((n) => !n.in_universe);
+  const select = (id: string) => setSelectedId(selectedId === id || id === graph.center ? null : id);
 
   return (
     <View style={{ gap: space.md }}>
@@ -89,25 +89,16 @@ export function SupplyChainGraph({ graph, runId }: { graph: DependencyGraph; run
             const a = layout.get(e.source);
             const b = layout.get(e.target);
             if (!a || !b) return null;
-            const key = `${e.source}-${e.target}-${e.relation}`;
-            // Libellé au milieu de l'arête ; décalé sur le côté si l'arête est presque verticale.
-            const mx = (a.x + b.x) / 2;
-            const my = (a.y + b.y) / 2;
-            const vertical = Math.abs(a.x - b.x) < 24;
+            const dim = selectedId !== null && !touches(e, selectedId);
             return (
-              <G key={key}>
+              <G key={`${e.source}-${e.target}-${e.relation}`}>
                 <Line
                   x1={a.x} y1={a.y} x2={b.x} y2={b.y}
-                  stroke={REL_COLOR[e.relation]} strokeWidth={2.5} strokeOpacity={0.9}
+                  stroke={REL_COLOR[e.relation]} strokeWidth={dim ? 1.5 : 2.5} strokeOpacity={dim ? 0.2 : 0.9}
                   strokeDasharray={e.claim_kind === "HYPOTHESE" ? "6,5" : undefined}
                 />
-                <SvgText x={vertical ? mx + 7 : mx} y={vertical ? my + 4 : my - 6} fontSize={11} fill={REL_COLOR[e.relation]}
-                  textAnchor={vertical ? "start" : "middle"} fontWeight="600"
-                  fontFamily={FONT}>
-                  {t.relation[e.relation]}
-                </SvgText>
-                {/* Zone tactile large, invisible */}
-                <Line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="transparent" strokeWidth={22} onPress={() => onEdge(e)} />
+                <Line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="transparent" strokeWidth={22}
+                  onPress={() => select(e.source === graph.center ? e.target : e.source)} />
               </G>
             );
           })}
@@ -115,21 +106,31 @@ export function SupplyChainGraph({ graph, runId }: { graph: DependencyGraph; run
             const p = layout.get(n.id);
             if (!p) return null;
             const isCenter = n.id === graph.center;
-            const fill = isCenter ? colors.mint : n.in_universe ? colors.surfaceRaised : colors.surface;
-            const stroke = isCenter ? colors.mint : n.in_universe ? colors.primary : GREY;
+            const isSel = n.id === selectedId;
+            const fill = isCenter ? colors.mint : isSel ? colors.primary : n.in_universe ? colors.surfaceRaised : colors.surface;
+            const stroke = isCenter ? colors.mint : isSel ? colors.mint : n.in_universe ? colors.primary : GREY;
             return (
-              <G key={n.id} onPress={() => setSelected(n)}>
-                <Circle cx={p.x} cy={p.y} r={isCenter ? 32 : 18} fill={fill} stroke={stroke} strokeWidth={2}
-                  strokeDasharray={n.in_universe ? undefined : "3,3"} />
+              <G key={n.id} onPress={() => select(n.id)}>
+                {isSel ? <Circle cx={p.x} cy={p.y} r={28} fill={alpha(colors.mint, 0.14)} /> : null}
+                <Circle cx={p.x} cy={p.y} r={isCenter ? 32 : 19} fill={fill} stroke={stroke} strokeWidth={2}
+                  strokeDasharray={n.in_universe || isSel ? undefined : "3,3"} />
                 {isCenter ? (
                   <SvgText x={p.x} y={p.y + 4} fontSize={11} textAnchor="middle" fill={colors.primaryText} fontWeight="800" fontFamily={FONT}>
                     {shortLabel(n.id, 9)}
                   </SvgText>
                 ) : (
-                  <SvgText x={p.x} y={p.y + 32} fontSize={12} textAnchor="middle" fontFamily={FONT}
-                    fill={n.in_universe ? colors.text : colors.textMuted}>
-                    {shortLabel(n.label)}
-                  </SvgText>
+                  <>
+                    <SvgText x={p.x} y={p.y + 4} fontSize={9.5} textAnchor="middle" fontWeight="800" fontFamily={FONT}
+                      fill={isSel ? colors.primaryText : colors.mint}>
+                      {shortLabel(n.id.replace(/\.TO$/, ""), 6)}
+                    </SvgText>
+                    {n.label !== n.id ? (
+                      <SvgText x={p.x} y={p.y + 33} fontSize={11.5} textAnchor="middle" fontFamily={FONT}
+                        fill={n.in_universe ? colors.text : colors.textMuted}>
+                        {shortLabel(n.label)}
+                      </SvgText>
+                    ) : null}
+                  </>
                 )}
               </G>
             );
@@ -137,92 +138,98 @@ export function SupplyChainGraph({ graph, runId }: { graph: DependencyGraph; run
         </Svg>
       </View>
 
-      <Legend />
+      <View style={styles.legend} accessibilityLabel={t.graph.legendA11y}>
+        {relations.map((r) => (
+          <View key={r} style={styles.legendItem}>
+            <View style={[styles.swatch, { backgroundColor: REL_COLOR[r] }]} />
+            <Text style={type.caption}>{REL_ICON[r]} {t.relation[r]}</Text>
+          </View>
+        ))}
+        {hasFact && hasHypothesis ? (
+          <View style={styles.legendItem}>
+            <View style={[styles.swatch, { backgroundColor: colors.text }]} />
+            <Text style={type.caption}>{t.graph.solid}</Text>
+          </View>
+        ) : null}
+        {hasHypothesis ? (
+          <View style={styles.legendItem}>
+            <View style={styles.dashed} />
+            <Text style={type.caption}>{t.graph.dashed}</Text>
+          </View>
+        ) : null}
+        {hasOutside ? (
+          <View style={styles.legendItem}>
+            <View style={styles.greyNode} />
+            <Text style={type.caption}>{t.graph.grey}</Text>
+          </View>
+        ) : null}
+      </View>
 
       {selected ? (
-        <View style={styles.mini}>
-          <Text style={type.h3}>{selected.label}</Text>
-          <Text style={type.small}>{selected.in_universe ? t.graph.inUniverse : t.graph.outUniverse}</Text>
-          {relationsOf(selected.id).map((e) => (
-            <Text key={`${e.source}-${e.target}`} style={type.body}>
-              {REL_ICON[e.relation]} {t.relation[e.relation]} {e.claim_kind === "HYPOTHESE" ? t.graph.hypothesis : ""}
-            </Text>
-          ))}
-          {selected.in_universe && selected.id !== graph.center ? (
-            <Button label={t.graph.seeIts} variant="secondary"
-              onPress={() => router.push({ pathname: "/piste/[ticker]", params: runId ? { ticker: selected.id, run: runId } : { ticker: selected.id } })} />
-          ) : null}
-          <Button label={t.common.close} variant="ghost" onPress={() => setSelected(null)} />
-        </View>
+        <FadeIn key={selected.id}>
+          <View style={styles.mini}>
+            <View style={styles.miniHead}>
+              <Text style={[type.h3, { flex: 1 }]}>{selected.label}</Text>
+              <Tap onPress={() => setSelectedId(null)} hitSlop={10} accessibilityRole="button" accessibilityLabel={t.common.close}>
+                <Icon name="x" size={18} color={colors.textMuted} />
+              </Tap>
+            </View>
+            <Text style={type.small}>{selected.in_universe ? t.graph.inUniverse : t.graph.outUniverse}</Text>
+            {graph.edges.filter((e) => touches(e, selected.id)).map((e) => (
+              <View key={`${e.source}-${e.target}`} style={styles.miniRel}>
+                <Text style={[type.body, { color: REL_COLOR[e.relation] }]}>{REL_ICON[e.relation]} {t.relation[e.relation]}</Text>
+                {e.claim_kind === "HYPOTHESE" ? <ClaimTag kind="HYPOTHESE" /> : null}
+                {e.evidence_id ? <EvidenceChip id={e.evidence_id} runId={runId} /> : null}
+              </View>
+            ))}
+            {selected.in_universe && selected.id !== graph.center ? (
+              <Button label={t.graph.seeIts} variant="secondary" icon="arrowRight"
+                onPress={() => router.push({ pathname: "/piste/[ticker]", params: runId ? { ticker: selected.id, run: runId } : { ticker: selected.id } })} />
+            ) : null}
+          </View>
+        </FadeIn>
       ) : (
         <Text style={type.caption}>{t.graph.tapHint}</Text>
       )}
 
-      <View style={{ gap: space.xs }}>
-        <Text style={type.label}>{t.graph.relations(graph.edges.length)}</Text>
+      <Collapsible title={t.graph.relations(graph.edges.length)} icon="network">
         {graph.edges.map((e) => {
           const other = e.source === graph.center ? e.target : e.source;
           const node = graph.nodes.find((n) => n.id === other);
           return (
-            <Pressable key={`${e.source}-${e.target}-l`} onPress={() => onEdge(e)} style={({ pressed }) => [styles.relRow, pressed && { opacity: 0.75 }]} accessibilityRole="button">
+            <Tap key={`${e.source}-${e.target}-l`} onPress={() => select(other)} scaleTo={0.98}
+              style={({ pressed }) => [styles.relRow, (pressed || other === selectedId) && styles.relRowOn]} accessibilityRole="button">
               <View style={[styles.relIconWrap, { backgroundColor: alpha(REL_COLOR[e.relation], 0.14) }]}>
                 <Text style={[styles.relIcon, { color: REL_COLOR[e.relation] }]}>{REL_ICON[e.relation]}</Text>
               </View>
               <View style={{ flex: 1, gap: 2 }}>
-                <Text style={type.body}>
-                  {t.relation[e.relation]} : {node?.label ?? other}
-                </Text>
+                <Text style={type.body}>{t.relation[e.relation]} : {node?.label ?? other}</Text>
                 {!node?.in_universe ? <Text style={type.caption}>{t.graph.outUniverseShort}</Text> : null}
               </View>
-              {e.claim_kind === "HYPOTHESE" ? <ClaimTag kind="HYPOTHESE" /> : null}
               {e.evidence_id ? <EvidenceChip id={e.evidence_id} runId={runId} /> : null}
-            </Pressable>
+            </Tap>
           );
         })}
-      </View>
-    </View>
-  );
-}
-
-function Legend() {
-  const t = useT();
-  return (
-    <View style={styles.legend} accessibilityLabel={t.graph.legendA11y}>
-      {(Object.keys(REL_COLOR) as Relation[]).map((r) => (
-        <View key={r} style={styles.legendItem}>
-          <View style={[styles.swatch, { backgroundColor: REL_COLOR[r] }]} />
-          <Text style={type.caption}>{REL_ICON[r]} {t.relation[r]}</Text>
-        </View>
-      ))}
-      <View style={styles.legendItem}>
-        <View style={[styles.swatch, { backgroundColor: colors.text }]} />
-        <Text style={type.caption}>{t.graph.solid}</Text>
-      </View>
-      <View style={styles.legendItem}>
-        <View style={styles.dashed} />
-        <Text style={type.caption}>{t.graph.dashed}</Text>
-      </View>
-      <View style={styles.legendItem}>
-        <View style={styles.greyNode} />
-        <Text style={type.caption}>{t.graph.grey}</Text>
-      </View>
+      </Collapsible>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   canvas: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, overflow: "hidden" },
-  empty: { backgroundColor: colors.surface, borderRadius: radius.md, padding: space.lg, gap: space.xs, borderWidth: 1, borderColor: colors.border },
   legend: { flexDirection: "row", flexWrap: "wrap", gap: space.md },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   swatch: { width: 18, height: 3, borderRadius: 2 },
   dashed: { width: 18, height: 0, borderTopWidth: 2, borderStyle: "dashed", borderColor: colors.text },
-  greyNode: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.surface, borderWidth: 1, borderColor: GREY },
+  greyNode: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.surface, borderWidth: 1, borderStyle: "dashed", borderColor: GREY },
   mini: { backgroundColor: colors.surfaceRaised, borderRadius: radius.md, padding: space.md, gap: space.sm, borderWidth: 1, borderColor: colors.borderStrong },
+  miniHead: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  miniRel: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: space.sm },
   relRow: {
     flexDirection: "row", alignItems: "center", gap: space.md, minHeight: 52, paddingVertical: space.sm, paddingHorizontal: space.sm,
-    borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.md, backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.border,
   },
+  relRowOn: { borderColor: colors.primary, backgroundColor: alpha(colors.primary, 0.1) },
   relIconWrap: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   relIcon: { fontSize: 16, fontWeight: "700", textAlign: "center" },
 });

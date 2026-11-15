@@ -1,15 +1,21 @@
 /**
- * Composant RiskMeter — Indicateur de risque situé dans l'univers et comparé au seuil indicatif du profil.
- * L'échelle est orientée pour que « plus risqué » soit toujours à droite (dégradé jade → ambre → corail).
+ * Composant RiskMeter — Indicateur observé, dessiné à l'échelle réelle (proportionnel à 100 %).
+ *
+ * - Volatilité, perte maximale : barre de 0 à 100 % ; la longueur de la barre est la valeur elle-même
+ *   (27,8 % de volatilité = 27,8 % de la piste). Le seuil indicatif du profil est un trait à sa vraie place.
+ * - Rendements (annualisé, 2022, pire période de 3 ans) : échelle de −100 % à +100 % centrée sur 0 ;
+ *   au-delà de ±100 %, la barre est pleine et une flèche le signale.
+ * Couleur doublée d'un libellé (« au-delà / sous votre seuil »), jamais seule.
  */
-import { StyleSheet, Text, View } from "react-native";
-import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
+import { useEffect, useRef } from "react";
+import { Animated, Easing, StyleSheet, Text, View } from "react-native";
 import { fmtPct } from "../format";
 import { useT } from "../i18n";
+import { useTx } from "../i18n/data";
+import { useSettings } from "../store/settings";
 import { alpha, colors, radius, space } from "../theme/tokens";
 import { type } from "../theme/typography";
 import type { AssetMetric } from "../types/contracts";
-import { ClaimTag } from "./ClaimTag";
 import { EvidenceChip } from "./EvidenceChip";
 import { GlossaryTerm } from "./GlossaryTerm";
 import { Icon } from "./Icon";
@@ -17,65 +23,76 @@ import { Icon } from "./Icon";
 const GLOSSARY: Record<string, string> = {
   volatilite: "volatilite", perte_max: "perte_max", pire_periode: "pire_periode", rendement_annualise: "rendement_annualise",
 };
-/** Indicateurs de rendement : situés dans l'univers sans lecture « plus risqué ». */
-const RETURNS = new Set(["rendement_annualise", "rendement_2022"]);
-/** Pour ces indicateurs, une valeur plus basse est plus risquée. */
+/** Indicateurs signés : échelle centrée sur 0. */
+const SIGNED = new Set(["rendement_annualise", "rendement_2022", "pire_periode"]);
+/** Pour ces indicateurs, une valeur plus basse dépasse le seuil (pertes, négatives). */
 const LOWER_IS_RISKIER = new Set(["perte_max", "pire_periode"]);
 
 export function RiskMeter({ m, runId }: { m: AssetMetric; runId?: string | null }) {
   const t = useT();
-  const isRisk = !RETURNS.has(m.metric);
-  const invert = LOWER_IS_RISKIER.has(m.metric);
-  const span = m.universe_max - m.universe_min || 1;
-  const pos = (v: number) => {
-    const p = (v - m.universe_min) / span;
-    return Math.max(0, Math.min(1, invert ? 1 - p : p));
-  };
-  const over = m.profile_limit !== null && (invert ? m.value < m.profile_limit : m.value > m.profile_limit);
-  const gid = `risk-${m.metric}`;
+  const tx = useTx();
+  const advanced = useSettings((s) => s.mode === "avance");
+  const signed = SIGNED.has(m.metric);
+  const label = t.metrics[m.metric as keyof typeof t.metrics] ?? tx(m.label);
+  const limit = m.profile_limit;
+  const over = limit !== null && (LOWER_IS_RISKIER.has(m.metric) ? m.value < limit : m.value > limit);
+  const overflow = Math.abs(m.value) > 100;
+  const mag = Math.min(100, Math.abs(m.value)); // part de la piste, en %
+
+  const tone = signed
+    ? (m.value >= 0 ? colors.good : colors.bad)
+    : limit !== null ? (over ? colors.bad : colors.good) : m.metric === "perte_max" ? colors.warn : colors.info;
+
+  // Barre qui se remplit à l'affichage.
+  const grow = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(grow, { toValue: 1, duration: 650, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
+  }, [grow]);
+  const width = grow.interpolate({ inputRange: [0, 1], outputRange: ["0%", `${signed ? mag / 2 : mag}%`] });
+
   return (
-    <View style={styles.wrap}>
+    <View style={styles.wrap} accessible accessibilityLabel={t.riskMeter.a11y(label, fmtPct(m.value), tx(m.window))}>
       <View style={styles.head}>
-        <GlossaryTerm id={GLOSSARY[m.metric] ?? m.metric} label={m.label} />
-        <Text style={type.h3}>{fmtPct(m.value)}</Text>
+        <View style={{ flex: 1, gap: 2 }}>
+          <GlossaryTerm id={GLOSSARY[m.metric] ?? m.metric} label={label} />
+          {advanced ? <Text style={type.caption}>{tx(m.window)}</Text> : null}
+        </View>
+        <Text style={[styles.value, { color: tone }]}>{fmtPct(m.value)}</Text>
       </View>
-      <View style={styles.track} accessibilityLabel={t.riskMeter.a11y(m.label, fmtPct(m.value), m.window)}>
-        <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
-          <Defs>
-            <LinearGradient id={gid} x1="0" y1="0" x2="1" y2="0">
-              {(isRisk
-                ? [
-                  { o: "0", c: colors.good, a: "0.55" },
-                  { o: "0.55", c: colors.warn, a: "0.55" },
-                  { o: "1", c: colors.bad, a: "0.6" },
-                ]
-                : [
-                  { o: "0", c: colors.surfaceRaised, a: "1" },
-                  { o: "1", c: colors.primary, a: "0.6" },
-                ]
-              ).map((s) => <Stop key={s.o} offset={s.o} stopColor={s.c} stopOpacity={s.a} />)}
-            </LinearGradient>
-          </Defs>
-          <Rect x="0" y="0" width="100%" height="100%" rx="6" fill={`url(#${gid})`} />
-        </Svg>
-        <View style={[styles.marker, { left: `${pos(m.value) * 100}%` }]} />
-        {m.profile_limit !== null ? <View style={[styles.limit, { left: `${pos(m.profile_limit) * 100}%` }]} /> : null}
+
+      <View style={styles.track}>
+        {signed ? <View style={styles.zero} /> : null}
+        <Animated.View
+          style={[
+            styles.fill,
+            { width, backgroundColor: tone },
+            signed ? (m.value >= 0 ? { left: "50%" } : { right: "50%" }) : { left: 0 },
+          ]}
+        />
+        {limit !== null ? (
+          <View style={[styles.limit, { left: `${signed ? 50 + Math.max(-100, Math.min(100, limit)) / 2 : Math.min(100, Math.abs(limit))}%` }]} />
+        ) : null}
+        {overflow ? (
+          <View style={[styles.overflow, m.value >= 0 ? { right: 2 } : { left: 2 }]}>
+            <Icon name={m.value >= 0 ? "chevronRight" : "chevronLeft"} size={12} color={colors.primaryText} strokeWidth={3} />
+          </View>
+        ) : null}
       </View>
       <View style={styles.scale}>
-        <Text style={type.caption}>← {isRisk ? t.riskMeter.lessRisky : t.riskMeter.lower} {t.riskMeter.universe}</Text>
-        <Text style={type.caption}>{isRisk ? t.riskMeter.moreRisky : t.riskMeter.higher} →</Text>
+        <Text style={type.caption}>{signed ? `−100${t.riskMeter.pctSpace}%` : `0${t.riskMeter.pctSpace}%`}</Text>
+        {signed ? <Text style={type.caption}>0</Text> : null}
+        <Text style={type.caption}>{signed ? "+" : ""}100{t.riskMeter.pctSpace}%</Text>
       </View>
-      {m.profile_limit !== null ? (
-        <View style={styles.meta}>
-          <Icon name={over ? "x" : "check"} size={16} color={over ? colors.bad : colors.good} strokeWidth={2.6} />
-          <Text style={[type.small, { flexShrink: 1 }, over ? { color: colors.bad, fontWeight: "600" } : { color: colors.good }]}>
-            {over ? t.riskMeter.beyond(fmtPct(m.profile_limit, 0)) : t.riskMeter.within(fmtPct(m.profile_limit, 0))}
-          </Text>
-          <ClaimTag kind="HYPOTHESE" />
-        </View>
-      ) : null}
+
       <View style={styles.meta}>
-        <Text style={type.caption}>{t.riskMeter.observed(m.window)}</Text>
+        {limit !== null ? (
+          <View style={styles.verdict}>
+            <Icon name={over ? "x" : "check"} size={15} color={over ? colors.bad : colors.good} strokeWidth={2.8} />
+            <Text style={[type.small, { color: over ? colors.bad : colors.good, fontWeight: "600", flexShrink: 1 }]}>
+              {over ? t.riskMeter.beyond(fmtPct(limit, 0)) : t.riskMeter.within(fmtPct(limit, 0))}
+            </Text>
+          </View>
+        ) : <View style={{ flex: 1 }} />}
         <EvidenceChip id={m.evidence_id} runId={runId} />
       </View>
     </View>
@@ -84,16 +101,16 @@ export function RiskMeter({ m, runId }: { m: AssetMetric; runId?: string | null 
 
 const styles = StyleSheet.create({
   wrap: { gap: space.xs + 2, paddingVertical: space.md, borderBottomWidth: 1, borderBottomColor: alpha(colors.mint, 0.06) },
-  head: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  track: { height: 12, borderRadius: radius.pill, marginTop: space.xs, justifyContent: "center", overflow: "visible" },
-  marker: {
-    position: "absolute", width: 22, height: 22, borderRadius: 11, marginLeft: -11,
-    backgroundColor: colors.mint, borderWidth: 4, borderColor: colors.bg,
-    shadowColor: colors.mint, shadowOpacity: 0.6, shadowRadius: 8, shadowOffset: { width: 0, height: 0 },
-  },
-  limit: { position: "absolute", width: 3, height: 28, marginLeft: -1.5, borderRadius: 2, backgroundColor: colors.text },
+  head: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space.md },
+  value: { fontSize: 20, fontWeight: "800", letterSpacing: -0.3 },
+  track: { height: 12, borderRadius: radius.pill, marginTop: space.xs, backgroundColor: colors.surfaceRaised, overflow: "visible" },
+  fill: { position: "absolute", top: 0, bottom: 0, borderRadius: radius.pill },
+  zero: { position: "absolute", left: "50%", top: -3, bottom: -3, width: 2, marginLeft: -1, backgroundColor: alpha(colors.mint, 0.45) },
+  limit: { position: "absolute", top: -6, width: 3, height: 24, marginLeft: -1.5, borderRadius: 2, backgroundColor: colors.text },
+  overflow: { position: "absolute", top: 0, bottom: 0, justifyContent: "center" },
   scale: { flexDirection: "row", justifyContent: "space-between" },
-  meta: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space.sm },
+  meta: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: space.sm },
+  verdict: { flexDirection: "row", alignItems: "center", gap: 6, flex: 1, minWidth: 180 },
 });
 
 export default RiskMeter;

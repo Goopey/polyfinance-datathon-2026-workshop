@@ -48,6 +48,10 @@ export const colors = {
   hypothesisBg: "rgba(205,184,245,0.12)",
   scenario: "#7FDBD0",
   scenarioBg: "rgba(127,219,208,0.12)",
+  // Agents du débat : Bull vert vif, Réaliste jaune, Bear rouge vif
+  bull: "#2EF58C",
+  realist: "#FFD43B",
+  bear: "#FF4D5E",
   overlay: "rgba(2,12,12,0.72)",
 } as const;
 

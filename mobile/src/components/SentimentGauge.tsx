@@ -4,7 +4,7 @@
  * Conception : docs/07_UX_UI.md ; données : AssetSheet.sentiment (Finnhub, docs/04_DONNEES.md §11).
  */
 import { StyleSheet, Text, View } from "react-native";
-import { fmtMonth, fmtNum } from "../format";
+import { fmtMonth, fmtNum, fmtPct } from "../format";
 import { useT } from "../i18n";
 import { alpha, colors, radius, space } from "../theme/tokens";
 import { type } from "../theme/typography";
@@ -28,7 +28,7 @@ const BUCKETS: { key: keyof Pick<AnalystSentiment, "strong_buy" | "buy" | "hold"
 
 export function SentimentGauge({ sentiment, runId }: { sentiment: SentimentView | null; runId?: string | null }) {
   const t = useT();
-  if (!sentiment) return <Text style={type.body}>{t.sentiment.none}</Text>;
+  if (!sentiment) return null; // FNB et crypto : pas de donnée, la fiche masque la section
   const tone = TONE[sentiment.label];
   const a = sentiment.analysts;
   const total = a ? BUCKETS.reduce((s, b) => s + a[b.key], 0) : 0;
@@ -37,7 +37,7 @@ export function SentimentGauge({ sentiment, runId }: { sentiment: SentimentView 
     <View style={styles.wrap}>
       <View style={styles.row}>
         <Pill text={t.sentiment.label[sentiment.label]} fg={tone.fg} bg={tone.bg} icon={tone.icon} />
-        <Text style={[type.caption, { flexShrink: 1 }]}>{t.sentiment.displayOnly}</Text>
+        {a && total > 0 ? <Text style={type.small}>{t.sentiment.total(total)}</Text> : null}
       </View>
 
       {a && total > 0 ? (
@@ -49,10 +49,10 @@ export function SentimentGauge({ sentiment, runId }: { sentiment: SentimentView 
             ))}
           </View>
           <View style={styles.legend}>
-            {BUCKETS.map((b) => (
+            {BUCKETS.filter((b) => a[b.key] > 0).map((b) => (
               <View key={b.key} style={styles.legendItem}>
                 <View style={[styles.swatch, { backgroundColor: b.color }]} />
-                <Text style={type.caption}>{`${t.sentiment.bucket[b.key]} ${a[b.key]}`}</Text>
+                <Text style={type.caption}>{`${t.sentiment.bucket[b.key]} ${a[b.key]} (${fmtPct((a[b.key] / total) * 100, 0)})`}</Text>
               </View>
             ))}
           </View>
@@ -68,7 +68,12 @@ export function SentimentGauge({ sentiment, runId }: { sentiment: SentimentView 
           <Text style={type.label}>{t.sentiment.insiders(fmtMonth(sentiment.insiders.period))}</Text>
           <View style={styles.track}>
             <View style={styles.mid} />
-            <View style={[styles.marker, { left: `${((sentiment.insiders.mspr + 100) / 200) * 100}%` }]} />
+            <View style={[styles.marker, { left: `${((Math.max(-100, Math.min(100, sentiment.insiders.mspr)) + 100) / 200) * 100}%` }]} />
+          </View>
+          <View style={[styles.row, { justifyContent: "space-between" }]}>
+            <Text style={type.caption}>−100 · {t.sentiment.selling}</Text>
+            <Text style={type.caption}>0</Text>
+            <Text style={type.caption}>{t.sentiment.buying} · +100</Text>
           </View>
           <View style={styles.row}>
             <Text style={type.small}>{t.sentiment.mspr(fmtNum(sentiment.insiders.mspr, 1))}</Text>

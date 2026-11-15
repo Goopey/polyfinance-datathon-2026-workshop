@@ -1,14 +1,15 @@
 /**
- * Client HTTP, bascule données fictives / API.
+ * Client HTTP, bascule API / données de démonstration.
  *
- * EXPO_PUBLIC_USE_MOCKS=true (défaut) : les appels sont servis par src/mocks/server.ts.
- * EXPO_PUBLIC_USE_MOCKS=false : appels HTTP vers EXPO_PUBLIC_API_URL (routes de docs/01_ARCHITECTURE.md).
+ * Par défaut : appels HTTP vers EXPO_PUBLIC_API_URL (routes de docs/01_ARCHITECTURE.md) ; l'application
+ * n'affiche que ce que renvoient le backend et ses agents.
+ * EXPO_PUBLIC_USE_MOCKS=true : appels servis par src/mocks/server.ts (développement et tests seulement).
  * Sur un téléphone, `localhost` désigne le téléphone : utiliser l'adresse IP locale de l'ordinateur,
- * ou l'URL API Gateway une fois P4 déployée.
+ * ou l'URL API Gateway (sortie `EasyTradeApi.ApiUrl`).
  */
 import { MockInvalid, MockNotFound } from "../mocks/server";
 
-export const USE_MOCKS = process.env.EXPO_PUBLIC_USE_MOCKS !== "false";
+export const USE_MOCKS = process.env.EXPO_PUBLIC_USE_MOCKS === "true";
 export const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
 
 export class ApiError extends Error {

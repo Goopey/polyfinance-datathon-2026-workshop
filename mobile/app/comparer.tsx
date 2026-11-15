@@ -4,10 +4,10 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { getPersonas, getProfile } from "../src/api/profiles";
 import { RunProgress } from "../src/components/RunProgress";
-import { Card, ErrorState, Loading, Row, Screen, Section } from "../src/components/ui";
+import { Card, ErrorState, Loading, Row, Screen, Section, Tap } from "../src/components/ui";
 import { fmtWeight } from "../src/format";
 import { useBaseRun } from "../src/hooks/useBaseRun";
 import { useT } from "../src/i18n";
@@ -32,7 +32,6 @@ export default function Comparer() {
 
   return (
     <Screen>
-      <Text style={[type.body, { color: colors.textMuted }]}>{t.comparer.intro}</Text>
       <Row style={{ alignItems: "flex-start", flexWrap: "nowrap" }}>
         <Picker ids={ids} value={left} onChange={setLeft} name={name} disabled={right} />
         <View style={styles.vs}><Text style={styles.vsText}>{t.comparer.vs}</Text></View>
@@ -94,11 +93,11 @@ function Picker({ ids, value, onChange, name, disabled }: { ids: string[]; value
       {ids.map((id) => {
         const on = value === id;
         return (
-          <Pressable key={id} disabled={id === disabled} onPress={() => onChange(id)} accessibilityRole="radio"
-            accessibilityState={{ checked: on, disabled: id === disabled }}
+          <Tap key={id} disabled={id === disabled} onPress={() => onChange(id)} accessibilityRole="radio"
+            accessibilityState={{ checked: on, disabled: id === disabled }} scaleTo={0.94}
             style={[styles.pick, on && styles.pickSel, id === disabled && { opacity: 0.3 }]}>
             <Text style={[styles.pickText, on && { color: colors.primaryText }]}>{name(id)}</Text>
-          </Pressable>
+          </Tap>
         );
       })}
     </View>

@@ -1,16 +1,100 @@
 /**
  * Briques d'interface communes : écran, carte, section, bouton, pastille, jauge de niveau,
+ * zone tactile animée (`Tap`), apparition en fondu (`FadeIn`), section repliable (`Collapsible`),
  * états de chargement et d'erreur.
  */
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle,
+  ActivityIndicator, Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, Text, View,
+  type GestureResponderEvent, type PressableProps, type StyleProp, type ViewStyle,
 } from "react-native";
 import { useT } from "../i18n";
+import { useTx } from "../i18n/data";
 import { alpha, colors, radius, space, touchMin } from "../theme/tokens";
 import { fontFamily, type } from "../theme/typography";
 import { Glow } from "./Glow";
 import { Icon, type IconName } from "./Icon";
+
+const NATIVE = Platform.OS !== "web";
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+type TapState = { pressed: boolean; hovered: boolean };
+type TapProps = Omit<PressableProps, "style" | "children"> & {
+  style?: StyleProp<ViewStyle> | ((s: TapState) => StyleProp<ViewStyle>);
+  children?: ReactNode;
+  /** Échelle au toucher (0,96 par défaut ; 1 = sans rebond). */
+  scaleTo?: number;
+};
+
+/**
+ * Zone tactile avec retour visuel : léger enfoncement à ressort au toucher, éclaircissement au survol (web).
+ * À utiliser à la place de `Pressable` pour tout élément cliquable.
+ */
+export function Tap({ style, children, scaleTo = 0.96, onPressIn, onPressOut, onHoverIn, onHoverOut, disabled, ...rest }: TapProps) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const [state, setState] = useState<TapState>({ pressed: false, hovered: false });
+  const spring = (to: number) =>
+    Animated.spring(scale, { toValue: to, useNativeDriver: NATIVE, speed: 40, bounciness: to === 1 ? 10 : 0 }).start();
+  const resolved = typeof style === "function" ? style(state) : style;
+  return (
+    <AnimatedPressable
+      {...rest}
+      disabled={disabled}
+      onPressIn={(e: GestureResponderEvent) => { setState((s) => ({ ...s, pressed: true })); spring(scaleTo); onPressIn?.(e); }}
+      onPressOut={(e: GestureResponderEvent) => { setState((s) => ({ ...s, pressed: false })); spring(1); onPressOut?.(e); }}
+      onHoverIn={(e) => { setState((s) => ({ ...s, hovered: true })); onHoverIn?.(e); }}
+      onHoverOut={(e) => { setState((s) => ({ ...s, hovered: false })); onHoverOut?.(e); }}
+      style={[resolved, state.hovered && !disabled && styles.hover, { transform: [{ scale }] }]}
+    >
+      {children}
+    </AnimatedPressable>
+  );
+}
+
+/** Apparition en fondu et léger glissement ; `index` décale l'entrée des éléments d'une liste. */
+export function FadeIn({ children, index = 0, style }: { children: ReactNode; index?: number; style?: StyleProp<ViewStyle> }) {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(v, {
+      toValue: 1, duration: 320, delay: Math.min(index, 8) * 55, easing: Easing.out(Easing.cubic), useNativeDriver: NATIVE,
+    }).start();
+  }, [v, index]);
+  const translateY = v.interpolate({ inputRange: [0, 1], outputRange: [10, 0] });
+  return <Animated.View style={[style, { opacity: v, transform: [{ translateY }] }]}>{children}</Animated.View>;
+}
+
+/** Section repliable : un en-tête cliquable (titre, résumé, chevron qui pivote) et son contenu. */
+export function Collapsible({ title, summary, children, initiallyOpen = false, icon, accent = colors.mint }: {
+  title: string; summary?: string; children: ReactNode; initiallyOpen?: boolean; icon?: IconName; accent?: string;
+}) {
+  const [open, setOpen] = useState(initiallyOpen);
+  const rot = useRef(new Animated.Value(initiallyOpen ? 1 : 0)).current;
+  const toggle = () => {
+    Animated.timing(rot, { toValue: open ? 0 : 1, duration: 200, useNativeDriver: NATIVE }).start();
+    setOpen(!open);
+  };
+  const rotate = rot.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "180deg"] });
+  return (
+    <View style={styles.collapse}>
+      <Tap onPress={toggle} scaleTo={0.985} accessibilityRole="button" accessibilityState={{ expanded: open }}
+        style={styles.collapseHead}>
+        {icon ? (
+          <View style={[styles.collapseIcon, { backgroundColor: alpha(accent, 0.12) }]}>
+            <Icon name={icon} size={18} color={accent} />
+          </View>
+        ) : null}
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={type.h3} accessibilityRole="header">{title}</Text>
+          {summary ? <Text style={type.small} numberOfLines={open ? undefined : 1}>{summary}</Text> : null}
+        </View>
+        <Animated.View style={{ transform: [{ rotate }] }}>
+          <Icon name="chevronDown" size={20} color={colors.mint} />
+        </Animated.View>
+      </Tap>
+      {open ? <FadeIn style={styles.collapseBody}>{children}</FadeIn> : null}
+    </View>
+  );
+}
 
 export function Screen({ children, scroll = true, glow = true }: { children: ReactNode; scroll?: boolean; glow?: boolean }) {
   if (!scroll) return <View style={[styles.screen, styles.pad]}>{glow ? <Glow /> : null}{children}</View>;
@@ -55,7 +139,7 @@ export function Button({
 }) {
   const fg = variant === "primary" ? colors.primaryText : colors.mint;
   return (
-    <Pressable
+    <Tap
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
@@ -66,13 +150,13 @@ export function Button({
         variant === "primary" && styles.btnPrimary,
         variant === "secondary" && styles.btnSecondary,
         variant === "ghost" && styles.btnGhost,
-        pressed && !disabled && { opacity: 0.82, transform: [{ scale: 0.985 }] },
+        pressed && !disabled && (variant === "primary" ? styles.btnPrimaryPressed : styles.btnPressed),
         disabled && { opacity: 0.4 },
       ]}
     >
       {icon ? <Icon name={icon} size={18} color={fg} /> : null}
       <Text style={[styles.btnText, { color: fg }]}>{label}</Text>
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -81,10 +165,10 @@ export function LinkText({ label, onPress, icon = "arrowRight", a11yRole = "link
   label: string; onPress: () => void; icon?: IconName | null; a11yRole?: "link" | "button";
 }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole={a11yRole} hitSlop={10} style={({ pressed }) => [styles.link, pressed && { opacity: 0.7 }]}>
+    <Tap onPress={onPress} accessibilityRole={a11yRole} hitSlop={10} style={({ pressed }) => [styles.link, pressed && { opacity: 0.7 }]}>
       <Text style={styles.linkText}>{label}</Text>
       {icon ? <Icon name={icon} size={16} color={colors.link} /> : null}
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -134,7 +218,8 @@ export function Loading({ label }: { label?: string }) {
 
 export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
   const t = useT();
-  const message = error instanceof Error ? error.message : String(error);
+  const tx = useTx();
+  const message = tx(error instanceof Error ? error.message : String(error));
   return (
     <Card style={{ borderColor: alpha(colors.bad, 0.45), backgroundColor: colors.badBg }}>
       <Row>
@@ -173,6 +258,13 @@ export const styles = StyleSheet.create({
   },
   btnSecondary: { backgroundColor: colors.surfaceRaised, borderWidth: 1, borderColor: colors.borderStrong },
   btnGhost: { backgroundColor: "transparent" },
+  btnPressed: { backgroundColor: alpha(colors.mint, 0.1) },
+  btnPrimaryPressed: { backgroundColor: colors.mint, shadowOpacity: 0.6 },
+  hover: { opacity: 0.92 },
+  collapse: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, overflow: "hidden" },
+  collapseHead: { flexDirection: "row", alignItems: "center", gap: space.md, padding: space.lg, minHeight: touchMin + 12 },
+  collapseIcon: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
+  collapseBody: { paddingHorizontal: space.lg, paddingBottom: space.lg, gap: space.md },
   btnText: { fontFamily, fontSize: 16, fontWeight: "700" },
   link: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 32, alignSelf: "flex-start" },
   linkText: { fontFamily, color: colors.link, fontWeight: "700", fontSize: 15 },

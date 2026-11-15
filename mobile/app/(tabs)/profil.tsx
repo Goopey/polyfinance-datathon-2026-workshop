@@ -3,14 +3,14 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { API_URL, USE_MOCKS } from "../../src/api/client";
+import { StyleSheet, Text, View } from "react-native";
 import { getProfile } from "../../src/api/profiles";
 import { LangToggle } from "../../src/components/HeaderActions";
 import { Icon, type IconName } from "../../src/components/Icon";
-import { Button, Card, Row, Screen, Section } from "../../src/components/ui";
+import { Button, Card, Row, Screen, Section, Tap } from "../../src/components/ui";
 import { fmtWeight } from "../../src/format";
 import { useT } from "../../src/i18n";
+import { useTx } from "../../src/i18n/data";
 import { useProfileStore } from "../../src/store/profile";
 import { useSettings, type ReadingMode } from "../../src/store/settings";
 import { alpha, colors, radius, space, touchMin } from "../../src/theme/tokens";
@@ -19,6 +19,7 @@ import { CRITERIA } from "../../src/types/contracts";
 
 export default function Profil() {
   const t = useT();
+  const tx = useTx();
   const { profileId, summary, reset } = useProfileStore();
   const { mode, setMode } = useSettings();
   const profile = useQuery({ queryKey: ["profile", profileId], queryFn: () => getProfile(profileId!), enabled: !!profileId });
@@ -27,7 +28,7 @@ export default function Profil() {
     <Screen>
       <Section title={t.profil.currentTitle}>
         <Card style={{ gap: space.md }}>
-          <Text style={type.h3}>{summary ?? t.profil.none}</Text>
+          <Text style={type.h3}>{summary ? tx(summary) : t.profil.none}</Text>
           {profile.data ? (
             <View style={styles.chips}>
               {CRITERIA.filter((k) => profile.data!.weights[k] > 0).map((k) => (
@@ -53,12 +54,12 @@ export default function Profil() {
           {(["simple", "avance"] as ReadingMode[]).map((m) => {
             const on = mode === m;
             return (
-              <Pressable key={m} onPress={() => setMode(m)} accessibilityRole="radio" accessibilityState={{ checked: on }}
-                style={[styles.segBtn, on && styles.segSel]}>
+              <Tap key={m} onPress={() => setMode(m)} accessibilityRole="radio" accessibilityState={{ checked: on }}
+                scaleTo={0.95} style={[styles.segBtn, on && styles.segSel]}>
                 <Text style={[styles.segText, on && { color: colors.primaryText }]}>
                   {m === "simple" ? t.profil.simple : t.profil.advanced}
                 </Text>
-              </Pressable>
+              </Tap>
             );
           })}
         </View>
@@ -81,7 +82,6 @@ export default function Profil() {
           <Text style={type.h3}>{t.profil.aboutTitle}</Text>
         </Row>
         <Text style={[type.small, { color: colors.text }]}>{t.profil.aboutBody(t.appName)}</Text>
-        <Text style={type.caption}>{t.profil.dataSource(USE_MOCKS ? t.demo.long : `API ${API_URL}`)}</Text>
       </Card>
     </Screen>
   );
@@ -89,14 +89,14 @@ export default function Profil() {
 
 function NavRow({ icon, label, onPress, last }: { icon: IconName; label: string; onPress: () => void; last?: boolean }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button"
-      style={({ pressed }) => [styles.navRow, !last && styles.navDivider, pressed && { backgroundColor: colors.surfaceRaised }]}>
+    <Tap onPress={onPress} accessibilityRole="button" scaleTo={0.98}
+      style={({ pressed, hovered }) => [styles.navRow, !last && styles.navDivider, (pressed || hovered) && { backgroundColor: colors.surfaceRaised }]}>
       <View style={styles.navIcon}>
         <Icon name={icon} size={18} color={colors.mint} />
       </View>
       <Text style={[type.body, { flex: 1, fontWeight: "600" }]}>{label}</Text>
       <Icon name="chevronRight" size={20} color={colors.textMuted} />
-    </Pressable>
+    </Tap>
   );
 }
 

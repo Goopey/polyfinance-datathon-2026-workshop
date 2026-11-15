@@ -24,37 +24,40 @@ npx expo start          # puis : touche w (navigateur), ou scanner le QR code av
 
 Pile : Expo SDK 58, `expo-router` (navigation par fichiers dans `app/`), TanStack Query (appels et interrogation d'un run), Zustand + AsyncStorage (profil courant, mode Simple / Avancé), `react-native-svg` (graphe).
 
-## Données fictives ou API
+## API réelle (par défaut) ou données de démonstration
 
 | Variable | Défaut | Effet |
 |---|---|---|
-| `EXPO_PUBLIC_USE_MOCKS` | `true` | `true` : tout est servi par `src/mocks/server.ts`. `false` : appels HTTP. |
-| `EXPO_PUBLIC_API_URL` | `http://localhost:8000` | URL de l'API (FastAPI en local, puis API Gateway). |
+| `EXPO_PUBLIC_API_URL` | `http://localhost:8000` | URL de l'API (FastAPI en local, ou API Gateway : sortie `EasyTradeApi.ApiUrl`). |
+| `EXPO_PUBLIC_USE_MOCKS` | `false` | `true` : tout est servi par `src/mocks/server.ts` (développement et tests seulement ; pastille « Démo » en haut à droite). |
 
 Les variables se mettent dans `mobile/.env` (non versionné) ou dans l'environnement avant `npx expo start`. Sur un téléphone, `localhost` désigne le téléphone : utiliser l'adresse IP locale de l'ordinateur (`http://192.168.x.x:8000`) ou l'URL API Gateway.
 
-### Brancher l'API réelle
+### Lancer
 
 ```bash
 # Terminal 1 — API (données du dépôt ; agents simulés tant que Bedrock n'est pas configuré)
 cd backend && uvicorn easytrade.api.app:app --port 8000        # ajouter --host 0.0.0.0 pour un téléphone
 
 # Terminal 2 — application
-cd mobile && EXPO_PUBLIC_USE_MOCKS=false npx expo start
-# PowerShell : $env:EXPO_PUBLIC_USE_MOCKS="false"; npx expo start
+cd mobile && npx expo start
 ```
 
-Le bandeau « Données entièrement fictives » disparaît : les pistes, les chiffres et les preuves viennent du pipeline (`backend/easytrade/orchestration/pipeline.py`) sur les 31 actifs du jeu de départ.
+Les pistes, les chiffres, les cours, le sentiment, le graphe et les preuves viennent du pipeline (`backend/easytrade/orchestration/pipeline.py`) sur les 31 actifs du jeu de départ. **Une section de la fiche n'apparaît que si l'API fournit des données** pour l'actif (sentiment : actions seulement ; graphe : sociétés comparables Finnhub ; actualités : preuves ESG / nouvelles / dépôts, vides tant que `esg_evidence.csv` n'est pas rempli).
+
+### Français / anglais
+
+Le bouton FR / EN en haut à droite bascule toute l'interface, **textes du backend compris**. Le backend rédige en français à partir de gabarits ; `src/i18n/data.ts` (règles dans `dataRules.ts`) les traduit en anglais, chiffres reformatés (« 13,1 % » → « 13.1% »). En français, les secteurs (fournis en anglais par les données) sont traduits. `tests/dataTranslation.test.ts` vérifie que **chaque** chaîne d'un corpus collecté sur l'API réelle (`tests/fixtures/backend_strings.json`, 3 personas, questionnaire, 93 tests d'idée, fiches, preuves, données) a une traduction. Après un changement de gabarit côté backend, régénérer le corpus (`python scripts/harvest_backend_strings.py tests/fixtures/backend_strings.json`, API lancée) et compléter les règles jusqu'à ce que le test passe. Un texte libre produit par un vrai modèle (Bedrock) qui ne suit aucun gabarit reste affiché tel quel.
 
 À savoir :
 
 - **Les preuves sont propres à une analyse.** `EV-000412` ne désigne pas la même preuve dans deux runs : la preuve, la fiche et le graphe sont demandés avec le `run_id` consulté (`src/api/assets.ts`).
 - **Même demande, même analyse.** L'identifiant d'un run est déterministe ; « Relancer l'analyse » rend le même résultat tant que les données n'ont pas changé.
 - **Runs et profils fictifs sont en mémoire de l'API.** Après un redémarrage de l'API, l'application relance l'analyse ; un profil créé par questionnaire est à recréer (« Changer de profil »).
-- **Le graphe est vide** tant que `data/reference/graph_edges.csv` n'est pas rempli (bloc G) : la fiche affiche « Aucune relation sourcée ».
+- **Graphe** : 90 liens « Concurrent » (sociétés comparables Finnhub, étiquetés Hypothèse) pour les 20 actions ; FNB et crypto n'en ont pas, la section est alors masquée.
 - **Mateo obtient « aucune recommandation »** tant que les signaux ESG ne sont pas sourcés : c'est la réponse attendue, pas une erreur.
 
-En mode fictif, un second bandeau « Données entièrement fictives » s'affiche sous le bandeau de simulation. **Aucun chiffre de ce mode ne doit apparaître dans la vidéo ou la documentation** : ce sont des valeurs inventées (actifs `ACTIF_A`, `FNB_B`…).
+En mode démonstration (`EXPO_PUBLIC_USE_MOCKS=true`), une pastille « Démo » s'affiche en haut à droite. **Aucun chiffre de ce mode ne doit apparaître dans la vidéo ou la documentation** : ce sont des valeurs inventées (actifs `ACTIF_A`, `FNB_B`…).
 
 ### Le serveur fictif
 
@@ -67,7 +70,7 @@ Les personas viennent du vrai `data/reference/personas.json` (importé grâce à
 | Route | Écran | Tâche `avancement.md` |
 |---|---|---|
 | `app/index.tsx` | Entrée : profil au premier lancement, sinon pistes | F1 |
-| `app/onboarding/index.tsx` | Bienvenue, 3 personas, « Créer un profil fictif » | F3 |
+| `app/onboarding/index.tsx` | « Choisissez votre profil d'investisseur » : 3 personas, « Créer mon propre profil » | F3 |
 | `app/onboarding/questionnaire.tsx` | 5 questions, une par écran ; baisse simulée illustrée | F3 |
 | `app/onboarding/resume.tsx` | « Voici comment nous avons compris votre profil » : règles, poids modifiables, justifications | F3 |
 | `app/(tabs)/index.tsx` | Pistes à explorer : progression, cartes, écartées, « Aucune recommandation », bouton « Tester une idée » | F4 |
@@ -79,7 +82,7 @@ Les personas viennent du vrai `data/reference/personas.json` (importé grâce à
 | `app/comparer.tsx` | Deux profils côte à côte, différences surlignées (extra n° 2) | — |
 | `app/donnees.tsx` | Sources, contrôles qualité, chronologie des preuves (point-in-time) | — |
 
-`SentimentGauge` (extra n° 8) reste un squelette. Le graphe est la version radiale fixe ; la version à simulation de forces est l'extra n° 7.
+Le graphe est la version radiale fixe (toucher une société la met en avant) ; la version à simulation de forces est l'extra n° 7.
 
 ## Contrats
 
@@ -97,6 +100,7 @@ Routes : table de `docs/01_ARCHITECTURE.md`. Exemples JSON conformes : `src/mock
 |---|---|
 | `tests/contracts.test.ts` | `contracts.schema.json` est à jour ; chaque route du serveur fictif respecte le schéma ; aucune formulation de `data/reference/forbidden_wording.txt` ; toute preuve citée existe et n'est pas postérieure à l'analyse ; toute arête du graphe a une preuve ou l'étiquette Hypothèse ; le validateur refuse bien un écart |
 | `tests/client.test.ts` | URL appelées en mode API, `run_id` transmis pour la preuve, la fiche, le graphe et les données, corps de `POST /runs` et `POST /profiles`, erreurs 404 et API injoignable |
+| `tests/dataTranslation.test.ts` | Chaque texte du backend (corpus `tests/fixtures/backend_strings.json`) a une traduction anglaise sans reste de français ; nombres reformatés |
 | `e2e/run.mjs` | Parcours complet avec clics réels dans Chrome : exporte la version web, la sert, lance l'API (`--api`), puis échoue sur toute attente non satisfaite, erreur de console ou réponse HTTP en erreur. `E2E_SHOTS=<dossier>` enregistre une capture par étape |
 | `backend/tests/api/` (dans le backend) | L'API réelle respecte le même schéma, route par route |
 
@@ -115,13 +119,14 @@ Prérequis de `e2e` : Chrome ou Edge (`CHROME_PATH` pour un autre emplacement) ;
 | `src/theme/` | Couleurs, espacements, typographie |
 | `src/i18n/` | Textes et glossaire |
 | `src/mocks/` | Serveur et données fictives |
-| `src/format.ts` | Nombres, pourcentages et dates en français |
+| `src/format.ts` | Nombres, pourcentages et dates selon la langue |
 | `tests/`, `e2e/`, `scripts/` | Tests du contrat et du client, parcours de bout en bout, génération du schéma |
 
 ## Règles d'interface appliquées
 
-- Bandeau « Simulation — aucune transaction réelle » sur tous les écrans (mise en page racine).
-- Aucune affirmation sans pastille de source ; étiquettes Hypothèse / Scénario fictif visibles sans action.
-- Couleur jamais seule : chaque état porte une icône et un libellé (adéquation, confiance, verdict, débat).
+- Aucune affirmation sans pastille de source ; étiquettes Hypothèse / Scénario visibles sans action.
+- Couleur jamais seule : chaque état porte une icône et un libellé (adéquation, confiance, verdict, débat). Débat : Bull vert vif, Réaliste jaune, Bear rouge vif.
+- Barres à l'échelle réelle : volatilité et perte de 0 à 100 %, rendements de −100 % à +100 %, contributions et score sur 100 points.
+- Retour au toucher sur tout élément cliquable (`Tap` dans `ui.tsx` : enfoncement à ressort, survol sur le web) ; listes en fondu échelonné ; détails repliables.
 - Zones tactiles d'au moins 44 px ; texte de 16 px par défaut.
 - Vocabulaire non prescriptif (`docs/07_UX_UI.md`, section Rédaction) ; vérifié sur toutes les sorties fictives avec `data/reference/forbidden_wording.txt`.

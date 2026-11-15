@@ -6,14 +6,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { Redirect, router } from "expo-router";
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 import { listAssets } from "../../src/api/assets";
 import { startRun, useRun } from "../../src/api/runs";
 import { ClaimLine } from "../../src/components/EvidenceChip";
 import { Icon, type IconName } from "../../src/components/Icon";
 import { RunProgress } from "../../src/components/RunProgress";
-import { Button, Card, ErrorState, Loading, Row, Screen, Section } from "../../src/components/ui";
+import { Button, Card, ErrorState, FadeIn, Loading, Row, Screen, Section, Tap } from "../../src/components/ui";
 import { useT } from "../../src/i18n";
+import { useTx } from "../../src/i18n/data";
 import { useProfileStore } from "../../src/store/profile";
 import { alpha, colors, radius, space, touchMin } from "../../src/theme/tokens";
 import { fontFamily, type } from "../../src/theme/typography";
@@ -27,6 +28,7 @@ const VERDICT: Record<Verdict, { icon: IconName; fg: string; bg: string }> = {
 
 export default function TesterIdee() {
   const t = useT();
+  const tx = useTx();
   const { profileId, label } = useProfileStore();
   const [search, setSearch] = useState("");
   const [focused, setFocused] = useState(false);
@@ -37,8 +39,10 @@ export default function TesterIdee() {
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
-    return (assets.data ?? []).filter((a) => !s || a.ticker.toLowerCase().includes(s) || a.name.toLowerCase().includes(s));
-  }, [assets.data, search]);
+    return (assets.data ?? []).filter((a) =>
+      !s || a.ticker.toLowerCase().includes(s) || a.name.toLowerCase().includes(s) || (a.sector ?? "").toLowerCase().includes(s)
+      || tx(a.sector ?? "").toLowerCase().includes(s));
+  }, [assets.data, search, tx]);
 
   if (!profileId) return <Redirect href="/onboarding" />;
 
@@ -65,7 +69,7 @@ export default function TesterIdee() {
         <>
           <View style={{ gap: space.sm }}>
             <Text style={type.title} accessibilityRole="header">{t.tester.title}</Text>
-            <Text style={[type.body, { color: colors.textMuted }]}>{t.tester.body(label)}</Text>
+            <Text style={[type.body, { color: colors.textMuted }]}>{t.tester.body(label ? tx(label) : null)}</Text>
           </View>
           <View style={[styles.search, focused && styles.searchFocus]}>
             <Icon name="search" size={20} color={focused ? colors.mint : colors.textMuted} />
@@ -84,18 +88,20 @@ export default function TesterIdee() {
           {startError ? <ErrorState error={startError} /> : null}
           {assets.isLoading ? <Loading /> : assets.error ? <ErrorState error={assets.error} onRetry={() => assets.refetch()} /> : null}
           <View style={{ gap: space.sm }}>
-            {filtered.map((a) => (
-              <Pressable key={a.ticker} onPress={() => test(a.ticker)} accessibilityRole="button" accessibilityLabel={t.tester.testA11y(a.name)}
-                style={({ pressed }) => [styles.assetRow, pressed && { opacity: 0.8, transform: [{ scale: 0.99 }] }]}>
-                <View style={styles.ticker}>
-                  <Text style={styles.tickerText} numberOfLines={1}>{a.ticker.slice(0, 4)}</Text>
-                </View>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text style={type.h3}>{a.name}</Text>
-                  <Text style={type.small}>{a.ticker} · {t.assetClass[a.asset_class] ?? a.asset_class}{a.sector ? ` · ${a.sector}` : ""}</Text>
-                </View>
-                <Icon name="chevronRight" size={22} color={colors.textMuted} />
-              </Pressable>
+            {filtered.map((a, i) => (
+              <FadeIn key={a.ticker} index={i}>
+                <Tap onPress={() => test(a.ticker)} accessibilityRole="button" accessibilityLabel={t.tester.testA11y(a.name)}
+                  scaleTo={0.975} style={({ pressed, hovered }) => [styles.assetRow, (pressed || hovered) && styles.assetRowActive]}>
+                  <View style={styles.ticker}>
+                    <Text style={styles.tickerText} numberOfLines={1}>{a.ticker.replace(/\.TO$|-USD$/, "").slice(0, 5)}</Text>
+                  </View>
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={type.h3}>{a.name}</Text>
+                    <Text style={type.small}>{a.ticker} · {t.assetClass[a.asset_class] ?? a.asset_class}{a.sector ? ` · ${tx(a.sector)}` : ""}</Text>
+                  </View>
+                  <Icon name="chevronRight" size={22} color={colors.textMuted} />
+                </Tap>
+              </FadeIn>
             ))}
             {assets.data && filtered.length === 0 ? <Text style={type.body}>{t.tester.noMatch}</Text> : null}
           </View>
@@ -107,7 +113,7 @@ export default function TesterIdee() {
       ) : coherence ? (
         <CoherenceView c={coherence} runId={runId} />
       ) : (
-        <ErrorState error={status.error ?? t.tester.missing} onRetry={reset} />
+        <ErrorState error={status.error ? tx(status.error) : t.tester.missing} onRetry={reset} />
       )}
 
       {runId && status?.status !== "en_cours" ? <Button label={t.tester.another} variant="secondary" icon="search" onPress={reset} /> : null}
@@ -124,15 +130,16 @@ function CoherenceView({ c, runId }: { c: CoherenceAnalysis; runId: string }) {
         <Text style={type.eyebrow}>{t.tester.eyebrow}</Text>
         <Text style={type.title}>{c.name}</Text>
       </View>
-      <View style={[styles.verdict, { backgroundColor: v.bg, borderColor: alpha(v.fg, 0.5) }]} accessibilityRole="summary">
-        <Row style={{ flexWrap: "nowrap" }}>
-          <View style={[styles.verdictIcon, { backgroundColor: v.fg }]}>
-            <Icon name={v.icon} size={20} color={colors.primaryText} strokeWidth={3} />
-          </View>
-          <Text style={[styles.verdictText, { color: v.fg }]}>{t.verdict[c.verdict]}</Text>
-        </Row>
-        <Text style={type.small}>{t.tester.verdictNote}</Text>
-      </View>
+      <FadeIn>
+        <View style={[styles.verdict, { backgroundColor: v.bg, borderColor: alpha(v.fg, 0.5) }]} accessibilityRole="summary">
+          <Row style={{ flexWrap: "nowrap" }}>
+            <View style={[styles.verdictIcon, { backgroundColor: v.fg }]}>
+              <Icon name={v.icon} size={20} color={colors.primaryText} strokeWidth={3} />
+            </View>
+            <Text style={[styles.verdictText, { color: v.fg }]}>{t.verdict[c.verdict]}</Text>
+          </Row>
+        </View>
+      </FadeIn>
 
       <Section title={t.tester.tensions(c.tensions.length)}>
         <Card style={{ gap: space.md }}>
@@ -183,6 +190,7 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: space.md, backgroundColor: colors.surface, borderRadius: radius.md,
     borderWidth: 1, borderColor: colors.border, padding: space.md, minHeight: touchMin + 16,
   },
+  assetRowActive: { borderColor: colors.primary, backgroundColor: colors.surfaceMuted },
   ticker: { width: 46, height: 46, borderRadius: 14, backgroundColor: colors.surfaceRaised, alignItems: "center", justifyContent: "center" },
   tickerText: { fontFamily, fontSize: 11, fontWeight: "800", color: colors.mint, letterSpacing: 0.4 },
   verdict: { borderWidth: 1.5, borderRadius: radius.lg, padding: space.lg, gap: space.md },

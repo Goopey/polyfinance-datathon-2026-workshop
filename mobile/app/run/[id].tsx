@@ -12,8 +12,10 @@ import { Icon, type IconName } from "../../src/components/Icon";
 import { Card, ErrorState, Loading, Pill, Row, Screen, Section } from "../../src/components/ui";
 import { durationMs, fmtDate, fmtSeconds } from "../../src/format";
 import { useT } from "../../src/i18n";
+import { useTx } from "../../src/i18n/data";
 import { useSettings } from "../../src/store/settings";
 import { alpha, colors, space } from "../../src/theme/tokens";
+import { AGENT_COLOR } from "../../src/components/DebateSummary";
 import { type } from "../../src/theme/typography";
 import type { TraceStep } from "../../src/types/contracts";
 
@@ -21,6 +23,7 @@ const KIND_ICON: Record<TraceStep["kind"], IconName> = { code: "sliders", llm: "
 
 export default function ParcoursAnalyse() {
   const t = useT();
+  const tx = useTx();
   const { id } = useLocalSearchParams<{ id: string }>();
   const q = useQuery({ queryKey: ["trace", id], queryFn: () => getTrace(id!), enabled: !!id });
   if (q.isLoading) return <Loading />;
@@ -31,7 +34,6 @@ export default function ParcoursAnalyse() {
   return (
     <Screen>
       <Text style={type.caption}>{t.trail.header(tr.run_id, tr.profile_id, fmtDate(tr.as_of))}</Text>
-      <Text style={[type.body, { color: colors.textMuted }]}>{t.trail.intro}</Text>
 
       <Section title={t.trail.controls}>
         <Card style={{ gap: space.md }}>
@@ -44,7 +46,7 @@ export default function ParcoursAnalyse() {
                 </View>
                 <View style={{ flex: 1, gap: 2 }}>
                   <Text style={[type.label, !ok && { color: colors.bad }]}>{t.trail.steps[s.step] ?? s.step}</Text>
-                  {s.note ? <Text style={type.small}>{s.note}</Text> : null}
+                  {s.note ? <Text style={type.small}>{tx(s.note)}</Text> : null}
                 </View>
               </View>
             );
@@ -61,8 +63,11 @@ export default function ParcoursAnalyse() {
 
 function StepRow({ s, runId }: { s: TraceStep; runId: string }) {
   const t = useT();
+  const tx = useTx();
   const advanced = useSettings((st) => st.mode === "avance");
   const ms = durationMs(s.started_at, s.ended_at);
+  const agent = /^debate\.(bull|realist|bear)\./.exec(s.step)?.[1] as keyof typeof AGENT_COLOR | undefined;
+  const agentColor = agent ? AGENT_COLOR[agent] : undefined;
   const st = s.status === "ok"
     ? { icon: "check" as const, text: t.trail.done, fg: colors.good, bg: colors.goodBg }
     : s.status === "echec"
@@ -73,9 +78,9 @@ function StepRow({ s, runId }: { s: TraceStep; runId: string }) {
       <Row style={{ justifyContent: "space-between", flexWrap: "nowrap" }}>
         <Row style={{ flex: 1, flexWrap: "nowrap" }}>
           <View style={styles.kind}>
-            <Icon name={KIND_ICON[s.kind]} size={16} color={s.kind === "llm" ? colors.hypothesis : colors.mint} />
+            <Icon name={KIND_ICON[s.kind]} size={16} color={agentColor ?? (s.kind === "llm" ? colors.hypothesis : colors.mint)} />
           </View>
-          <Text style={[type.h3, { flex: 1 }]}>{t.trail.steps[s.step] ?? s.step}</Text>
+          <Text style={[type.h3, { flex: 1 }, agentColor ? { color: agentColor } : null]}>{t.trail.steps[s.step] ?? s.step}</Text>
         </Row>
         <Pill icon={st.icon} text={st.text} fg={st.fg} bg={st.bg} />
       </Row>
@@ -83,7 +88,7 @@ function StepRow({ s, runId }: { s: TraceStep; runId: string }) {
       {s.model_id ? <Text style={type.small}>{t.trail.model(s.model_id, s.prompt_version)}</Text> : null}
       {s.version ? <Text style={type.small}>{t.trail.version(s.version)}</Text> : null}
       {s.tools_called && s.tools_called.length > 0 ? <Text style={type.small}>{t.trail.tools(s.tools_called.join(", "))}</Text> : null}
-      {s.note ? <Text style={type.body}>{s.note}</Text> : null}
+      {s.note ? <Text style={type.body}>{tx(s.note)}</Text> : null}
       {advanced && s.outputs && s.outputs.length > 0 ? (
         <Row>
           <Text style={type.small}>{t.trail.outputs}</Text>

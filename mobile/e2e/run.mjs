@@ -162,6 +162,8 @@ async function main() {
   else await visible("Démo");
   await click("EN");
   await visible("Choose your investor profile");
+  await visible("Low to moderate risk");
+  await absent("Faible à modéré");
   await step("Accueil en anglais : sélecteur de langue en haut à droite");
   await click("FR");
   await visible("Choisissez votre profil d'investisseur");
@@ -173,17 +175,29 @@ async function main() {
   await step("Résumé du profil Robert : règles et poids");
   await click("Confirmer et voir les pistes");
   await visible("pistes cohérentes avec votre profil");
+  await absent("Pourquoi ? Voir la fiche");
   await step("Pistes à explorer");
-  await click("Déplier");
+  await click("Écartées et pourquoi");
   await visible("Écartées par une règle de votre profil");
   await step("Écartées et pourquoi");
 
-  await click("Pourquoi ? Voir la fiche");
+  await page.click('[aria-label^="Ouvrir la fiche de"]');
   await visible("Pourquoi cette piste");
   await visible("Risque observé");
   await visible("Débat Bull / Réaliste / Bear");
   await visible("Pourquoi ce classement");
   await step("Fiche : raisons, risque, débat, contributions");
+  // Tout bascule en anglais, données du backend comprises.
+  await click("EN");
+  await visible("Why this idea");
+  await visible("Observed risk");
+  await visible("Why this ranking");
+  if (MODE === "api") {
+    for (const fr of ["Volatilité annualisée observée", "Rendement annualisé observé", "toute la période disponible", "Appui"]) await absent(fr);
+  }
+  await step("Fiche en anglais : interface et textes du backend traduits");
+  await click("FR");
+  await visible("Pourquoi cette piste");
   await click("Source");
   await visible("Traitement");
   await visible("Publiée :");
@@ -204,8 +218,15 @@ async function main() {
   await step(`Tester une idée : Robert + ${tested} → incohérent, tensions chiffrées, effet sur le panier`);
   await click(`Voir la fiche de ${tested}`);
   await visible("Risque observé");
-  await visible("Au-delà du seuil indicatif du profil");
-  await step("Fiche du titre testé : repères du profil dépassés");
+  await visible("Au-delà de votre seuil");
+  if (MODE === "api") {
+    // Données réelles : cours, sentiment Finnhub et graphe des sociétés comparables.
+    await visible("Cours observés");
+    await visible("Sentiment du marché");
+    await visible("Écosystème de la société");
+    await visible("Concurrent");
+  }
+  await step("Fiche du titre testé : repères du profil dépassés, cours, sentiment, graphe");
 
   await go("/donnees");
   await visible("Contrôles qualité");

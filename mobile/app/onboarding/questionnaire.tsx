@@ -5,11 +5,11 @@
 import { useMutation } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { createProfile } from "../../src/api/profiles";
 import { ClaimTag } from "../../src/components/ClaimTag";
 import { Icon } from "../../src/components/Icon";
-import { Button, Card, ErrorState, Row, Screen } from "../../src/components/ui";
+import { Button, Card, ErrorState, FadeIn, Row, Screen, Tap } from "../../src/components/ui";
 import { useT, type Dict } from "../../src/i18n";
 import { alpha, colors, radius, space, touchMin } from "../../src/theme/tokens";
 import { type } from "../../src/theme/typography";
@@ -73,25 +73,27 @@ export default function Questionnaire() {
       ) : null}
 
       <View style={{ gap: space.sm }}>
-        {q.values.map((v) => {
+        {q.values.map((v, i) => {
           const o = qt.options[v];
           const sel = q.multi ? ((value as string[]) ?? []).includes(v) : value === v;
           return (
-            <Pressable
-              key={v}
-              onPress={() => toggle(v)}
-              accessibilityRole={q.multi ? "checkbox" : "radio"}
-              accessibilityState={{ checked: sel }}
-              style={({ pressed }) => [styles.option, sel && styles.optionSel, pressed && { opacity: 0.85 }]}
-            >
-              <View style={[q.multi ? styles.box : styles.radio, sel && styles.markOn]}>
-                {sel ? (q.multi ? <Icon name="check" size={14} color={colors.primaryText} strokeWidth={3} /> : <View style={styles.radioDot} />) : null}
-              </View>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={type.h3}>{o.label}</Text>
-                {o.detail ? <Text style={type.small}>{o.detail}</Text> : null}
-              </View>
-            </Pressable>
+            <FadeIn key={`${q.key}-${v}`} index={i}>
+              <Tap
+                onPress={() => toggle(v)}
+                accessibilityRole={q.multi ? "checkbox" : "radio"}
+                accessibilityState={{ checked: sel }}
+                scaleTo={0.97}
+                style={({ hovered }) => [styles.option, hovered && !sel && styles.optionHover, sel && styles.optionSel]}
+              >
+                <View style={[q.multi ? styles.box : styles.radio, sel && styles.markOn]}>
+                  {sel ? (q.multi ? <Icon name="check" size={14} color={colors.primaryText} strokeWidth={3} /> : <View style={styles.radioDot} />) : null}
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={type.h3}>{o.label}</Text>
+                  {o.detail ? <Text style={type.small}>{o.detail}</Text> : null}
+                </View>
+              </Tap>
+            </FadeIn>
           );
         })}
       </View>
@@ -105,7 +107,6 @@ export default function Questionnaire() {
           onPress={() => (isLast ? create.mutate() : setStep(step + 1))}
         />
       </Row>
-      <Text style={[type.caption, { textAlign: "center" }]}>{t.questionnaire.privacy}</Text>
     </Screen>
   );
 }
@@ -140,6 +141,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.border, padding: space.md,
   },
   optionSel: { borderColor: colors.primary, backgroundColor: alpha(colors.primary, 0.1) },
+  optionHover: { borderColor: colors.borderStrong },
   radio: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: colors.borderStrong, alignItems: "center", justifyContent: "center" },
   box: { width: 24, height: 24, borderRadius: 7, borderWidth: 2, borderColor: colors.borderStrong, alignItems: "center", justifyContent: "center" },
   markOn: { borderColor: colors.primary, backgroundColor: colors.primary },

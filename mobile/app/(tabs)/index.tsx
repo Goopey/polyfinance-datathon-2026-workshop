@@ -3,17 +3,17 @@
  * « Écartées et pourquoi », état « Aucune recommandation », raccourcis, bouton flottant « Tester une idée ».
  */
 import { Redirect, router } from "expo-router";
-import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { EvidenceChip } from "../../src/components/EvidenceChip";
 import { Icon, type IconName } from "../../src/components/Icon";
 import { MoveCard } from "../../src/components/MoveCard";
 import { RunProgress } from "../../src/components/RunProgress";
 import { UnknownsBlock } from "../../src/components/UnknownsBlock";
-import { Button, Card, ErrorState, LinkText, Loading, Row, Screen, Section } from "../../src/components/ui";
+import { Button, Card, Collapsible, ErrorState, FadeIn, LinkText, Loading, Row, Screen, Section, Tap } from "../../src/components/ui";
 import { fmtDate } from "../../src/format";
 import { useBaseRun } from "../../src/hooks/useBaseRun";
 import { useT } from "../../src/i18n";
+import { useTx } from "../../src/i18n/data";
 import { useProfileStore } from "../../src/store/profile";
 import { alpha, colors, radius, space } from "../../src/theme/tokens";
 import { fontFamily, type } from "../../src/theme/typography";
@@ -21,6 +21,7 @@ import type { Explanation, RejectedItem } from "../../src/types/contracts";
 
 export default function Pistes() {
   const t = useT();
+  const tx = useTx();
   const { profileId, summary } = useProfileStore();
   const { runId, query, startError, restart } = useBaseRun(profileId);
   if (!profileId) return <Redirect href="/onboarding" />;
@@ -36,7 +37,7 @@ export default function Pistes() {
           </View>
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={type.eyebrow}>{t.pistes.yourProfile}</Text>
-            <Text style={type.label} numberOfLines={2}>{summary}</Text>
+            <Text style={type.label} numberOfLines={2}>{summary ? tx(summary) : ""}</Text>
             <Text style={type.caption}>{t.pistes.dataAsOf(fmtDate(run?.as_of ?? null))}</Text>
           </View>
           <LinkText label={t.pistes.changeProfile} icon={null} onPress={() => router.push("/(tabs)/profil")} />
@@ -51,7 +52,7 @@ export default function Pistes() {
         ) : run.status === "en_cours" ? (
           <RunProgress steps={run.steps} />
         ) : run.status === "echec" ? (
-          <ErrorState error={run.error ?? t.common.runFailed} onRetry={restart} />
+          <ErrorState error={run.error ? tx(run.error) : t.common.runFailed} onRetry={restart} />
         ) : result ? (
           <Results result={result} runId={runId!} />
         ) : null}
@@ -68,42 +69,44 @@ export default function Pistes() {
         ) : null}
       </Screen>
 
-      <Pressable
+      <Tap
         onPress={() => router.push("/(tabs)/tester")}
         accessibilityRole="button"
         accessibilityLabel={t.pistes.fab}
-        style={({ pressed }) => [styles.fab, pressed && { opacity: 0.88, transform: [{ scale: 0.97 }] }]}
+        scaleTo={0.93}
+        style={({ hovered }) => [styles.fab, hovered && { shadowOpacity: 0.6 }]}
       >
         <Icon name="flask" size={20} color={colors.primaryText} />
         <Text style={styles.fabText}>{t.pistes.fab}</Text>
-      </Pressable>
+      </Tap>
     </View>
   );
 }
 
 function Tile({ icon, label, onPress }: { icon: IconName; label: string; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label}
-      style={({ pressed }) => [styles.tile, pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }]}>
+    <Tap onPress={onPress} accessibilityRole="button" accessibilityLabel={label} scaleTo={0.95}
+      style={({ pressed, hovered }) => [styles.tile, (pressed || hovered) && styles.tileActive]}>
       <View style={styles.tileIcon}>
         <Icon name={icon} size={20} color={colors.mint} />
       </View>
       <Text style={styles.tileText} numberOfLines={2}>{label}</Text>
-    </Pressable>
+    </Tap>
   );
 }
 
 function Results({ result, runId }: { result: Explanation; runId: string }) {
-  const t = useT();
+  const tx = useTx();
   if (result.no_recommendation) return <NoRecommendation result={result} runId={runId} />;
   return (
     <>
-      <View style={{ gap: space.xs }}>
-        <Text style={type.title} accessibilityRole="header">{result.headline}</Text>
-        <Text style={type.small}>{t.pistes.resultsHint}</Text>
-      </View>
+      <FadeIn>
+        <Text style={type.title} accessibilityRole="header">{tx(result.headline)}</Text>
+      </FadeIn>
       {result.items.map((item, i) => (
-        <MoveCard key={item.ticker} item={item} rank={i + 1} runId={runId} />
+        <FadeIn key={item.ticker} index={i + 1}>
+          <MoveCard item={item} rank={i + 1} runId={runId} />
+        </FadeIn>
       ))}
       <RejectedList rejected={result.rejected} runId={runId} />
       <UnknownsBlock items={result.unknowns} />
@@ -113,6 +116,7 @@ function Results({ result, runId }: { result: Explanation; runId: string }) {
 
 function NoRecommendation({ result, runId }: { result: Explanation; runId: string }) {
   const t = useT();
+  const tx = useTx();
   return (
     <>
       <Card style={{ borderColor: alpha(colors.warn, 0.4), backgroundColor: colors.warnBg }}>
@@ -122,9 +126,8 @@ function NoRecommendation({ result, runId }: { result: Explanation; runId: strin
         </Row>
         <Text style={type.body}>{t.pistes.noRecoBody}</Text>
         {result.missing.map((m) => (
-          <Text key={m} style={type.body}>• {m}</Text>
+          <Text key={m} style={type.body}>• {tx(m)}</Text>
         ))}
-        <Text style={type.small}>{t.pistes.noRecoValid}</Text>
         <Button label={t.pistes.reviewRules} variant="secondary" onPress={() => router.push("/(tabs)/profil")} />
       </Card>
       <RejectedList rejected={result.rejected} runId={runId} initiallyOpen />
@@ -135,50 +138,42 @@ function NoRecommendation({ result, runId }: { result: Explanation; runId: strin
 
 function RejectedList({ rejected, runId, initiallyOpen = false }: { rejected: RejectedItem[]; runId: string; initiallyOpen?: boolean }) {
   const t = useT();
-  const [open, setOpen] = useState(initiallyOpen);
   if (rejected.length === 0) return null;
   const rules = rejected.filter((r) => r.kind === "contrainte");
   const ranked = rejected.filter((r) => r.kind !== "contrainte");
   return (
-    <Section
-      title={t.pistes.rejectedTitle(rejected.length)}
-      right={
-        <Pressable onPress={() => setOpen(!open)} accessibilityRole="button" accessibilityState={{ expanded: open }} hitSlop={10}
-          style={({ pressed }) => [styles.toggle, pressed && { opacity: 0.75 }]}>
-          <Text style={styles.toggleText}>{open ? t.pistes.fold : t.pistes.unfold}</Text>
-          <Icon name={open ? "chevronUp" : "chevronDown"} size={16} color={colors.mint} />
-        </Pressable>
-      }
-    >
-      {open ? (
-        <View style={{ gap: space.md }}>
-          {rules.length > 0 ? <RejectedGroup title={t.pistes.rejectedByRule} items={rules} runId={runId} icon="ban" color={colors.bad} /> : null}
-          {ranked.length > 0 ? <RejectedGroup title={t.pistes.rejectedRanked} items={ranked} runId={runId} icon="trendingDown" color={colors.warn} /> : null}
-        </View>
-      ) : null}
-    </Section>
+    <Collapsible title={t.pistes.rejectedTitle(rejected.length)} summary={t.pistes.rejectedSummary(rules.length, ranked.length)}
+      icon="ban" accent={colors.bad} initiallyOpen={initiallyOpen}>
+      {rules.length > 0 ? <RejectedGroup title={t.pistes.rejectedByRule} items={rules} runId={runId} icon="ban" color={colors.bad} /> : null}
+      {ranked.length > 0 ? <RejectedGroup title={t.pistes.rejectedRanked} items={ranked} runId={runId} icon="trendingDown" color={colors.warn} /> : null}
+    </Collapsible>
   );
 }
 
 function RejectedGroup({ title, items, runId, icon, color }: { title: string; items: RejectedItem[]; runId: string; icon: IconName; color: string }) {
   const t = useT();
+  const tx = useTx();
   return (
-    <Card>
+    <View style={{ gap: space.sm }}>
       <Row>
-        <Icon name={icon} size={18} color={color} />
-        <Text style={[type.h3, { flex: 1 }]}>{title}</Text>
+        <Icon name={icon} size={16} color={color} />
+        <Text style={[type.label, { flex: 1, color }]}>{title}</Text>
       </Row>
       {items.map((r) => (
-        <View key={r.ticker} style={styles.rejRow}>
-          <Text style={[type.label, { color }]}>{r.ticker}</Text>
-          <Text style={type.body}>{r.reason}</Text>
-          <Row>
-            {(r.evidence_ids ?? []).map((id) => <EvidenceChip key={id} id={id} runId={runId} />)}
-            <LinkText label={t.common.seeSheetArrow} onPress={() => router.push({ pathname: "/piste/[ticker]", params: { ticker: r.ticker, run: runId } })} />
-          </Row>
-        </View>
+        <Tap key={r.ticker} scaleTo={0.98} accessibilityRole="button"
+          onPress={() => router.push({ pathname: "/piste/[ticker]", params: { ticker: r.ticker, run: runId } })}
+          style={({ pressed, hovered }) => [styles.rejRow, (pressed || hovered) && styles.rejRowActive]}>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={type.h3}>{r.ticker}</Text>
+            <Text style={type.small}>{tx(r.reason)}</Text>
+            <Row>{(r.evidence_ids ?? []).map((id, i, all) => (
+              <EvidenceChip key={id} id={id} runId={runId} label={all.length > 1 ? t.common.sourceN(i + 1) : undefined} />
+            ))}</Row>
+          </View>
+          <Icon name="chevronRight" size={20} color={colors.textMuted} />
+        </Tap>
       ))}
-    </Card>
+    </View>
   );
 }
 
@@ -193,14 +188,14 @@ const styles = StyleSheet.create({
     flex: 1, minHeight: 96, padding: space.md, gap: space.sm, borderRadius: radius.lg, justifyContent: "space-between",
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
   },
+  tileActive: { borderColor: colors.primary, backgroundColor: colors.surfaceMuted },
   tileIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surfaceRaised, alignItems: "center", justifyContent: "center" },
   tileText: { fontFamily, fontSize: 14, fontWeight: "700", color: colors.text },
-  toggle: {
-    flexDirection: "row", alignItems: "center", gap: 4, minHeight: 36, paddingHorizontal: space.md,
-    borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+  rejRow: {
+    flexDirection: "row", alignItems: "center", gap: space.md, padding: space.md, borderRadius: radius.md,
+    backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.border,
   },
-  toggleText: { fontFamily, color: colors.mint, fontWeight: "700", fontSize: 14 },
-  rejRow: { gap: space.xs, paddingVertical: space.sm, borderTopWidth: 1, borderTopColor: alpha(colors.mint, 0.07) },
+  rejRowActive: { borderColor: colors.borderStrong },
   fab: {
     position: "absolute", right: space.lg, bottom: space.lg, backgroundColor: colors.mint, flexDirection: "row", alignItems: "center", gap: space.sm,
     borderRadius: radius.pill, paddingHorizontal: space.xl, paddingVertical: space.md, minHeight: 54,

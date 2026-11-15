@@ -12,6 +12,7 @@ import { Icon, type IconName } from "../src/components/Icon";
 import { Card, ErrorState, Loading, Pill, Row, Screen, Section } from "../src/components/ui";
 import { fmtDate } from "../src/format";
 import { useT } from "../src/i18n";
+import { useTx } from "../src/i18n/data";
 import { useProfileStore } from "../src/store/profile";
 import { alpha, colors, space } from "../src/theme/tokens";
 import { type } from "../src/theme/typography";
@@ -39,6 +40,7 @@ function evidenceIdsOf(r: Explanation): string[] {
 
 export default function Donnees() {
   const t = useT();
+  const tx = useTx();
   const { profileId, runs } = useProfileStore();
   const runId = profileId ? runs[profileId] : null;
   const overview = useQuery({ queryKey: ["data", runId], queryFn: () => getDataOverview(runId) });
@@ -56,19 +58,19 @@ export default function Donnees() {
 
   return (
     <Screen>
-      <Text style={[type.body, { color: colors.textMuted }]}>{t.donnees.intro(fmtDate(asOf))}</Text>
+      <Text style={type.caption}>{t.donnees.asOf(fmtDate(asOf))}</Text>
 
       <Section title={t.donnees.sources}>
-        {d.sources.map((s) => {
+        {d.sources.filter((s) => s.statut === "utilisé").map((s) => {
           const st = STATUT[s.statut] ?? { fg: colors.textMuted, bg: colors.neutralBg, icon: "minus" as IconName };
           return (
             <Card key={s.source_id}>
               <Row style={{ justifyContent: "space-between", flexWrap: "nowrap" }}>
-                <Text style={[type.h3, { flex: 1 }]}>{s.nom}</Text>
+                <Text style={[type.h3, { flex: 1 }]}>{tx(s.nom)}</Text>
                 <Pill icon={st.icon} text={t.donnees.statut[s.statut] ?? s.statut} fg={st.fg} bg={st.bg} />
               </Row>
-              <Text style={type.small}>{s.type_de_donnee}{s.date_extraction ? t.donnees.extracted(fmtDate(s.date_extraction)) : ""}</Text>
-              {s.limites !== "—" ? <Text style={type.body}>{t.donnees.limits(s.limites)}</Text> : null}
+              <Text style={type.small}>{tx(s.type_de_donnee)}{s.date_extraction ? t.donnees.extracted(fmtDate(s.date_extraction)) : ""}</Text>
+              {s.limites !== "—" ? <Text style={type.body}>{t.donnees.limits(tx(s.limites))}</Text> : null}
             </Card>
           );
         })}
@@ -82,10 +84,10 @@ export default function Donnees() {
               <View key={c.check} style={[styles.check, i === d.quality.length - 1 && { borderBottomWidth: 0 }]}>
                 <Row style={{ flexWrap: "nowrap" }}>
                   <Icon name={k.icon} size={16} color={k.color} strokeWidth={2.6} />
-                  <Text style={[type.label, { color: k.color, flex: 1 }]}>{c.check}</Text>
+                  <Text style={[type.label, { color: k.color, flex: 1 }]}>{tx(c.check)}</Text>
                 </Row>
                 <Text style={type.caption}>{t.donnees.check[c.status]}</Text>
-                {c.details.map((x) => <Text key={x} style={type.small}>{x}</Text>)}
+                {c.details.map((x) => <Text key={x} style={type.small}>{tx(x)}</Text>)}
               </View>
             );
           })}
@@ -109,8 +111,8 @@ export default function Donnees() {
                   <View style={styles.railDot} />
                 </View>
                 <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={[type.caption, { color: colors.mint }]}>{e!.published_at}</Text>
-                  <Text style={type.small}>{e!.subject} — {e!.statement}</Text>
+                  <Text style={[type.caption, { color: colors.mint }]}>{fmtDate(e!.published_at)}</Text>
+                  <Text style={type.small}>{e!.subject} — {tx(e!.statement)}</Text>
                   <Row>
                     <ClaimTag kind={e!.claim_kind} />
                     <EvidenceChip id={e!.evidence_id} runId={run.data!.run_id} />

@@ -3,26 +3,29 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getPersonas } from "../../src/api/profiles";
 import { HeaderActions } from "../../src/components/HeaderActions";
 import { Icon } from "../../src/components/Icon";
-import { PaletteStack } from "../../src/components/PaletteStack";
-import { ErrorState, Loading, Screen } from "../../src/components/ui";
+import { ErrorState, FadeIn, Loading, Screen, Tap } from "../../src/components/ui";
 import { useT } from "../../src/i18n";
+import { useTx } from "../../src/i18n/data";
 import { alpha, colors, palette, radius, space } from "../../src/theme/tokens";
 import { fontFamily, type } from "../../src/theme/typography";
 import type { Persona } from "../../src/types/contracts";
 
 /** Une teinte de la palette par persona, pour l'avatar. */
 const AVATAR = [palette.g300, palette.g100, "#B5D8C0", palette.g600];
-const RISK_COLOR: Record<string, string> = { "élevé": colors.bad, "élevée": colors.bad, "modéré": colors.warn, "modérée": colors.warn, faible: colors.good };
+const RISK_COLOR: Record<string, string> = { "élevé": colors.bad, "élevée": colors.bad, "modéré": colors.warn, "modérée": colors.warn, faible: colors.good,
+  "faible à modéré": colors.good, "faible à modérée": colors.good,
+};
 
 export default function Bienvenue() {
   const t = useT();
   const insets = useSafeAreaInsets();
   const personas = useQuery({ queryKey: ["personas"], queryFn: getPersonas });
+  const count = personas.data?.length ?? 0;
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <View style={[styles.topBar, { paddingTop: insets.top + space.sm }]}>
@@ -33,36 +36,39 @@ export default function Bienvenue() {
         <HeaderActions />
       </View>
       <Screen>
-        <View style={styles.hero}>
-          <View style={{ gap: space.sm }}>
-            <Text style={type.eyebrow}>{t.welcome.eyebrow}</Text>
-            <Text style={type.display} accessibilityRole="header">{t.welcome.title}</Text>
-            <Text style={[type.body, { color: colors.textMuted }]}>{t.welcome.body}</Text>
-          </View>
-          <PaletteStack labels={t.welcome.stack} />
-        </View>
+        <FadeIn style={styles.hero}>
+          <Text style={type.display} accessibilityRole="header">{t.welcome.title}</Text>
+        </FadeIn>
 
-        <Text style={type.h2} accessibilityRole="header">{t.welcome.personasTitle}</Text>
         {personas.isLoading ? <Loading /> : null}
         {personas.error ? <ErrorState error={personas.error} onRetry={() => personas.refetch()} /> : null}
         <View style={{ gap: space.md }}>
-          {personas.data?.map((p, i) => <PersonaCard key={p.id} p={p} tint={AVATAR[i % AVATAR.length]} />)}
+          {personas.data?.map((p, i) => (
+            <FadeIn key={p.id} index={i + 1}>
+              <PersonaCard p={p} tint={AVATAR[i % AVATAR.length]} />
+            </FadeIn>
+          ))}
         </View>
 
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push("/onboarding/questionnaire")}
-          style={({ pressed }) => [styles.custom, pressed && { opacity: 0.85 }]}
-        >
-          <View style={styles.customIcon}>
-            <Icon name="sliders" size={20} color={colors.primaryText} />
-          </View>
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={type.h3}>{t.welcome.custom}</Text>
-            <Text style={type.small}>{t.welcome.customHint}</Text>
-          </View>
-          <Icon name="arrowRight" size={20} color={colors.mint} />
-        </Pressable>
+        {personas.data ? (
+          <FadeIn index={count + 1}>
+            <Tap
+              accessibilityRole="button"
+              onPress={() => router.push("/onboarding/questionnaire")}
+              scaleTo={0.975}
+              style={({ pressed, hovered }) => [styles.custom, (pressed || hovered) && styles.customActive]}
+            >
+              <View style={styles.customIcon}>
+                <Icon name="sliders" size={20} color={colors.primaryText} />
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={type.h3}>{t.welcome.custom}</Text>
+                <Text style={type.small}>{t.welcome.customHint}</Text>
+              </View>
+              <Icon name="arrowRight" size={20} color={colors.mint} />
+            </Tap>
+          </FadeIn>
+        ) : null}
       </Screen>
     </View>
   );
@@ -70,15 +76,17 @@ export default function Bienvenue() {
 
 function PersonaCard({ p, tint }: { p: Persona; tint: string }) {
   const t = useT();
+  const tx = useTx();
   const h = p.profil.horizon_annees;
   const risk = p.profil.tolerance_risque;
   const riskColor = RISK_COLOR[risk] ?? colors.info;
   return (
-    <Pressable
+    <Tap
       accessibilityRole="button"
       accessibilityLabel={t.welcome.choose(p.profil.nom)}
       onPress={() => router.push({ pathname: "/onboarding/resume", params: { id: p.id } })}
-      style={({ pressed }) => [styles.persona, pressed && { opacity: 0.85, transform: [{ scale: 0.99 }] }]}
+      scaleTo={0.975}
+      style={({ pressed, hovered }) => [styles.persona, (pressed || hovered) && styles.personaActive]}
     >
       <View style={[styles.avatar, { backgroundColor: tint }]}>
         <Text style={styles.avatarText}>{p.profil.nom[0]}</Text>
@@ -93,10 +101,10 @@ function PersonaCard({ p, tint }: { p: Persona; tint: string }) {
             <Text style={[styles.tagText, { color: colors.info }]}>{t.welcome.horizon(h.min, h.max)}</Text>
           </View>
         </View>
-        <Text style={[type.small, { color: colors.text }]}>{p.profil.objectif}</Text>
+        <Text style={[type.small, { color: colors.text }]}>{tx(p.profil.objectif)}</Text>
       </View>
       <Icon name="chevronRight" size={22} color={colors.textMuted} />
-    </Pressable>
+    </Tap>
   );
 }
 
@@ -108,11 +116,13 @@ const styles = StyleSheet.create({
   brand: { flexDirection: "row", alignItems: "center", gap: space.sm },
   brandMark: { width: 22, height: 12, borderRadius: 6, backgroundColor: colors.mint },
   brandText: { fontFamily, fontSize: 18, fontWeight: "800", color: colors.text, letterSpacing: -0.3 },
-  hero: { gap: space.xl, marginTop: space.md, marginBottom: space.sm },
+  hero: { marginTop: space.md, marginBottom: space.xs },
   persona: {
     flexDirection: "row", alignItems: "center", gap: space.md, backgroundColor: colors.surface,
     borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: space.lg,
   },
+  personaActive: { borderColor: colors.primary, backgroundColor: colors.surfaceMuted },
+  customActive: { borderColor: colors.primary, backgroundColor: alpha(colors.mint, 0.08) },
   avatar: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center" },
   avatarText: { fontFamily, color: colors.primaryText, fontSize: 22, fontWeight: "800" },
   tags: { flexDirection: "row", flexWrap: "wrap", gap: 6 },

@@ -2,8 +2,9 @@
  * Composant HeaderActions — Coin supérieur droit de chaque écran : sélecteur de langue FR / EN
  * (et, en mode développement seulement, une pastille « Démo »).
  */
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { USE_MOCKS } from "../api/client";
+import { Tap } from "./ui";
 import { useT } from "../i18n";
 import { useSettings, type Lang } from "../store/settings";
 import { alpha, colors, radius, space } from "../theme/tokens";
@@ -17,17 +18,18 @@ export function LangToggle() {
       {(["fr", "en"] as Lang[]).map((l) => {
         const on = lang === l;
         return (
-          <Pressable
+          <Tap
             key={l}
             onPress={() => setLang(l)}
             accessibilityRole="radio"
             accessibilityState={{ checked: on }}
             accessibilityLabel={t.lang[l]}
             hitSlop={6}
-            style={({ pressed }) => [styles.opt, on && styles.optOn, pressed && !on && { opacity: 0.7 }]}
+            scaleTo={0.88}
+            style={({ hovered }) => [styles.opt, on && styles.optOn, hovered && !on && { backgroundColor: alpha(colors.mint, 0.08) }]}
           >
             <Text style={[styles.optText, on && styles.optTextOn]}>{l.toUpperCase()}</Text>
-          </Pressable>
+          </Tap>
         );
       })}
     </View>
