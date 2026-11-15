@@ -38,6 +38,7 @@ Commandes de déploiement : `infra/README.md`. Conception : `docs/06_AWS.md` (se
 | `infra/app.py`, `infra/stacks/{data,pipeline,api}_stack.py`, `infra/build_lambda.py`, `infra/statemachine/pipeline.asl.json`, `infra/cdk.json`, `infra/requirements.txt` | CDK (us-east-1), paquets Lambda sans Docker (93,8 Mo), machine d'états |
 | `scripts/seed_aws.py` | Recopie de `data/` vers S3 sans redéployer |
 | `backend/tests/aws/` (nouveau) | Interpréteur de la machine d'états ; 12 tests : résultat identique au local (amira, robert + TSLA, mateo), artefacts, relances puis échec visible, échec sans relance, API sur deux « conteneurs », profil fictif, lanceur |
+| `scripts/precompute.py` (nouveau), `api/aws_service.py` (vues de profil dans la table), `pipeline.py` (`candidate_workers`), `scripts/run_local.py` (progression, `--max-candidates`), `llm_client.py` (délai de lecture 300 s) | Objectif « moins de 5 s » : moteur seul 0,3 s mesuré, agents en direct 1,5 à 2 min ⇒ agents précalculés (`docs/06_AWS.md`, section « Précalcul ») ; 4 tests |
 
 **Non vérifié** : aucune exécution sur AWS (pas d'identifiants) ; import du paquet sur Linux / Python 3.12 (construit pour, non exécuté) ; quotas Bedrock du compte d'atelier.
 
@@ -369,7 +370,7 @@ Cocher au fur et à mesure. Les blocs A et F peuvent avancer en parallèle des a
 - [x] D5. `agents/explanation.py`, `explain/fidelity.py`, `explain/wording.py`. → `test_fidelity`, `test_wording`, **S6**, **S8** (points 1 et 2)
 - [x] D6. `explain/trace.py`, `engine/governance.py`.
 - [x] D7. Scénarios **S1** et **S3** au vert en local ; runs des personas enregistrés dans `data/curated/runs/` (agents simulés).
-- [ ] D8. Rejouer S1, S3, S6 avec Amazon Bedrock (`--llm bedrock`) dès que les identifiants du compte d'atelier sont disponibles (client corrigé en P4 : ni `temperature` ni `toolChoice` forcé, refusés par Opus 5.5 / Sonnet 5.5 / Haiku 5.5) : vérifier la requête Converse sur le compte réel, mesurer le taux de fidélité d'un vrai modèle, ajuster les prompts `v1`, puis réenregistrer les runs des personas.
+- [ ] D8. **En cours (2026-11-15)** : identifiants d'atelier et modèles OK (rapide `us.anthropic.claude-haiku-5-5`, fort `us.anthropic.claude-sonnet-5-5`) ; Bedrock répond depuis le poste, 8 à 12 s par appel (`run_local.py --llm bedrock --max-candidates 3`). Reste : un run complet, le taux de fidélité, les runs enregistrés. Rejouer S1, S3, S6 avec Amazon Bedrock (`--llm bedrock`) dès que les identifiants du compte d'atelier sont disponibles (client corrigé en P4 : ni `temperature` ni `toolChoice` forcé, refusés par Opus 5.5 / Sonnet 5.5 / Haiku 5.5) : vérifier la requête Converse sur le compte réel, mesurer le taux de fidélité d'un vrai modèle, ajuster les prompts `v1`, puis réenregistrer les runs des personas.
 
 ### E. AWS — P4 (dès que A2 est levé)
 
@@ -377,6 +378,7 @@ Cocher au fur et à mesure. Les blocs A et F peuvent avancer en parallèle des a
 - [x] E2. `PipelineStack` : 8 Lambda (`orchestration/handlers/*`), machine d'états en série + `Map` du débat, droits Bedrock. Pipeline découpé en étapes (`stage_*`, `RunContext`), même code qu'en local.
 - [x] E3. `ApiStack` : API Gateway HTTP + Lambda API ; `api/aws_service.py` (runs dans DynamoDB, lancement Step Functions, résultat sur S3, profils fictifs dans la table).
 - [ ] E4. Déployer (`infra/README.md`) puis un run complet sur AWS ; trace visible ; captures pour la vidéo.
+- [ ] E6. Précalculer les analyses sur AWS (`scripts/precompute.py --api <ApiUrl>`, 96 analyses) : réponse en moins d'une seconde ensuite. Script, vues de profil gardées et débat parallèle faits et testés.
 - [x] E5. Un rôle IAM par fonction (compartiment, table, Bedrock seulement si besoin) ; aucun secret nécessaire (rôle de la fonction) ; étiquettes `projet`, `evenement`, `environnement`.
 
 ### F. Mobile — P5 (démarre tout de suite avec les données fictives)

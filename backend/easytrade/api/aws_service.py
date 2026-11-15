@@ -84,6 +84,22 @@ class AwsApiService(ApiService):
                     self._personas["personas"].append(entry)
             return entry
 
+    def profile_view(self, profile_id: str) -> ProfileWeightsView:
+        """Vue pondérée par l'agent : calculée une seule fois (appel au modèle), puis lue dans la table."""
+        with self._lock:
+            cached = self._profile_views.get(profile_id)
+        if cached is not None:
+            return cached
+        stored = self.table.get_view(profile_id)
+        if stored is not None:
+            view = ProfileWeightsView.model_validate_json(stored)
+            with self._lock:
+                self._profile_views[profile_id] = view
+            return view
+        view = super().profile_view(profile_id)
+        self.table.put_view(profile_id, view.model_dump_json())
+        return view
+
     def create_profile(self, draft: ProfileDraft) -> ProfileWeightsView:
         view = super().create_profile(draft)
         self.table.put_profile(self._entry(view.profile_id))

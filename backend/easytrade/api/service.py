@@ -29,6 +29,7 @@ import pandas as pd
 
 from easytrade.agents.llm_client import LLMClient, make_client
 from easytrade.agents.profile_weighting import SOURCE_PROFILE, WeightingResult, weigh_profile
+from easytrade.agents.simulated import MODEL_ID as SIMULATED_MODEL_ID
 from easytrade.agents.tools import ResearchTools
 from easytrade.data.point_in_time import to_timestamp
 from easytrade.engine.coherence import RISK_LIMITS, tolerance_level
@@ -315,6 +316,8 @@ class ApiService:
             result = run_pipeline(
                 run.profile_id, as_of=run.as_of, requested_ticker=run.requested_ticker, client=self.client,
                 workspace=self.ws, on_step=run.steps.append, profile_source=profile_source,
+                # Vrai modèle : candidats et agents débattus en parallèle (agents simulés : en série).
+                **({} if self.client.model_id("strong") == SIMULATED_MODEL_ID else {"max_workers": 3, "candidate_workers": 4}),
             )
         except Exception as error:  # run_pipeline rend déjà un échec propre ; ceci couvre le reste
             result = RunResult(

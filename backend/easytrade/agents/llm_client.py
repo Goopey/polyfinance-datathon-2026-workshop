@@ -205,7 +205,12 @@ class BedrockClient:
                 import boto3  # import tardif : le dépôt fonctionne sans AWS
             except ImportError as error:
                 raise LLMUnavailableError("boto3 n'est pas installé (pip install boto3).") from error
-            self._client = boto3.client("bedrock-runtime", region_name=self.region)
+            from botocore.config import Config
+
+            # Délai de lecture large : un modèle qui raisonne avant de répondre dépasse souvent les 60 s
+            # par défaut, ce qui déclenchait des relances silencieuses (exécution qui semble figée).
+            self._client = boto3.client("bedrock-runtime", region_name=self.region, config=Config(
+                connect_timeout=10, read_timeout=300, retries={"max_attempts": 3, "mode": "standard"}))
         return self._client
 
     def invoke(self, *, step, system, payload, schema, tier, feedback=None) -> Any:

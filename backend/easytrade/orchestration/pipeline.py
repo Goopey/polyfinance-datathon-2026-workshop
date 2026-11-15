@@ -20,6 +20,7 @@ l'explication le disent.
 from __future__ import annotations
 
 import json
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
@@ -558,12 +559,22 @@ def record_debate(ctx: RunContext, results: dict[str, tuple[DebateRecord, list[C
     ctx.records = ctx.result.debate = records
 
 
-def stage_debate(ctx: RunContext, ws: Workspace, client: LLMClient, max_workers: int = 1) -> None:
-    """Débat de tous les candidats dans le même processus (exécution locale)."""
-    results: dict[str, tuple[DebateRecord, list[CallInfo]]] = {}
+def stage_debate(ctx: RunContext, ws: Workspace, client: LLMClient, max_workers: int = 1,
+                 candidate_workers: int = 1) -> None:
+    """Débat de tous les candidats dans le même processus (exécution locale).
+
+    `candidate_workers` > 1 débat plusieurs candidats en même temps, comme l'état `Map` sur AWS : le
+    débat ne fait que lire le registre de preuves, et les résultats sont rassemblés dans l'ordre des
+    dossiers, donc le résultat est le même qu'en série.
+    """
+    jobs = debate_jobs(ctx)
     try:
-        for ticker in debate_jobs(ctx):
-            results[ticker] = debate_one(ctx, ws, client, ticker, max_workers=max_workers)
+        if candidate_workers > 1 and len(jobs) > 1:
+            with ThreadPoolExecutor(max_workers=min(candidate_workers, len(jobs))) as pool:
+                futures = {t: pool.submit(debate_one, ctx, ws, client, t, max_workers) for t in jobs}
+                results = {t: futures[t].result() for t in jobs}
+        else:
+            results = {t: debate_one(ctx, ws, client, t, max_workers=max_workers) for t in jobs}
     except Exception as error:
         record_debate_failure(ctx, error)
         raise
@@ -676,6 +687,7 @@ def run_pipeline(
     reading_level: str = "simple",
     max_candidates: Optional[int] = None,
     max_workers: int = 1,
+    candidate_workers: int = 1,
     on_step: Optional[Callable[[TraceStep], None]] = None,
     profile_source: str = SOURCE_PROFILE,
 ) -> RunResult:
@@ -683,6 +695,7 @@ def run_pipeline(
 
     `on_step` est appelé à la fermeture de chaque étape (progression affichée par le mobile).
     `profile_source` : source des phrases du profil (énoncé du case, ou questionnaire de l'application).
+    `max_workers` : agents d'un même tour en parallèle ; `candidate_workers` : candidats débattus en parallèle.
     Les étapes sont celles de la machine d'états AWS, enchaînées dans le même processus.
     """
     ws = workspace or Workspace.load()
@@ -695,7 +708,7 @@ def run_pipeline(
         stage_validation(ctx, ws, client)
         stage_research(ctx, ws, client)
         stage_evidence_packs(ctx, ws, client)
-        stage_debate(ctx, ws, client, max_workers=max_workers)
+        stage_debate(ctx, ws, client, max_workers=max_workers, candidate_workers=candidate_workers)
         stage_decision(ctx, ws, client)
         stage_explanation(ctx, ws, client)
     except Exception as error:

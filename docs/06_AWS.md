@@ -106,6 +106,24 @@ Code prêt à déployer ; déploiement et premier run sur le compte d'atelier : 
   profil, la recherche et l'explication (ex. Claude Sonnet 5.5 ou Opus 5.5). Le client Converse n'envoie ni
   `temperature` ni `toolChoice` forcé, refusés par ces modèles.
 
+## Précalcul : réponse en moins d'une seconde
+
+Mesures : le moteur seul (validation, dossiers, score, décision, sur les 31 actifs) prend **0,3 s** ; une
+analyse avec les agents enchaîne au moins cinq appels au modèle qui dépendent les uns des autres (profil →
+recherche → débat tour 1 → tour 3 → explication), soit 8 à 15 s au mieux et 1,5 à 2 min en pratique (une
+trentaine d'appels de 8 à 12 s). Le direct ne peut donc pas tenir l'objectif de 5 secondes.
+
+Choix : les agents sont **précalculés** (`scripts/precompute.py`). Le pipeline est déterministe et
+l'identifiant d'un run ne dépend que de la date, du profil et du titre demandé ; l'API sert un run terminé
+de même identifiant sans le refaire. On calcule donc une fois, sur AWS, les analyses par défaut des
+personas et « Tester une idée » pour chaque persona × chaque titre (96 analyses), plus la vue pondérée de
+chaque profil (gardée dans DynamoDB, `VIEW#<id>`). C'est conforme à l'ADR 0001 : le code décide, les agents
+argumentent ; leur travail est fait en amont, toujours tracé et daté.
+
+Limites : un profil fictif créé par questionnaire, ou une autre date de référence, n'est pas précalculé :
+l'analyse tourne alors en direct (1,5 à 2 min sur AWS, avec l'écran de progression). Le débat d'un run en
+direct est parallèle (état `Map` sur AWS ; `candidate_workers` en local).
+
 ## Points confirmés (A2, 2026-11-14)
 
 Compte d'atelier temporaire, région **us-east-1**, Amazon Bedrock, modèles au choix de l'équipe, **500 $ de

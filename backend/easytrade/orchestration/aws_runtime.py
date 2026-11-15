@@ -174,6 +174,8 @@ class RunTable(Protocol):
     def update_run(self, run_id: str, **fields: Any) -> None: ...
     def get_profile(self, profile_id: str) -> Optional[dict]: ...
     def put_profile(self, entry: dict) -> None: ...
+    def get_view(self, profile_id: str) -> Optional[str]: ...
+    def put_view(self, profile_id: str, payload: str) -> None: ...
 
 
 class LocalRunTable:
@@ -205,9 +207,17 @@ class LocalRunTable:
     def put_profile(self, entry: dict) -> None:
         self._write(f"PROFILE_{entry['id']}", {"entry": entry})
 
+    def get_view(self, profile_id: str) -> Optional[str]:
+        item = self._read(f"VIEW_{profile_id}")
+        return item["view"] if item else None
+
+    def put_view(self, profile_id: str, payload: str) -> None:
+        self._write(f"VIEW_{profile_id}", {"view": payload})
+
 
 class DynamoRunTable:
-    """Une seule table : clé `pk` = « RUN#<id> » ou « PROFILE#<id> ». Valeurs complexes en JSON (pas de Decimal)."""
+    """Une seule table : clé `pk` = « RUN#<id> », « PROFILE#<id> » (profil fictif) ou « VIEW#<id> » (vue du profil
+    pondérée par l'agent, calculée une fois). Valeurs complexes en JSON (pas de Decimal)."""
 
     def __init__(self, table_name: str, client: Any = None):
         self.table_name, self._client = table_name, client
@@ -253,6 +263,13 @@ class DynamoRunTable:
         self.db.put_item(TableName=self.table_name, Item={
             "pk": {"S": f"PROFILE#{entry['id']}"}, "entry": {"S": json.dumps(entry, ensure_ascii=False)},
         })
+
+    def get_view(self, profile_id: str) -> Optional[str]:
+        item = self.db.get_item(TableName=self.table_name, Key={"pk": {"S": f"VIEW#{profile_id}"}})
+        return item["Item"]["view"]["S"] if "Item" in item else None
+
+    def put_view(self, profile_id: str, payload: str) -> None:
+        self.db.put_item(TableName=self.table_name, Item={"pk": {"S": f"VIEW#{profile_id}"}, "view": {"S": payload}})
 
 
 def run_table() -> RunTable:

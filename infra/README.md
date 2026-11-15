@@ -60,7 +60,16 @@ Prérequis : Python ≥ 3.11, Node (déjà installé), AWS CLI v2.
    curl <ApiUrl>/runs/run_2026-11-12_robert_TSLA
    ```
    Suivre l'exécution dans la console Step Functions (graphe en direct : capture pour la vidéo, tâche E4).
-6. **Brancher le mobile** : dans `mobile/.env`, `EXPO_PUBLIC_API_URL=<ApiUrl>` et `EXPO_PUBLIC_USE_MOCKS=false`.
+6. **Précalculer les analyses** (réponse en moins d'une seconde ensuite) :
+   ```bash
+   python scripts/precompute.py --api <ApiUrl>                  # 3 personas + 3 × 31 « Tester une idée »
+   python scripts/precompute.py --api <ApiUrl> --tickers none   # essai : seulement les 3 analyses par défaut
+   ```
+   Une analyse en direct prend 1,5 à 2 minutes (une trentaine d'appels aux modèles) ; le moteur seul,
+   0,3 seconde. L'identifiant d'un run ne dépend que de la date, du profil et du titre : une fois calculé,
+   il est servi tel quel. Tout précalculer : environ 96 analyses, 35 à 60 $ (estimation), 30 à 60 minutes
+   avec 3 analyses à la fois. Relancer le script ne refait que ce qui manque ou a échoué.
+7. **Brancher le mobile** : dans `mobile/.env`, `EXPO_PUBLIC_API_URL=<ApiUrl>` et `EXPO_PUBLIC_USE_MOCKS=false`.
 
 Après une modification de `data/` sans changement de code : `python scripts/seed_aws.py`.
 Fin de l'atelier : `npx aws-cdk destroy --all` (le compte sera de toute façon supprimé).

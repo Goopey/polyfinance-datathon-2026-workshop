@@ -5,6 +5,7 @@ Usage (depuis la racine du dépôt, avec l'environnement Python du backend) :
     python scripts/run_local.py --persona robert --ticker TSLA
     python scripts/run_local.py --persona amira --as-of 2024-06-28 --save
     python scripts/run_local.py --tous --save          # enregistre les runs des trois personas
+    python scripts/run_local.py --persona robert --llm bedrock --max-candidates 3   # essai rapide sur Bedrock
 
 Modèle : `--llm simule` (par défaut si Bedrock n'est pas configuré) exécute des agents simulés
 par des règles, sans aucun modèle de langage ; `--llm bedrock` appelle Amazon Bedrock (variables
@@ -15,16 +16,44 @@ from __future__ import annotations
 
 import argparse
 import sys
+import threading
+import time
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "backend"))
 
 from easytrade.agents.llm_client import make_client  # noqa: E402
+from easytrade.agents.simulated import MODEL_ID as SIMULATED_MODEL_ID  # noqa: E402
 from easytrade.orchestration.pipeline import RunResult, Workspace, run_pipeline  # noqa: E402
 from easytrade.schemas.debate import STANCE_LABELS  # noqa: E402
 
 PERSONAS = ("amira", "mateo", "robert")
+
+
+class ProgressClient:
+    """Affiche chaque appel au modèle et sa durée (sur stderr) : une analyse réelle fait des dizaines d'appels."""
+
+    def __init__(self, inner):
+        self.inner, self.count, self.started = inner, 0, time.monotonic()
+        self._lock = threading.Lock()
+
+    def model_id(self, tier):
+        return self.inner.model_id(tier)
+
+    def invoke(self, **kwargs):
+        start = time.monotonic()
+        try:
+            return self.inner.invoke(**kwargs)
+        finally:
+            with self._lock:
+                self.count += 1
+                print(f"  appel {self.count:3d} · {kwargs['step']:24s} {time.monotonic() - start:6.1f} s "
+                      f"(total {time.monotonic() - self.started:5.0f} s)", file=sys.stderr, flush=True)
+
+
+def _step_closed(step) -> None:
+    print(f"  ── étape {step.step} : {step.status}", file=sys.stderr, flush=True)
 
 
 def _print(result: RunResult, verbose: bool) -> None:
@@ -81,17 +110,25 @@ def main() -> int:
     parser.add_argument("--niveau", choices=("simple", "avance"), default="simple", help="niveau de lecture")
     parser.add_argument("--save", action="store_true", help="enregistre les artefacts dans data/curated/runs/")
     parser.add_argument("-v", "--verbose", action="store_true", help="affiche les raisons et le débat de chaque piste")
+    parser.add_argument("--max-candidates", dest="max_candidates", type=int, default=None,
+                        help="limite les candidats présélectionnés (essai rapide, moins d'appels au modèle)")
     args = parser.parse_args()
 
-    if hasattr(sys.stdout, "reconfigure"):
-        sys.stdout.reconfigure(encoding="utf-8")
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
     workspace = Workspace.load()
     client = make_client(args.llm)
+    live = client.model_id("strong") != SIMULATED_MODEL_ID
+    if live:  # un vrai modèle : afficher la progression, l'analyse prend plusieurs minutes
+        print(f"Modèles : rapide {client.model_id('fast')} · fort {client.model_id('strong')}", file=sys.stderr)
+        client = ProgressClient(client)
     failed = 0
     for persona in (PERSONAS if args.tous else (args.persona,)):
         result = run_pipeline(persona, as_of=args.as_of, requested_ticker=args.ticker, client=client,
-                              workspace=workspace, reading_level=args.niveau,
-                              max_workers=1 if args.llm == "simule" else 3)
+                              workspace=workspace, reading_level=args.niveau, max_candidates=args.max_candidates,
+                              max_workers=3 if live else 1, candidate_workers=4 if live else 1,
+                              on_step=_step_closed if live else None)
         _print(result, args.verbose)
         if args.save:
             target = result.save(workspace.settings.curated_dir / "runs")
