@@ -29,4 +29,9 @@ class Decision(BaseModel):
     reason: str = ""                          # pourquoi aucune reco / réserves
     missing_info: tuple[str, ...] = ()
     confidence: Confidence = "moyen"
-    disagreements: tuple[str, ...] = ()       # recopiés du débat (P3), vides ici
+    disagreements: tuple[str, ...] = ()       # recopiés tels quels du débat (engine.decision.apply_debate)
+    # --- remplis après le débat et les garde-fous de panier (P3) ---
+    retained: tuple[str, ...] = ()            # pistes retenues, dans l'ordre du classement
+    displaced: tuple[Rejection, ...] = ()     # déclassés par un garde-fou de panier (concentration)
+    candidate_confidence: dict[str, Confidence] = {}  # par piste : couverture des données + accord du débat
+    to_review: tuple[str, ...] = ()           # drapeau « à examiner » (opposition du Bear liée au profil)

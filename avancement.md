@@ -4,7 +4,7 @@
 > En cas d'interruption : joindre ce fichier dans une nouvelle conversation et reprendre à la **première tâche non cochée** de la section 4.
 > **Règle : ne jamais recommencer une étape marquée ✅.**
 
-Dernière mise à jour : 2026-11-14 — étape 2 (P2) en cours : contraintes, scoring, décision, cohérence ; S4 et S12 au vert (restent C6 pipeline et C7 calibrage). Étape 5 (P5) réalisée sur données fictives (F1 à F8) ; F9, branchement de l'API réelle, en attente de P3 et P4
+Dernière mise à jour : 2026-11-14 — étape 3 (P3) terminée en local : agents, débat, explication, vérificateur de fidélité, pipeline complet (`scripts/run_local.py`) ; S1, S3, S6, S11 au vert, S8 partiel. Les agents tournent en mode **simulé** (règles Python, aucun modèle) : le client Bedrock est écrit mais n'a pas été exécuté contre AWS (A2 non levé). C6 fait avec P3 ; C7 (calibrage) reste ouvert. Étape 5 (P5) sur données fictives ; F9 en attente de P4
 
 ---
 
@@ -14,14 +14,78 @@ Dernière mise à jour : 2026-11-14 — étape 2 (P2) en cours : contraintes, sc
 |---|---|---|---|
 | 0 | Cadrage, arborescence du dépôt, documents de conception, scénarios | ✅ terminée | Dépôt `easytrade/` ; `pytest` : 5 réussis, 20 en attente |
 | 1 | Socle données (P1) | ✅ terminée | S5, S7, S9 verts ; `pytest` : 42 réussis, 14 en attente (P2 et suivantes) |
-| 2 | Moteur de décision (P2) | 🟦 en cours | S4, S12 verts ; restent C6 (pipeline sans LLM) et C7 (calibrage) |
-| 3 | Agents et explicabilité (P3) | ⬜ à faire | S1, S3, S6 en local |
+| 2 | Moteur de décision (P2) | 🟦 en cours | S4, S12 verts ; C6 fait avec P3 ; reste C7 (calibrage) |
+| 3 | Agents et explicabilité (P3) | ✅ terminée en local (agents simulés) ; exécution sur Bedrock à faire dès A2 | S1, S3, S6, S11 verts ; `pytest` : 195 réussis, 4 en attente |
 | 4 | AWS (P4) | ⬜ à faire | Un run complet sur AWS |
 | 5 | Mobile (P5) | 🟨 partielle : F1 à F8 ✅ sur données fictives ; F9 (API réelle) bloquée par P2 à P4 | Parcours complet vérifié de bout en bout (export web, clics réels) ; reste : téléphone + API réelle |
 | 6 | Mateo / ESG + extras (P6) | ⬜ à faire | S2 |
 | 7 | Livrables (P7) | ⬜ à faire | Vidéo, documentation, one-pager, README |
 
 ## 2. Fichiers créés ou modifiés
+
+### Étape 3 — P3 Agents et explicabilité (2026-11-14), en local
+
+Commande : `python scripts/run_local.py --persona robert --ticker TSLA -v` (depuis la racine). Détail de conception : `docs/02_AGENTS.md` (section « Réalisation »), `docs/03_DECISION_ENGINE.md` (section « Hypothèses ajoutées à l'étape P3 »), `docs/05_EXPLICABILITE.md` (section 4).
+
+**Schémas (squelettes remplacés, ou champs ajoutés sans casser P2)**
+
+| Fichier | Contenu |
+|---|---|
+| `schemas/debate.py` | `Claim`, `DebateTurnDraft` (sortie du modèle), `DebateTurn`, `DebateRecord` (dissidence) |
+| `schemas/explanation.py` | `Explanation`, `ExplanationItem`, `RejectedItem`, `CoherenceAnalysis` : miroir de `mobile/src/types/contracts.ts` |
+| `schemas/trace.py` | `TraceStep`, `RunTrace` |
+| `schemas/candidate.py` | + `Candidate`, `CandidateList`, `EvidencePack` |
+| `schemas/decision.py` | + `retained`, `displaced`, `candidate_confidence`, `to_review` |
+| `schemas/coherence.py`, `schemas/weights.py` | + `Tension.evidence_ids` ; + `CRITERION_LABELS` |
+
+**Agents**
+
+| Fichier | Contenu |
+|---|---|
+| `agents/llm_client.py` | `structured_call` (schéma, une relance, `LLMOutputError`), `BedrockClient` (API Converse, sortie par outil forcé, Guardrails en option), `FakeLLMClient`, `make_client` — D1 |
+| `agents/profile_weighting.py` | Profil → `WeightingResult` : poids bornés, resserrement seulement, thèmes, justification rattachée aux phrases du profil, preuves `FAIT` / `HYPOTHESE` — D2 |
+| `agents/tools.py`, `agents/research.py` | 5 outils filtrés par `as_of` et journalisés ; candidats, titre demandé toujours analysé — D3 |
+| `agents/debate/protocol.py`, `bull.py`, `realist.py`, `bear.py` | Tours 1 et 3 ; arguments sans preuve valide supprimés — D4 |
+| `agents/explanation.py` | Rédaction, une relance, retrait des phrases fautives, assemblage de l'`Explanation` — D5 |
+| `agents/simulated.py` (nouveau) | Agents simulés par des règles, pour l'exécution locale sans modèle |
+| `agents/prompts/*.md` | 6 prompts en version `v1` |
+
+**Explicabilité et gouvernance**
+
+| Fichier | Contenu |
+|---|---|
+| `explain/fidelity.py` | Insertion des valeurs `{EV-…}`, 5 contrôles par affirmation, `FidelityReport`, recontrôle de la sortie — D5 |
+| `explain/wording.py` | Filtre de formulations (`forbidden_wording.txt`) — D5 |
+| `explain/trace.py` | `TraceRecorder` : étapes, statut, durée, échec visible — D6 |
+| `engine/governance.py` | Panier simulé (taille, plafonds, groupes de concentration, déclassement motivé) et 3 points de contrôle — D6 |
+
+**Moteur, validation, données (ajouts)**
+
+| Fichier | Contenu |
+|---|---|
+| `engine/signals.py` | + `THEMES`, `preference_signals` : le critère `preferences` est maintenant couvert |
+| `engine/decision.py` | + paramètre `candidates` de `decide` ; `apply_debate` (confiance, désaccords, drapeau « à examiner ») |
+| `engine/coherence.py` | + `RISK_LIMITS`, `tolerance_level`, `limit_tensions`, `reference_medians` |
+| `engine/scoring.py` | + `fit_level` (adéquation élevée / partielle / faible) |
+| `validation/risk.py`, `validation/metrics.py` | + volatilité d'un panier simulé, preuve `SCENARIO` |
+| `data/loaders.py` | + `load_reference_table` (ESG, arêtes du graphe) |
+| `orchestration/pipeline.py`, `scripts/run_local.py` | Pipeline complet, `RunResult.save` ; CLI — C6, D7 |
+
+**Tests** : `unit/test_wording.py` (16), `test_fidelity.py` (23), `test_llm_client.py` (12), `test_agents.py` (15), `test_governance.py` (11), `test_pipeline.py` (8), `tests/helpers.py` ; scénarios `test_s01`, `test_s03`, `test_s06`, `test_s08`, `test_s11`. Fixtures `forbidden`, `workspace`, `pipeline_run` dans `conftest.py`. Bilan `pytest` : 195 réussis, 4 en attente (S2, S10, `test_graph_edges`, S8 point 3).
+
+**Données de référence** : `sources_registry.csv` + 2 lignes (`case_personas`, `easytrade_hypotheses`), sources des preuves de type `profile`.
+
+**Documentation modifiée** : `docs/01_ARCHITECTURE.md` (étape 4 du flux), `docs/02_AGENTS.md`, `docs/03_DECISION_ENGINE.md`, `docs/05_EXPLICABILITE.md`, `docs/09_SCENARIOS_TEST.md`, `docs/ARBORESCENCE.md`, `README.md`, `backend/README.md`, ce fichier.
+
+**Runs enregistrés** (`python scripts/run_local.py --tous --llm simule --save`, puis `--persona robert --ticker TSLA`) : `data/curated/runs/run_2026-11-12_{amira,mateo,robert,robert_TSLA}/`, non versionnés (régénérables, identiques à chaque exécution). Résultats : Amira, 7 pistes et 1 déclassée pour concentration (NVDA, plafond de 40 % atteint pour « Technologies ») ; Robert, 10 pistes, 2 cryptoactifs écartés par une règle ; Robert + TSLA, « incohérent avec le profil », 4 tensions chiffrées ; Mateo, « aucune recommandation » (ESG et qualité non sourcés).
+
+**Non fait ou non vérifié**
+
+- Aucun appel réel à Amazon Bedrock : `BedrockClient` n'est testé que sur une requête simulée. Les résultats ci-dessus viennent des agents simulés ; le taux de fidélité de 100 % mesure donc les règles simulées, pas un modèle. À refaire avec Bedrock dès que A2 est levé (`--llm bedrock`).
+- Tour 2 du débat (extra n° 5), Bedrock Guardrails (extra n° 4 ; l'identifiant est seulement transmis s'il est configuré).
+- `orchestration/handlers/*` (Lambda) et `scripts/run_scenarios.py` : toujours des squelettes (P4).
+- Outils `chercher_documents` et `nouvelles` : aucune source branchée, ils répondent « rien » avec la raison. `preuves_esg` et `relations` lisent des fichiers encore vides (bloc G).
+- `Python` : tests exécutés avec Python 3.13 (Anaconda) ; `backend/.venv` n'existe pas sur ce poste.
 
 ### Étape 5 — P5 Mobile (2026-11-14), sur données fictives
 
@@ -169,20 +233,20 @@ Définitions : `docs/09_SCENARIOS_TEST.md`. Commande : `cd backend && pytest tes
 
 | ID | Scénario | État | Écart constaté |
 |---|---|---|---|
-| S1 | Amira : le risque élevé garde une diversification | ⏳ non exécuté | Test en attente : pipeline non implémenté |
-| S2 | Mateo : l'ESG change le résultat | ⏳ non exécuté | Test en attente ; données ESG absentes |
-| S3 | Robert : la demande incohérente est remise en question | ⏳ non exécuté | Test en attente : pipeline non implémenté |
+| S1 | Amira : le risque élevé garde une diversification | ✅ passe (local, agents simulés) | `test_s01` (5 tests) : pistes technologiques présentes (QQQ, GOOGL), plafonds tenus, 5 groupes hors technologies, NVDA déclassée pour concentration avec le motif rattaché au souhait de diversification du profil. Aucune piste crypto n'est retenue (classement, pas règle) |
+| S2 | Mateo : l'ESG change le résultat | ⏳ non exécuté | Test en attente ; données ESG absentes. En attendant, le run de Mateo rend « aucune recommandation » et n'a aucune piste crypto (`test_pipeline`) |
+| S3 | Robert : la demande incohérente est remise en question | ✅ passe (local, agents simulés) | `test_s03` (13 tests, TSLA et NVDA) : titre débattu, verdict « incohérent avec le profil », tensions chiffrées et sourcées (volatilité, perte maximale ; pire période de 3 ans pour TSLA), effet sur le panier simulé, alternatives, pistes par défaut sans crypto. Pour NVDA, la tension d'horizon ne se déclenche pas (sa pire période de 3 ans est positive) |
 | S4 | « Aucune recommandation » | ✅ passe | `test_s04` : univers crypto-only exclu (Mateo) → aucun admissible ; et signaux manquants → preuves insuffisantes |
 | S5 | Aucune fuite du futur | ✅ passe | `test_s05_aucune_fuite_du_futur.py` ; analyse à 2023-06-30 identique sur un jeu amputé du futur |
-| S6 | Fidélité de l'explication | ⏳ non exécuté | Test en attente : vérificateur non implémenté |
+| S6 | Fidélité de l'explication | ✅ passe (local, agents simulés) | `test_s06` (15 tests). Taux au premier passage : Amira 20/20, Robert 28/28, Mateo sans objet (aucune piste rédigée) ; 124 affirmations recontrôlées dans les trois sorties, 0 écart. Avec un agent d'explication volontairement fautif : une relance, toutes les phrases fautives retirées, sortie fidèle. **Le taux avec un vrai modèle reste à mesurer** |
 | S7 | Comparabilité (devises, calendriers, ajustements) | ✅ passe | 4 tests : CAD et dernier taux connu, adj_close, 7 fractionnements non réappliqués, 252 contre 365 |
-| S8 | Formulation et cadre de simulation | ⏳ non exécuté | Test en attente : filtre non implémenté |
+| S8 | Formulation et cadre de simulation | 🟨 partiel | `test_s08` : points 1 et 2 passent (aucune formulation refusée dans les sorties, le débat et la trace de 5 runs ; mention de simulation dans chaque `Explanation`). Point 3 (aucune route d'ordre) en attente de l'API (E3) |
 | S9 | Exactitude et déterminisme des calculs | ✅ passe | Exécutions identiques ; XIU.TO, AAPL, BTC-USD recoupés par calcul sans pandas (tolérance relative 1e-9) |
 | S10 | Graphe sourcé | ⏳ non exécuté | Test en attente ; aucune arête saisie |
-| S11 | Désaccord conservé | ⏳ non exécuté | Test en attente : débat non implémenté |
+| S11 | Désaccord conservé | ✅ passe | `test_s11` (5 tests, positions divergentes imposées par un faux client) : désaccord recopié dans `Decision.disagreements` et dans l'explication, confiance jamais « élevée », classement inchangé, arguments sans preuve valide supprimés ; si le débat s'oppose à toutes les pistes, aucune recommandation |
 | S12 | Adaptation au profil | ✅ passe | `test_s12` : même univers (8 actifs réels), classements différents pour Amira et Robert, contributions alignées sur les poids, déterministe |
 
-**Bilan : 5 passent (S4, S5, S7, S9, S12), 0 échoue, 7 non exécutés.**
+**Bilan : 9 passent (S1, S3, S4, S5, S6, S7, S9, S11, S12), 1 partiel (S8), 0 échoue, 2 non exécutés (S2, S10).** S1, S3 et S6 passent en local avec des agents simulés ; ils sont à rejouer avec Bedrock.
 
 ### Tests techniques
 
@@ -191,7 +255,8 @@ Définitions : `docs/09_SCENARIOS_TEST.md`. Commande : `cd backend && pytest tes
 | `unit/test_reference_data.py` (5 tests : personas, poids normalisés, contraintes bornées, registre des sources, univers de 31 actifs) | ✅ 5 / 5 | — |
 | Tests unitaires P1 : `test_fx_calendar`, `test_point_in_time`, `test_metrics`, `test_evidence_ledger`, `test_data_quality` | ✅ | — |
 | Tests unitaires P2 : `test_constraints` (4), `test_scoring` (6) | ✅ | — |
-| 3 autres tests unitaires (D et G) : `test_fidelity`, `test_wording`, `test_graph_edges` | ⏳ en attente | Squelettes |
+| Tests unitaires P3 : `test_wording` (16), `test_fidelity` (23), `test_llm_client` (12), `test_agents` (15), `test_governance` (11), `test_pipeline` (8) | ✅ | — |
+| `test_graph_edges` (G) | ⏳ en attente | Squelette |
 | Validité de tous les fichiers JSON et Python du dépôt | ✅ | — |
 
 ## 4. Tâches restantes, dans l'ordre
@@ -223,18 +288,19 @@ Cocher au fur et à mesure. Les blocs A et F peuvent avancer en parallèle des a
 - [x] C3. `engine/scoring.py` avec contributions. → `test_scoring`
 - [x] C4. `engine/decision.py` + « aucune recommandation ». → **S4**
 - [x] C5. `engine/coherence.py` (« Tester une idée »).
-- [ ] C6. `orchestration/pipeline.py` sans LLM (débat simulé) ; `scripts/run_local.py`. **S12 déjà vert au niveau du moteur**, reste le câblage pipeline + CLI.
-- [ ] C7. Calibrer poids et contraintes de `personas.json` sur les résultats.
+- [x] C6. `orchestration/pipeline.py` sans LLM (débat simulé) ; `scripts/run_local.py`. Fait avec P3 (agents simulés).
+- [ ] C7. Calibrer poids et contraintes de `personas.json` sur les résultats. Poids et contraintes inchangés en P3. À regarder : aucune piste crypto pour Amira (BTC et ETH sont mal classés sur 5 ans) ; NVDA déclassée au profit de QQQ et GOOGL ; repères de risque et seuils d'adéquation posés en P3 (`docs/03_DECISION_ENGINE.md`).
 
 ### D. Agents et explicabilité — P3
 
-- [ ] D1. `agents/llm_client.py` : Bedrock, sortie structurée, faux client de test.
-- [ ] D2. `agents/profile_weighting.py` + prompt.
-- [ ] D3. `agents/tools.py`, `agents/research.py` + prompt.
-- [ ] D4. `agents/debate/*` : tours 1 et 3 + prompts. → **S11**
-- [ ] D5. `agents/explanation.py`, `explain/fidelity.py`, `explain/wording.py`. → `test_fidelity`, `test_wording`, **S6**, **S8**
-- [ ] D6. `explain/trace.py`, `engine/governance.py`.
-- [ ] D7. Scénarios **S1** et **S3** au vert en local ; enregistrer les runs des personas.
+- [x] D1. `agents/llm_client.py` : Bedrock, sortie structurée, faux client de test.
+- [x] D2. `agents/profile_weighting.py` + prompt.
+- [x] D3. `agents/tools.py`, `agents/research.py` + prompt.
+- [x] D4. `agents/debate/*` : tours 1 et 3 + prompts. → **S11**
+- [x] D5. `agents/explanation.py`, `explain/fidelity.py`, `explain/wording.py`. → `test_fidelity`, `test_wording`, **S6**, **S8** (points 1 et 2)
+- [x] D6. `explain/trace.py`, `engine/governance.py`.
+- [x] D7. Scénarios **S1** et **S3** au vert en local ; runs des personas enregistrés dans `data/curated/runs/` (agents simulés).
+- [ ] D8. Rejouer S1, S3, S6 avec Amazon Bedrock (`--llm bedrock`) dès que A2 est levé : vérifier la requête Converse sur le compte réel, mesurer le taux de fidélité d'un vrai modèle, ajuster les prompts `v1`, puis réenregistrer les runs des personas.
 
 ### E. AWS — P4 (dès que A2 est levé)
 
@@ -254,7 +320,7 @@ Cocher au fur et à mesure. Les blocs A et F peuvent avancer en parallèle des a
 - [x] F6. « Pourquoi ? » : `EvidenceChip`, écran preuve, parcours de l'analyse.
 - [x] F7. Tester une idée.
 - [x] F8. Graphe de dépendances, version radiale.
-- [ ] F9. Brancher l'API réelle. Côté mobile, le client HTTP est prêt (`EXPO_PUBLIC_USE_MOCKS=false`). Bloqué par C (schémas Pydantic alignés sur `contracts.ts`), E3 (routes). Puis : test sur téléphone avec Expo Go.
+- [ ] F9. Brancher l'API réelle. Côté mobile, le client HTTP est prêt (`EXPO_PUBLIC_USE_MOCKS=false`). `Explanation`, `Trace` et les preuves du backend suivent maintenant `contracts.ts` (P3) ; reste à exposer `ProfileWeights` au format du mobile (`WeightingResult` contient déjà la justification par champ) et les routes (E3). Puis : test sur téléphone avec Expo Go.
 - [ ] F10. Remplacer les données fictives de la vidéo par des runs réels (aucun chiffre fictif à l'écran).
 
 ### G. Graphe et ESG — P1 / P6
@@ -298,7 +364,25 @@ Détail et valeurs : `docs/04_DONNEES.md` section 9, `backend/easytrade/config.p
 8. Le test S9 relit les CSV avec `csv`/`statistics` (sans pandas) pour le calcul indépendant : seule exception aux accès via `easytrade/data/`, limitée aux tests.
 9. Décision de l'équipe : pas d'intégration continue (CI) pour le moment. Aucun `.github/workflows/` ; les tests se lancent à la main (`cd backend && pytest`). Références à `ci.yml` retirées de `avancement.md` et de `docs/ARBORESCENCE.md`.
 
-## 7. Hypothèses prises à l'étape 5 (à valider par l'équipe)
+## 7. Hypothèses prises à l'étape 3 (à valider par l'équipe)
+
+Détail et valeurs : `docs/03_DECISION_ENGINE.md`, section « Hypothèses ajoutées à l'étape P3 ».
+
+1. Un agent n'écrit aucun chiffre : il place `{EV-…}` et le code insère la valeur. Tolérance du vérificateur : l'arrondi à la dernière décimale écrite.
+2. Panier simulé à parts égales ; nombre de pistes tiré de la part maximale par actif (7 pour Amira, 10 pour Mateo et Robert).
+3. Trois groupes de concentration comptés ensemble pour le plafond par secteur (Technologies ; Actions américaines, marché large ; Obligations).
+4. Critère `preferences` : 7 thèmes fermés, choisis par l'agent de pondération, rattachés aux actifs par le code.
+5. Agent de pondération : ± 0,10 autour du gabarit ; il ne peut que resserrer une contrainte dure. Gabarit d'un profil fictif : le persona du même niveau de risque.
+6. Repères de risque par tolérance, avec un niveau « faible à modérée » (22 % / −25 %) pour Robert ; tension sévère au-delà de 1,5 fois le repère.
+7. Libellé d'adéquation : seuils 0,65 et 0,50 sur le score rapporté aux critères couverts.
+8. Confiance d'une piste = minimum (couverture des données, accord du débat) ; « à examiner » si le Bear s'oppose en citant une preuve du profil.
+9. Seuls les pistes pressenties, les candidats déclassés et le titre demandé sont débattus.
+10. La présélection de l'agent de recherche ne change le score d'aucun actif (normalisation sur tout l'univers admissible).
+11. Trace du débat : une étape par agent et par tour, tous candidats confondus (6 étapes), pas une étape par appel.
+12. Si la sortie finale garde un écart de fidélité après retrait des phrases fautives, elle n'est pas affichée : le run échoue.
+13. Deux sources internes ajoutées au registre : `case_personas` (phrases des profils) et `easytrade_hypotheses` (poids, plafonds, repères).
+
+## 8. Hypothèses prises à l'étape 5 (à valider par l'équipe)
 
 1. Données fictives par défaut (`EXPO_PUBLIC_USE_MOCKS=true`), signalées par un second bandeau ; aucun chiffre fictif dans la vidéo.
 2. Champs de réponse proposés par le front (`mobile/README.md`, section Contrats) et 3 routes ajoutées : `GET /profiles/{id}`, `GET /assets`, `GET /data`.

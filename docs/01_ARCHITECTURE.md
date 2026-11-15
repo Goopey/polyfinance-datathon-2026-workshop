@@ -58,7 +58,7 @@ Conséquence : une décision peut être rejouée et vérifiée sans relancer de 
 3. En parallèle :
    - **Recherche** → liste de candidats avec premières preuves qualitatives (documents, ESG, relations du graphe).
    - **Validation** → métriques déterministes pour l'univers, calculées à la date `as_of`. Comme l'univers est petit, elles sont pré-calculées pour tous les actifs, ce qui rend le parallélisme réel.
-4. Jointure : `EvidencePack` par candidat = preuves qualitatives + métriques. Tout candidat sans métriques valides est écarté avec un motif.
+4. Jointure : `EvidencePack` par candidat = preuves qualitatives + métriques. Tout candidat sans métriques valides est écarté avec un motif. Les contraintes dures et le pré-classement (déterministes) s'appliquent ici : seuls les pistes pressenties, les candidats déclassés pour concentration et le titre demandé sont débattus.
 5. **Débat** : les trois agents reçoivent le même `EvidencePack` et les mêmes contraintes.
 6. **Moteur de décision** → classement, rejets motivés, désaccords conservés, ou « aucune recommandation ».
 7. **Explication** → texte synthétique + liens vers les preuves ; le vérificateur de fidélité bloque toute affirmation non étayée.

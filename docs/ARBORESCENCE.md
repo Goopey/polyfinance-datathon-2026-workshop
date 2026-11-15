@@ -1,6 +1,6 @@
 # Arborescence complète
 
-Générée à la fin de l'étape 0, mise à jour à la fin de l'étape 5 (P5, `mobile/`). À régénérer quand la structure change.
+Générée à la fin de l'étape 0, mise à jour à la fin des étapes 5 (P5, `mobile/`) et 3 (P3, agents et tests). À régénérer quand la structure change.
 
 ```
 easytrade/
@@ -25,6 +25,7 @@ easytrade/
 │   │   │   ├── llm_client.py
 │   │   │   ├── profile_weighting.py
 │   │   │   ├── research.py
+│   │   │   ├── simulated.py
 │   │   │   └── tools.py
 │   │   ├── api/
 │   │   │   ├── __init__.py
@@ -119,17 +120,24 @@ easytrade/
 │   │   │   └── test_s12_adaptation_profil.py
 │   │   ├── unit/
 │   │   │   ├── __init__.py
+│   │   │   ├── test_agents.py
 │   │   │   ├── test_constraints.py
+│   │   │   ├── test_data_quality.py
+│   │   │   ├── test_evidence_ledger.py
 │   │   │   ├── test_fidelity.py
 │   │   │   ├── test_fx_calendar.py
+│   │   │   ├── test_governance.py
 │   │   │   ├── test_graph_edges.py
+│   │   │   ├── test_llm_client.py
 │   │   │   ├── test_metrics.py
+│   │   │   ├── test_pipeline.py
 │   │   │   ├── test_point_in_time.py
 │   │   │   ├── test_reference_data.py
 │   │   │   ├── test_scoring.py
 │   │   │   └── test_wording.py
 │   │   ├── __init__.py
-│   │   └── conftest.py
+│   │   ├── conftest.py
+│   │   └── helpers.py
 │   ├── pyproject.toml
 │   ├── README.md
 │   └── requirements.txt

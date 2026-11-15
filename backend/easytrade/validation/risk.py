@@ -49,6 +49,23 @@ def correlation(prices_a: pd.Series, prices_b: pd.Series, min_common: int) -> Op
     return float(returns["a"].corr(returns["b"])), int(len(returns))
 
 
+def basket_volatility(aligned_prices: pd.DataFrame, weights: dict[str, float],
+                      periods_per_year: int) -> Optional[tuple[float, int]]:
+    """Volatilité annualisée d'un panier à parts fixes, rééquilibré à chaque séance.
+
+    `aligned_prices` : prix alignés sur les dates communes (`align_prices`), dans la même devise.
+    Le rendement du panier est la moyenne pondérée des rendements quotidiens : les corrélations
+    entre actifs sont donc prises en compte. Retourne (volatilité en fraction, nombre de rendements).
+    """
+    returns = aligned_prices.pct_change().dropna()
+    if len(returns) < 2:
+        return None
+    total = sum(weights.values())
+    w = np.array([weights[column] / total for column in returns.columns], dtype=float)
+    basket = returns.to_numpy(dtype=float) @ w
+    return float(np.std(basket, ddof=1) * np.sqrt(periods_per_year)), int(len(returns))
+
+
 def correlation_matrix(aligned_prices: pd.DataFrame, min_common: int) -> pd.DataFrame:
     """Matrice de corrélation des rendements d'un tableau de prix déjà aligné (`align_prices`)."""
     returns = aligned_prices.pct_change().dropna()

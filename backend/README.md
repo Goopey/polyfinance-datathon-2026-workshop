@@ -8,7 +8,9 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 pytest
 python ../scripts/bootstrap_data.py                                 # tables préparées et rapport de qualité dans data/curated/
-python ../scripts/run_local.py --persona amira --as-of 2026-11-12   # pipeline local (à implémenter)
+python ../scripts/run_local.py --persona amira --as-of 2026-11-12   # pipeline local complet (agents simulés sans Bedrock)
+python ../scripts/run_local.py --persona robert --ticker TSLA -v    # « Tester une idée »
+python ../scripts/run_local.py --tous --save                        # enregistre les runs des 3 personas dans data/curated/runs/
 uvicorn easytrade.api.app:app --reload                             # API locale (à implémenter)
 ```
 

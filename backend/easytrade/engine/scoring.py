@@ -42,6 +42,26 @@ def percentile_rank(signals: dict[str, Optional[float]]) -> dict[str, Optional[f
     return out
 
 
+# Seuils du libellé d'adéquation (hypothèses de l'équipe, docs/03_DECISION_ENGINE.md).
+FIT_HIGH = 0.65
+FIT_PARTIAL = 0.50
+
+
+def fit_level(candidate: ScoredCandidate) -> str:
+    """Adéquation au profil : « élevée », « partielle » ou « faible ».
+
+    Le score est rapporté au poids des critères réellement couverts pour ce candidat : un
+    critère sans donnée ne fait pas baisser le libellé (il baisse la confiance, affichée à part).
+    """
+    covered = sum(c.weight for c in candidate.criteria if not c.missing)
+    if covered <= 0:
+        return "faible"
+    relative = candidate.fit_score / covered
+    if relative >= FIT_HIGH:
+        return "élevée"
+    return "partielle" if relative >= FIT_PARTIAL else "faible"
+
+
 def score_candidates(
     eligible: tuple[Asset, ...],
     signals: dict[str, dict[str, Optional[float]]],

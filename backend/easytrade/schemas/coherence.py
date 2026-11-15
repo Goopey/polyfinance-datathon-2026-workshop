@@ -19,6 +19,7 @@ class Tension(BaseModel):
     detail: str                    # explication chiffrée et lisible
     severe: bool = False           # une tension sévère suffit à bloquer un « cohérent »
     evidence_id: Optional[str] = None
+    evidence_ids: tuple[str, ...] = ()  # preuves supplémentaires (repère du profil, médiane de référence)
 
 
 class CoherenceReport(BaseModel):

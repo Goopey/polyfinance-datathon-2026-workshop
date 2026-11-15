@@ -23,6 +23,17 @@ CRITERIA: tuple[str, ...] = (
     "preferences",
 )
 
+# Libellés affichés (textes, preuves). Les identifiants de `CRITERIA` restent sans accent.
+CRITERION_LABELS: dict[str, str] = {
+    "croissance": "croissance",
+    "stabilite": "stabilité",
+    "diversification": "diversification",
+    "esg": "ESG",
+    "qualite": "qualité",
+    "horizon": "tenue sur l'horizon",
+    "preferences": "préférences déclarées",
+}
+
 Speculatif = Literal["permis", "exclu", "signalé"]
 WEIGHT_SUM_TOL = 1e-6
 

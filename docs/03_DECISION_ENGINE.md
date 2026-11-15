@@ -116,3 +116,29 @@ Si l'application présente un panier simulé :
 - plafonds de `hard_constraints` appliqués après le classement ;
 - au moins trois classes d'actifs ou secteurs distincts pour un profil qui demande de la diversification ;
 - conversion en CAD pour toute agrégation (voir `04_DONNEES.md`).
+
+## Hypothèses ajoutées à l'étape P3
+
+Choix de l'équipe (`HYPOTHESE`), à calibrer. Valeurs dans le code indiqué ; chaque valeur montrée à l'utilisateur a sa preuve de type `profile`, étiquetée hypothèse.
+
+| Sujet | Valeur retenue | Raison | Code |
+|---|---|---|---|
+| Panier simulé | Parts égales entre les pistes retenues | Le plus simple à expliquer ; aucune optimisation cachée | `engine/governance.py` |
+| Nombre de pistes retenues | Plus petit nombre qui respecte la part maximale par actif : 15 % → 7, 10 % → 10 | Le plafond par actif est tenu par construction | `basket_size` |
+| Plafond par secteur, en nombre de pistes | Partie entière de (plafond × nombre de pistes) : 40 % de 7 → 2 ; 30 % de 10 → 3 | Même règle pour la part crypto (15 % de 7 → 1) | `select_basket` |
+| Déclassement | Le classement est parcouru dans l'ordre ; une piste qui ferait dépasser un plafond est déclassée avec le motif, la suivante est examinée | « Moins bien classé » et « écarté par une règle » restent distincts | `select_basket` |
+| Groupes de concentration | Trois groupes comptés ensemble pour le plafond par secteur : Technologies (technologies de l'information, services de communication, FNB à forte composante technologique) ; Actions américaines, marché large ; Obligations | Sans cela, trois pistes technologiques sous trois libellés de secteur passeraient chacune sous le plafond. À remplacer par la corrélation au panier | `CONCENTRATION_GROUPS` |
+| Thèmes du critère `preferences` | Vocabulaire fermé de 7 thèmes : technologies, cryptoactifs, entreprises établies, fonds indiciels diversifiés, obligations, or, filtre ESG | L'agent de pondération lit le profil et choisit des thèmes ; le rattachement d'un actif à un thème est fait par le code, par classe d'actifs et secteur | `engine/signals.py` (`THEMES`) |
+| Signal `preferences` | Thèmes préférés touchés − thèmes évités touchés ; 0 si aucun | Le critère est couvert pour tout l'univers, il n'est plus « manquant » | `preference_signals` |
+| Écart maximal d'un poids au gabarit | ± 0,10, puis renormalisation | Borne l'effet de l'agent de pondération sur le classement | `agents/profile_weighting.py` |
+| Contraintes dures et agent de pondération | Le modèle peut seulement resserrer une règle | Un modèle ne doit pas pouvoir assouplir une règle du profil | `tighten_constraints` |
+| Repères de risque par tolérance | Volatilité annualisée / perte maximale : faible 18 % / −20 % ; faible à modérée 22 % / −25 % ; modérée 25 % / −30 % ; élevée 45 % / −50 % | Repris de l'écran « Tester une idée » du mobile ; niveau intermédiaire ajouté pour Robert | `engine/coherence.py` (`RISK_LIMITS`) |
+| Tension sévère | Dépassement d'un repère de plus de 50 % | Une tension sévère donne « incohérent avec le profil » | `SEVERE_RATIO` |
+| Libellé d'adéquation | Score rapporté au poids des critères couverts : ≥ 0,65 élevée ; ≥ 0,50 partielle ; sinon faible | Un critère sans donnée baisse la confiance, pas le libellé | `engine/scoring.py` (`fit_level`) |
+| Confiance tirée du débat | Trois appuis : élevée ; au moins deux oppositions : faible ; sinon moyenne. Confiance d'une piste = minimum (données, débat) | Le débat ne modifie pas le score | `engine/decision.py` (`apply_debate`) |
+| Drapeau « à examiner » | Opposition du Bear dont un argument cite une preuve du profil (règle ou repère) | Traduction de la règle « fait lié à une contrainte du profil » | `bear_flags_profile` |
+| Candidats débattus | Pistes pressenties, candidats déclassés pour concentration, titre demandé | Limite le nombre d'appels au modèle ; le pré-classement est déterministe | `orchestration/pipeline.py` |
+| Aucune recommandation après débat | Confiance faible sur toutes les pistes retenues | Troisième cas de la section « Aucune recommandation » | `orchestration/pipeline.py` |
+| Effet sur le panier simulé | Volatilité du panier à parts égales, sans puis avec le titre testé à la part maximale par actif ; rendements quotidiens en CAD sur les dates communes | Tient compte des corrélations ; preuve `SCENARIO` | `validation/metrics.py` (`basket_volatility_metric`) |
+
+Conséquence sur les scénarios, avec les données du jeu de départ : le critère `preferences` étant couvert, la confiance fondée sur les données passe à « élevé » pour Amira (15 % du poids sur des critères non sourcés) et reste « moyen » pour Robert (30 %) ; Mateo reste à 40 % non sourcés (ESG, qualité), donc « aucune recommandation » jusqu'à la saisie des preuves ESG (P6).

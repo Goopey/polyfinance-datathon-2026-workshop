@@ -156,3 +156,37 @@ Entrées : `ProfileWeights`, `MetricsTable`, `DebateRecord[]`. Sortie : `Decisio
 ## Modèles
 
 Le choix dépend des modèles ouverts dans le compte AWS du datathon (à confirmer). Principe : un modèle rapide pour les tours de débat, un modèle plus fort pour la recherche et l'explication. L'identifiant du modèle est enregistré dans la trace de chaque étape.
+
+---
+
+## Réalisation (étape P3)
+
+### Comment un agent cite une valeur sans écrire de chiffre
+
+Un agent qui veut faire apparaître une valeur écrit un marqueur `{EV-000123}` dans son texte. Le code remplace le marqueur par la valeur de la preuve, formatée (`explain/fidelity.py`, `render_text`), et ajoute la preuve aux citations. Le vérificateur contrôle ensuite le texte final : un nombre écrit à la main et non étayé fait supprimer l'argument (débat) ou retirer la phrase (explication).
+
+### Garde-fous appliqués par le code
+
+| Agent | Module | Ce que le code impose |
+|---|---|---|
+| Pondération | `agents/profile_weighting.py` | Poids bornés à ± 0,10 du gabarit puis renormalisés ; contraintes : resserrement seulement ; thèmes pris dans un vocabulaire fermé ; justification gardée seulement si elle cite une phrase du profil |
+| Recherche | `agents/research.py`, `agents/tools.py` | Tickers hors univers retirés et notés ; titre demandé toujours candidat ; outils filtrés par `as_of` ; source hors registre ignorée ; appels journalisés dans la trace |
+| Débat | `agents/debate/protocol.py` | Argument gardé seulement s'il cite une preuve du dossier et passe le vérificateur ; `claim_kind` tiré des preuves ; la position de l'agent n'est jamais modifiée |
+| Explication | `agents/explanation.py` | Une relance avec le motif, puis retrait des phrases fautives ; raison recomposée par le code si une piste n'en a plus ; recontrôle de la sortie complète |
+
+Toute sortie de modèle passe par `agents/llm_client.py` (`structured_call`) : validation par un schéma Pydantic, une relance avec le motif, puis `LLMOutputError` et échec visible de l'étape.
+
+### Sorties par agent
+
+- Pondération : `WeightingResult` = `ProfileWeights` (contrat du moteur, inchangé) + justification par champ, écarts au gabarit, thèmes, informations manquantes, et les preuves créées (phrases du profil en `FAIT` ; poids, plafonds et repères en `HYPOTHESE`).
+- Recherche : `CandidateList` (`schemas/candidate.py`).
+- Débat : `DebateRecord` par candidat, tours 1 et 3 (`schemas/debate.py`).
+- Explication : `Explanation` (`schemas/explanation.py`), miroir de `mobile/src/types/contracts.ts`.
+
+### Agents simulés
+
+Tant que Bedrock n'est pas disponible (compte AWS à confirmer), le pipeline s'exécute avec des agents simulés par des règles Python (`agents/simulated.py`), sans aucun modèle de langage. Ils reçoivent la même charge utile et rendent la même forme de sortie qu'un modèle, donc les garde-fous s'appliquent à l'identique. La trace porte `model_id = simule-local-v1` et l'explication le signale dans « ce que nous ne savons pas ». Ce ne sont pas des résultats de modèle : `BedrockClient` (API Converse, sortie structurée par appel d'outil forcé) est écrit et testé sur une requête simulée, mais n'a pas encore été exécuté contre AWS.
+
+### Prompts
+
+Version `v1` de chaque prompt dans `agents/prompts/`. La ligne `Version : vN` est lue par le code et inscrite dans la trace (`bear@v1`).

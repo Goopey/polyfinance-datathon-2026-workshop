@@ -98,17 +98,19 @@ Convention : chaque scénario a un test automatisé dans `backend/tests/scenario
 
 ## Tableau de suivi (recopié dans `avancement.md`)
 
+État au 2026-11-14 (fin de P3). Le détail et les écarts sont dans `avancement.md`, qui fait foi.
+
 | ID | Scénario | Automatisé | État |
 |---|---|:-:|---|
-| S1 | Amira : diversification | — | Non exécuté |
-| S2 | Mateo : ESG | — | Non exécuté |
-| S3 | Robert : demande incohérente | — | Non exécuté |
-| S4 | Aucune recommandation | — | Non exécuté |
-| S5 | Aucune fuite du futur | — | Non exécuté |
-| S6 | Fidélité de l'explication | — | Non exécuté |
-| S7 | Comparabilité | — | Non exécuté |
-| S8 | Formulation et simulation | — | Non exécuté |
-| S9 | Exactitude et déterminisme | — | Non exécuté |
-| S10 | Graphe sourcé | — | Non exécuté |
-| S11 | Désaccord conservé | — | Non exécuté |
-| S12 | Adaptation au profil | — | Non exécuté |
+| S1 | Amira : diversification | ✔ | Passe en local (agents simulés) |
+| S2 | Mateo : ESG | — | Non exécuté (données ESG absentes, P6) |
+| S3 | Robert : demande incohérente | ✔ | Passe en local (agents simulés) |
+| S4 | Aucune recommandation | ✔ | Passe |
+| S5 | Aucune fuite du futur | ✔ | Passe |
+| S6 | Fidélité de l'explication | ✔ | Passe en local (agents simulés) |
+| S7 | Comparabilité | ✔ | Passe |
+| S8 | Formulation et simulation | ✔ (points 1 et 2) | Partiel : point 3 en attente de l'API |
+| S9 | Exactitude et déterminisme | ✔ | Passe |
+| S10 | Graphe sourcé | — | Non exécuté (aucune arête saisie) |
+| S11 | Désaccord conservé | ✔ | Passe |
+| S12 | Adaptation au profil | ✔ | Passe |

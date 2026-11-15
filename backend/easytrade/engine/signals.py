@@ -9,7 +9,9 @@ Couverture actuelle (socle de départ) :
 - croissance, stabilite, horizon : dérivés de la table d'indicateurs (P1).
 - diversification : approximation par la rareté sectorielle dans l'univers (proxy assumé,
   à remplacer par la corrélation au panier quand le graphe de dépendances sera saisi — bloc G).
-- esg, qualite, preferences : non encore sourcés → signal manquant (None), jamais un bon score.
+- esg, qualite : non encore sourcés → signal manquant (None), jamais un bon score.
+- preferences : manquant ici ; le pipeline (P3) le renseigne avec `preference_signals`, à partir
+  des thèmes que l'agent de pondération a lus dans le profil.
 """
 from __future__ import annotations
 
@@ -91,3 +93,68 @@ def build_signals(
         signals[ticker] = per_criterion
         evidence[ticker] = per_evidence
     return signals, evidence
+
+
+# --- critère « preferences » : thèmes déclarés dans le profil ----------------------------------
+# Vocabulaire fermé de thèmes (hypothèse de l'équipe, docs/03_DECISION_ENGINE.md). L'agent de
+# pondération lit le profil et choisit des thèmes dans cette liste ; le rattachement d'un actif
+# à un thème est fait ici, par le code, à partir de la classe d'actifs et du secteur de l'univers.
+THEMES: dict[str, dict] = {
+    "technologies": {
+        "label": "technologies",
+        "sectors": frozenset({
+            "Information Technology", "Communication Services", "Broad market (U.S. growth/tech-heavy)",
+        }),
+        "asset_classes": frozenset(),
+    },
+    "cryptoactifs": {"label": "cryptoactifs", "sectors": frozenset(), "asset_classes": frozenset({"crypto"})},
+    "entreprises_etablies": {
+        "label": "entreprises établies",
+        "sectors": frozenset({
+            "Financials", "Utilities", "Consumer Staples", "Health Care", "Industrials", "Energy",
+        }),
+        "asset_classes": frozenset(),
+    },
+    "indiciel_diversifie": {
+        "label": "fonds indiciels diversifiés",
+        "sectors": frozenset({
+            "Broad market (Canada)", "Broad market (U.S.)", "Broad market (U.S., ESG-screened)",
+        }),
+        "asset_classes": frozenset(),
+    },
+    "obligations": {"label": "obligations", "sectors": frozenset(), "asset_classes": frozenset({"etf_bond"})},
+    "or": {"label": "or", "sectors": frozenset(), "asset_classes": frozenset({"etf_commodity"})},
+    "esg": {
+        "label": "filtre ESG",
+        "sectors": frozenset({"Broad market (U.S., ESG-screened)"}),
+        "asset_classes": frozenset(),
+    },
+}
+
+
+def asset_themes(asset_class: str, sector: str) -> tuple[str, ...]:
+    """Thèmes auxquels un actif se rattache (ordre de `THEMES`)."""
+    return tuple(
+        theme for theme, spec in THEMES.items()
+        if asset_class in spec["asset_classes"] or sector in spec["sectors"]
+    )
+
+
+def preference_signals(
+    assets: pd.DataFrame, preferred: tuple[str, ...], avoided: tuple[str, ...] = ()
+) -> dict[str, tuple[float, tuple[str, ...], tuple[str, ...]]]:
+    """Signal « preferences » par ticker : (thèmes préférés touchés − thèmes évités touchés,
+    thèmes préférés touchés, thèmes évités touchés). Un actif sans thème touché vaut 0 : le
+    critère est couvert pour tout l'univers, il n'est pas « manquant »."""
+    out: dict[str, tuple[float, tuple[str, ...], tuple[str, ...]]] = {}
+    for _, row in assets.iterrows():
+        themes = asset_themes(str(row["asset_class"]), str(row["sector"]))
+        liked = tuple(t for t in themes if t in preferred)
+        disliked = tuple(t for t in themes if t in avoided)
+        out[str(row["ticker"])] = (float(len(liked) - len(disliked)), liked, disliked)
+    return out
+
+
+def sector_counts(assets: pd.DataFrame) -> dict[str, int]:
+    """Nombre d'actifs de l'univers par secteur (base du proxy de diversification)."""
+    return {str(sector): int(count) for sector, count in assets["sector"].value_counts().items()}

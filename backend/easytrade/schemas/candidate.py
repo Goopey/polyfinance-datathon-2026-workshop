@@ -11,6 +11,8 @@ from typing import Optional
 import pandas as pd
 from pydantic import BaseModel, ConfigDict
 
+from easytrade.schemas.evidence import Evidence
+
 ASSET_COLUMNS = ("asset_id", "ticker", "name", "asset_class", "market", "currency", "sector")
 
 
@@ -68,3 +70,43 @@ class Rejection(BaseModel):
     name: str
     rule: str                                # identifiant de la contrainte
     reason: str                              # texte lisible
+
+
+class Candidate(BaseModel):
+    """Candidat présélectionné par l'agent de recherche, avec ses premières preuves qualitatives."""
+
+    model_config = ConfigDict(frozen=True)
+
+    ticker: str
+    reason: str = ""                         # motif de présélection (texte court, sans chiffre)
+    evidence_ids: tuple[str, ...] = ()       # preuves qualitatives rapportées par les outils
+    requested: bool = False                  # titre soumis par l'utilisateur : toujours analysé
+
+
+class CandidateList(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    candidates: tuple[Candidate, ...] = ()
+    dropped: tuple[str, ...] = ()            # propositions retirées par le code (ticker inconnu)
+    tools_called: tuple[str, ...] = ()
+
+    @property
+    def tickers(self) -> tuple[str, ...]:
+        return tuple(c.ticker for c in self.candidates)
+
+
+class EvidencePack(BaseModel):
+    """Dossier de preuves d'un candidat : identique pour les trois agents du débat."""
+
+    model_config = ConfigDict(frozen=True)
+
+    ticker: str
+    name: str
+    asset_class: str
+    sector: str
+    evidence: tuple[Evidence, ...] = ()      # métriques + preuves qualitatives + preuves du profil
+    roles: dict[str, str] = {}               # evidence_id -> rôle (« annualized_volatility:full », « repere:volatilite »)
+
+    @property
+    def evidence_ids(self) -> tuple[str, ...]:
+        return tuple(e.evidence_id for e in self.evidence)

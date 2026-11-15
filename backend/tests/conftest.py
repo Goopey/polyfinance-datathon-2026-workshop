@@ -39,3 +39,36 @@ def registry(settings):
     from easytrade.data.sources_registry import SourcesRegistry
 
     return SourcesRegistry.load(settings.reference_dir)
+
+
+@pytest.fixture(scope="session")
+def forbidden(data_dir):
+    from easytrade.explain.wording import load_forbidden
+
+    return load_forbidden(data_dir / "reference")
+
+
+@pytest.fixture(scope="session")
+def workspace(settings, store, registry, personas, forbidden):
+    """Ressources partagées du pipeline (données chargées une seule fois par session)."""
+    from easytrade.orchestration.pipeline import Workspace
+
+    return Workspace(settings=settings, store=store, registry=registry, personas=personas, forbidden=forbidden)
+
+
+@pytest.fixture(scope="session")
+def pipeline_run(workspace):
+    """Exécute le pipeline avec les agents simulés (aucun modèle) ; résultats mis en cache par session."""
+    from easytrade.agents.simulated import simulated_client
+    from easytrade.orchestration.pipeline import run_pipeline
+
+    cache = {}
+
+    def run(persona, ticker=None, as_of=None):
+        key = (persona, ticker, as_of)
+        if key not in cache:
+            cache[key] = run_pipeline(persona, requested_ticker=ticker, as_of=as_of, client=simulated_client(),
+                                      workspace=workspace)
+        return cache[key]
+
+    return run

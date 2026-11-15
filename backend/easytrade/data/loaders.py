@@ -30,6 +30,19 @@ def _retrieved_on(starter_dir: Path) -> dict[str, pd.Timestamp]:
     return dict(zip(meta["file"], meta["retrieved_on"]))
 
 
+def load_reference_table(reference_dir: Path, filename: str, date_column: str) -> pd.DataFrame:
+    """Table de référence saisie à la main (`esg_evidence.csv`, `graph_edges.csv`), typée.
+
+    `published_at` = date du document (`date_column`) : l'accès passe ensuite par
+    `filter_published`, comme pour toute autre donnée. Un fichier réduit à son en-tête donne
+    une table vide (aucune preuve saisie), pas une erreur.
+    """
+    table = pd.read_csv(reference_dir / filename, dtype=str, keep_default_na=False)
+    table["published_at"] = pd.to_datetime(table[date_column], errors="coerce")
+    table["observed_at"] = table["published_at"]
+    return table
+
+
 def load_starter(starter_dir: Path) -> StarterData:
     """Lit les six fichiers du jeu de départ. Lève une erreur si un fichier ou une colonne manque."""
     retrieved = _retrieved_on(starter_dir)

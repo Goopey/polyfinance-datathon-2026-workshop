@@ -33,10 +33,15 @@ Ce qui fonctionne aujourd'hui :
 cd backend
 python -m venv .venv && source .venv/bin/activate    # Windows : .venv\Scripts\activate
 pip install -r requirements.txt
-pytest -rs          # 5 tests de données de référence passent ; le reste est en attente
+pytest -rs          # données, moteur, agents, scénarios ; le détail est dans avancement.md
+cd ..
+python scripts/run_local.py --persona amira                  # analyse complète en local
+python scripts/run_local.py --persona robert --ticker TSLA -v   # « Tester une idée »
 ```
 
-À venir (voir `avancement.md`) : pipeline local (`scripts/run_local.py`), API (`uvicorn easytrade.api.app:app`), application mobile (`mobile/README.md`), déploiement AWS (`infra/README.md`).
+Sans Amazon Bedrock configuré (`BEDROCK_MODEL_ID_FAST`, `BEDROCK_MODEL_ID_STRONG`), le pipeline local utilise des agents simulés par des règles, sans modèle de langage ; la sortie le signale. Les calculs, le classement et les contrôles sont les mêmes dans les deux cas.
+
+À venir (voir `avancement.md`) : API (`uvicorn easytrade.api.app:app`), branchement de l'application mobile (`mobile/README.md`), déploiement AWS (`infra/README.md`).
 
 Configuration : copier `.env.example` en `.env`.
 

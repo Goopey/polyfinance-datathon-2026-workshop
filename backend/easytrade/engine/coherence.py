@@ -115,3 +115,88 @@ def evaluate_idea(
         context=context,
         alternatives=alternatives,
     )
+
+
+# --- repères de risque du profil (P3) -----------------------------------------------------------
+# Repères indicatifs par niveau de tolérance : (volatilité annualisée maximale en %, perte
+# maximale tolérée en %). Hypothèses de l'équipe (docs/03_DECISION_ENGINE.md), affichées comme
+# telles ; reprises de l'écran « Tester une idée » du mobile.
+RISK_LIMITS: dict[str, tuple[float, float]] = {
+    "faible": (18.0, -20.0),
+    "faible à modérée": (22.0, -25.0),  # entre les deux niveaux voisins (persona Robert)
+    "modérée": (25.0, -30.0),
+    "élevée": (45.0, -50.0),
+}
+SEVERE_RATIO = 1.5  # dépassement d'un repère au-delà duquel la tension est jugée sévère
+
+
+def tolerance_level(tolerance_risque: str) -> str:
+    """Niveau de tolérance normalisé, clé de `RISK_LIMITS`. Un libellé inconnu est lu « modérée »."""
+    text = tolerance_risque.casefold()
+    if "faible" in text and "mod" in text:
+        return "faible à modérée"
+    if "faible" in text:
+        return "faible"
+    if "mod" in text:
+        return "modérée"
+    if "lev" in text:  # élevé, élevée, eleve
+        return "élevée"
+    return "modérée"
+
+
+def verdict_from(tensions: tuple[Tension, ...] | list[Tension]) -> str:
+    if any(t.severe for t in tensions):
+        return "incohérent avec le profil"
+    return "cohérent avec réserve" if tensions else "cohérent"
+
+
+def limit_tensions(
+    *,
+    level: str,
+    volatility: Optional[float],
+    max_drawdown: Optional[float],
+    volatility_evidence: Optional[str] = None,
+    drawdown_evidence: Optional[str] = None,
+    limit_evidence: Optional[dict[str, str]] = None,
+) -> list[Tension]:
+    """Tensions entre un titre et les repères de risque du profil (valeurs en points de %)."""
+    max_vol, max_loss = RISK_LIMITS[level]
+    limit_evidence = limit_evidence or {}
+    tensions: list[Tension] = []
+    if volatility is not None and volatility > max_vol:
+        tensions.append(Tension(
+            dimension="repère de volatilité",
+            detail=(
+                f"Volatilité annualisée de {volatility:.0f} %, au-dessus du repère de {max_vol:.0f} % "
+                f"retenu pour une tolérance au risque {level}."
+            ),
+            severe=volatility > max_vol * SEVERE_RATIO,
+            evidence_id=volatility_evidence,
+            evidence_ids=tuple(i for i in (limit_evidence.get("volatilite"),) if i),
+        ))
+    if max_drawdown is not None and max_drawdown < max_loss:
+        tensions.append(Tension(
+            dimension="repère de perte maximale",
+            detail=(
+                f"Perte maximale observée de {abs(max_drawdown):.0f} %, au-delà du repère de "
+                f"{abs(max_loss):.0f} % retenu pour une tolérance au risque {level}."
+            ),
+            severe=max_drawdown < max_loss * SEVERE_RATIO,
+            evidence_id=drawdown_evidence,
+            evidence_ids=tuple(i for i in (limit_evidence.get("perte_max"),) if i),
+        ))
+    return tensions
+
+
+def reference_medians(
+    ticker: str, ranking_tickers: list[str], signals: dict[str, dict[str, Optional[float]]]
+) -> dict[str, Optional[float]]:
+    """Médianes de référence utilisées par `evaluate_idea` : volatilité et pire période de 3 ans
+    des actifs classés pour le profil (hors le titre testé). Valeurs en points de %."""
+    others = [t for t in ranking_tickers if t != ticker]
+    stab = [s for s in (_signal(signals, t, "stabilite") for t in others) if s is not None]
+    hz = [s for s in (_signal(signals, t, "horizon") for t in others) if s is not None]
+    return {
+        "volatilite": -statistics.median(stab) if stab else None,
+        "horizon": statistics.median(hz) if hz else None,
+    }

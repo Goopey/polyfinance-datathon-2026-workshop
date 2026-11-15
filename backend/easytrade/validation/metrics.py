@@ -17,7 +17,7 @@ from typing import Callable, Iterable, Optional
 import numpy as np
 import pandas as pd
 
-from easytrade.config import QualityThresholds
+from easytrade.config import CRYPTO_ASSET_CLASS, QualityThresholds
 from easytrade.data.calendar import align_prices, annualization_factor
 from easytrade.data.point_in_time import DateLike, PointInTimeStore, to_timestamp
 from easytrade.data.sources_registry import SourcesRegistry
@@ -256,6 +256,54 @@ def compute_metrics_table(
         rows.extend(builder.asset_metrics(ticker, group.sort_values("date", kind="mergesort")))
     columns = list(MetricResult.model_fields)
     return pd.DataFrame([r.model_dump() for r in rows], columns=columns)
+
+
+def basket_volatility_metric(
+    store: PointInTimeStore, as_of: DateLike, ledger: EvidenceLedger, registry: SourcesRegistry,
+    weights: dict[str, float], label: str, thresholds: Optional[QualityThresholds] = None,
+) -> MetricResult:
+    """Volatilité annualisée d'un panier **simulé** (parts fixes), en CAD, avec preuve `SCENARIO`.
+
+    `weights` : part de chaque ticker (normalisées ici). `label` décrit le panier dans l'énoncé
+    de la preuve (« 10 pistes retenues, parts égales »). Dates communes à tous les actifs, sans
+    remplissage ; 252 périodes par an, sauf panier entièrement en crypto (365).
+    """
+    as_of_ts = to_timestamp(as_of)
+    thresholds = thresholds or QualityThresholds()
+    builder = _Builder(store, as_of_ts, ledger, registry, "CAD", thresholds)
+    tickers = sorted(weights)
+    prices = store.prices(as_of_ts, tickers)
+    wide = align_prices(prices, tickers, "adj_close_cad")
+    classes = set(prices["asset_class"].unique())
+    ppy = annualization_factor(CRYPTO_ASSET_CLASS) if classes == {CRYPTO_ASSET_CLASS} else annualization_factor("")
+    result = risk.basket_volatility(wide, weights, ppy) if len(wide) > thresholds.min_common_observations else None
+    metric = "basket_volatility"
+    if result is None:
+        return MetricResult(as_of=as_of_ts.date(), ticker="PANIER", metric=metric, window="full", value=None,
+                            unit="%", currency="CAD", observations=int(len(wide)),
+                            note="Dates communes insuffisantes pour le panier simulé")
+    value, n = result
+    draft = EvidenceDraft(
+        type="metric", claim_kind="SCENARIO", subject="PANIER",
+        statement=f"Volatilité annualisée d'un panier simulé ({label})", value=value * 100.0, unit="%",
+        currency="CAD",
+        window=EvidenceWindow(start=wide.index[0].date(), end=wide.index[-1].date(), observations=n + 1),
+        observed_at=wide.index[-1].date(), published_at=wide.index[-1].date(), retrieved_at=builder.retrieved_at,
+        source=builder.source.as_evidence_source(),
+        processing=(
+            "adj_close en CAD ; dates communes à tous les actifs du panier (sans remplissage) ; parts fixes "
+            f"rééquilibrées à chaque séance ; écart-type (ddof=1) × racine de {ppy} ; composition : "
+            + ", ".join(f"{t} {weights[t] / sum(weights.values()) * 100:.1f} %" for t in tickers)
+        ),
+        produced_by=f"validation.risk.basket_volatility@{VERSION}",
+        limits=BASE_LIMITS + " Panier fictif : aucune transaction, aucun frais, parts fixes.",
+    )
+    evidence_id = ledger.add(draft).evidence_id
+    return MetricResult(
+        as_of=as_of_ts.date(), ticker="PANIER", metric=metric, window="full", value=value * 100.0, unit="%",
+        currency="CAD", observations=n + 1, start=wide.index[0].date(), end=wide.index[-1].date(),
+        evidence_id=evidence_id,
+    )
 
 
 def correlation_metric(

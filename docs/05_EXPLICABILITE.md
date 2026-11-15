@@ -87,6 +87,15 @@ Avant affichage, `explain/fidelity.py` contrôle la sortie de l'agent d'explicat
 
 En cas d'échec : une relance avec le motif ; si l'échec persiste, la phrase fautive est retirée et l'incident est noté dans la trace. Le taux de réussite est un indicateur de validation à présenter au jury (scénario S6).
 
+Précisions de réalisation (P3, `explain/fidelity.py`) :
+
+- **Insertion des valeurs.** Un agent écrit `{EV-000123}` là où une valeur doit apparaître ; le code y insère la valeur de la preuve (pourcentage à une décimale, ratio à deux). Aucun chiffre n'est donc écrit par un modèle ; le contrôle 1 s'applique quand même au texte final.
+- **Tolérance d'arrondi.** Un nombre du texte est étayé s'il est à moins d'un demi-pas de la valeur d'une preuve citée, le pas étant la dernière décimale écrite (« 35 % » accepte 34,5 à 35,5 ; « 35,2 % » accepte 35,15 à 35,25). Le signe est ignoré (« perte maximale de 42 % » pour −41,6).
+- **Nombres de l'énoncé.** Un nombre qui figure dans l'énoncé ou la fenêtre d'une preuve citée est admis (« pire période glissante de 3 ans », « année 2022 »). Les noms d'actifs (« S&P 500 »), les dates et les identifiants de preuve ne sont pas lus comme des chiffres.
+- **`claim_kind`.** Celui des preuves citées : SCENARIO l'emporte sur HYPOTHESE, qui l'emporte sur FAIT. Un écart est corrigé par le code et compté.
+- **Portée.** Mêmes contrôles sur les arguments du débat (un argument fautif est supprimé) et sur les textes produits par le moteur (tensions, motifs de rejet). La sortie complète est recontrôlée avant affichage ; s'il reste un écart, elle n'est pas affichée et le run échoue de façon visible.
+- **Mesure.** `FidelityReport` : affirmations rédigées fidèles au premier passage, relance, retraits, affirmations recontrôlées. Valeurs mesurées : `avancement.md`, scénario S6.
+
 ## 5. Dans l'interface
 
 | Élément | Comportement |
