@@ -5,21 +5,20 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
+import type { ReactNode } from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { getEvidence } from "../../src/api/assets";
 import { ClaimTag } from "../../src/components/ClaimTag";
+import { Icon } from "../../src/components/Icon";
 import { Button, Card, ErrorState, Loading, Row, Screen } from "../../src/components/ui";
 import { fmtDate, fmtValue } from "../../src/format";
+import { useT } from "../../src/i18n";
 import { useSettings } from "../../src/store/settings";
-import { colors, space } from "../../src/theme/tokens";
-import { type } from "../../src/theme/typography";
-
-const TYPE_LABEL: Record<string, string> = {
-  metric: "Indicateur calculé", filing: "Dépôt réglementaire", esg: "Document ESG", relation: "Relation du graphe",
-  macro: "Donnée macroéconomique", news: "Nouvelle datée", profile: "Paramètre du profil",
-};
+import { alpha, colors, space } from "../../src/theme/tokens";
+import { fontFamily, type } from "../../src/theme/typography";
 
 export default function Preuve() {
+  const t = useT();
   const { id, run } = useLocalSearchParams<{ id: string; run?: string }>();
   const advanced = useSettings((s) => s.mode === "avance");
   const q = useQuery({ queryKey: ["evidence", run ?? null, id], queryFn: () => getEvidence(id!, run), enabled: !!id });
@@ -33,72 +32,74 @@ export default function Preuve() {
     <Screen>
       <Row>
         <ClaimTag kind={e.claim_kind} showFact />
-        <Text style={type.small}>{TYPE_LABEL[e.type] ?? e.type} · {e.subject}</Text>
+        <Text style={type.small}>{t.preuve.typeLabel[e.type] ?? e.type} · {e.subject}</Text>
       </Row>
       <Text style={type.h2}>{e.statement}</Text>
       {e.value !== null ? (
         <Text style={styles.value}>
           {fmtValue(e.value, e.unit)}
-          {e.currency && e.unit === "%" ? <Text style={type.small}>  (calculé en {e.currency})</Text> : null}
+          {e.currency && e.unit === "%" ? <Text style={type.small}>  {t.preuve.computedIn(e.currency)}</Text> : null}
         </Text>
       ) : null}
 
-      <Card>
-        <Field label="Source">
+      <Card style={{ gap: 0, paddingVertical: space.sm }}>
+        <Field label={t.preuve.source}>
           {e.source.url ? (
-            <Pressable onPress={() => Linking.openURL(e.source.url!)} accessibilityRole="link">
-              <Text style={[type.body, { color: colors.primary, textDecorationLine: "underline" }]}>{e.source.name}</Text>
+            <Pressable onPress={() => Linking.openURL(e.source.url!)} accessibilityRole="link" style={styles.srcLink}>
+              <Text style={[type.body, { color: colors.link, textDecorationLine: "underline" }]}>{e.source.name}</Text>
+              <Icon name="arrowRight" size={14} color={colors.link} />
             </Pressable>
           ) : (
             <Text style={type.body}>{e.source.name}</Text>
           )}
         </Field>
         {w.start || w.end ? (
-          <Field label="Période décrite">
+          <Field label={t.preuve.period}>
             <Text style={type.body}>
-              Du {fmtDate(w.start)} au {fmtDate(w.end)}
-              {w.observations ? ` · ${w.observations} observations` : ""}
+              {t.preuve.fromTo(fmtDate(w.start), fmtDate(w.end))}
+              {w.observations ? t.preuve.observations(w.observations) : ""}
             </Text>
           </Field>
         ) : null}
-        <Field label="Dates">
-          <Text style={type.body}>Observée : {fmtDate(e.observed_at)}</Text>
-          <Text style={type.body}>Publiée : {fmtDate(e.published_at)}</Text>
-          <Text style={type.body}>Extraite : {fmtDate(e.retrieved_at)}</Text>
+        <Field label={t.preuve.dates}>
+          <Text style={type.body}>{t.preuve.observed} {fmtDate(e.observed_at)}</Text>
+          <Text style={type.body}>{t.preuve.published} {fmtDate(e.published_at)}</Text>
+          <Text style={type.body}>{t.preuve.retrieved} {fmtDate(e.retrieved_at)}</Text>
         </Field>
-        <Field label="Traitement">
+        <Field label={t.preuve.processing}>
           <Text style={type.body}>{e.processing}</Text>
         </Field>
         {e.limits ? (
-          <Field label="Limites">
+          <Field label={t.preuve.limits}>
             <Text style={type.body}>{e.limits}</Text>
           </Field>
         ) : null}
         {advanced ? (
-          <Field label="Produit par">
+          <Field label={t.preuve.producedBy} last>
             <Text style={type.small}>{e.produced_by} · {e.evidence_id}</Text>
           </Field>
         ) : null}
       </Card>
 
       {run ? (
-        <Button label="Parcours de l'analyse" variant="secondary" onPress={() => router.push({ pathname: "/run/[id]", params: { id: run } })} />
+        <Button label={t.common.runTrail} variant="secondary" icon="activity" onPress={() => router.push({ pathname: "/run/[id]", params: { id: run } })} />
       ) : null}
-      <Button label="Fermer" variant="ghost" onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} />
+      <Button label={t.common.close} variant="ghost" onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} />
     </Screen>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children, last }: { label: string; children: ReactNode; last?: boolean }) {
   return (
-    <View style={styles.field}>
-      <Text style={type.label}>{label}</Text>
+    <View style={[styles.field, last && { borderBottomWidth: 0 }]}>
+      <Text style={type.eyebrow}>{label}</Text>
       {children}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  value: { fontSize: 34, fontWeight: "700", color: colors.text },
-  field: { gap: 2, paddingVertical: space.xs, borderBottomWidth: 1, borderBottomColor: colors.surfaceMuted },
+  value: { fontFamily, fontSize: 40, fontWeight: "800", color: colors.mint, letterSpacing: -1 },
+  field: { gap: 4, paddingVertical: space.md, borderBottomWidth: 1, borderBottomColor: alpha(colors.mint, 0.07) },
+  srcLink: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start" },
 });

@@ -8,21 +8,23 @@ import { getDataOverview, getEvidence } from "../src/api/assets";
 import { useRun } from "../src/api/runs";
 import { ClaimTag } from "../src/components/ClaimTag";
 import { EvidenceChip } from "../src/components/EvidenceChip";
+import { Icon, type IconName } from "../src/components/Icon";
 import { Card, ErrorState, Loading, Pill, Row, Screen, Section } from "../src/components/ui";
 import { fmtDate } from "../src/format";
+import { useT } from "../src/i18n";
 import { useProfileStore } from "../src/store/profile";
-import { colors, space } from "../src/theme/tokens";
+import { alpha, colors, space } from "../src/theme/tokens";
 import { type } from "../src/theme/typography";
 import type { Explanation } from "../src/types/contracts";
 
-const STATUT: Record<string, { fg: string; bg: string; icon: string }> = {
-  "utilisé": { fg: colors.good, bg: colors.goodBg, icon: "✓" },
-  "prévu": { fg: colors.neutral, bg: colors.neutralBg, icon: "○" },
+const STATUT: Record<string, { fg: string; bg: string; icon: IconName }> = {
+  "utilisé": { fg: colors.good, bg: colors.goodBg, icon: "check" },
+  "prévu": { fg: colors.neutral, bg: colors.neutralBg, icon: "minus" },
 };
 const CHECK = {
-  ok: { icon: "✓", color: colors.good, label: "Aucune remarque" },
-  avertissement: { icon: "!", color: colors.warn, label: "Avertissement" },
-  erreur: { icon: "✕", color: colors.bad, label: "Erreur" },
+  ok: { icon: "check", color: colors.good },
+  avertissement: { icon: "alert", color: colors.warn },
+  erreur: { icon: "x", color: colors.bad },
 } as const;
 
 function evidenceIdsOf(r: Explanation): string[] {
@@ -36,6 +38,7 @@ function evidenceIdsOf(r: Explanation): string[] {
 }
 
 export default function Donnees() {
+  const t = useT();
   const { profileId, runs } = useProfileStore();
   const runId = profileId ? runs[profileId] : null;
   const overview = useQuery({ queryKey: ["data", runId], queryFn: () => getDataOverview(runId) });
@@ -53,34 +56,35 @@ export default function Donnees() {
 
   return (
     <Screen>
-      <Text style={type.body}>
-        Pour chaque donnée : d'où elle vient, quand elle a été extraite, comment elle est traitée et ses limites. Analyse au {fmtDate(asOf)}.
-      </Text>
+      <Text style={[type.body, { color: colors.textMuted }]}>{t.donnees.intro(fmtDate(asOf))}</Text>
 
-      <Section title="Sources">
+      <Section title={t.donnees.sources}>
         {d.sources.map((s) => {
-          const st = STATUT[s.statut] ?? { fg: colors.textMuted, bg: colors.surfaceMuted, icon: "–" };
+          const st = STATUT[s.statut] ?? { fg: colors.textMuted, bg: colors.neutralBg, icon: "minus" as IconName };
           return (
             <Card key={s.source_id}>
-              <Row style={{ justifyContent: "space-between" }}>
+              <Row style={{ justifyContent: "space-between", flexWrap: "nowrap" }}>
                 <Text style={[type.h3, { flex: 1 }]}>{s.nom}</Text>
-                <Pill icon={st.icon} text={s.statut} fg={st.fg} bg={st.bg} />
+                <Pill icon={st.icon} text={t.donnees.statut[s.statut] ?? s.statut} fg={st.fg} bg={st.bg} />
               </Row>
-              <Text style={type.small}>{s.type_de_donnee}{s.date_extraction ? ` · extrait le ${fmtDate(s.date_extraction)}` : ""}</Text>
-              {s.limites !== "—" ? <Text style={type.body}>Limites : {s.limites}</Text> : null}
+              <Text style={type.small}>{s.type_de_donnee}{s.date_extraction ? t.donnees.extracted(fmtDate(s.date_extraction)) : ""}</Text>
+              {s.limites !== "—" ? <Text style={type.body}>{t.donnees.limits(s.limites)}</Text> : null}
             </Card>
           );
         })}
       </Section>
 
-      <Section title="Contrôles qualité">
-        <Card>
-          {d.quality.map((c) => {
+      <Section title={t.donnees.quality}>
+        <Card style={{ gap: 0, paddingVertical: space.sm }}>
+          {d.quality.map((c, i) => {
             const k = CHECK[c.status];
             return (
-              <View key={c.check} style={styles.check}>
-                <Text style={[type.label, { color: k.color }]}>{k.icon} {c.check}</Text>
-                <Text style={type.caption}>{k.label}</Text>
+              <View key={c.check} style={[styles.check, i === d.quality.length - 1 && { borderBottomWidth: 0 }]}>
+                <Row style={{ flexWrap: "nowrap" }}>
+                  <Icon name={k.icon} size={16} color={k.color} strokeWidth={2.6} />
+                  <Text style={[type.label, { color: k.color, flex: 1 }]}>{c.check}</Text>
+                </Row>
+                <Text style={type.caption}>{t.donnees.check[c.status]}</Text>
                 {c.details.map((x) => <Text key={x} style={type.small}>{x}</Text>)}
               </View>
             );
@@ -88,20 +92,24 @@ export default function Donnees() {
         </Card>
       </Section>
 
-      <Section title="Chronologie des preuves de l'analyse">
+      <Section title={t.donnees.timeline}>
         {!run.data?.result ? (
-          <Text style={type.body}>Aucune analyse terminée pour le profil courant.</Text>
+          <Text style={type.body}>{t.donnees.noRun}</Text>
         ) : (
           <Card>
-            <Text style={[type.label, { color: future.length ? colors.bad : colors.good }]}>
-              {future.length
-                ? `✕ ${future.length} preuve(s) publiée(s) après la date d'analyse`
-                : `✓ Aucune preuve publiée après le ${fmtDate(asOf)} (point-in-time)`}
-            </Text>
+            <Row style={{ flexWrap: "nowrap" }}>
+              <Icon name={future.length ? "x" : "check"} size={18} color={future.length ? colors.bad : colors.good} strokeWidth={2.6} />
+              <Text style={[type.label, { flex: 1, color: future.length ? colors.bad : colors.good }]}>
+                {future.length ? t.donnees.future(future.length) : t.donnees.clean(fmtDate(asOf))}
+              </Text>
+            </Row>
             {timeline.map((e) => (
               <View key={e!.evidence_id} style={styles.event}>
-                <Text style={[type.caption, { width: 92 }]}>{e!.published_at}</Text>
-                <View style={{ flex: 1, gap: 2 }}>
+                <View style={styles.rail}>
+                  <View style={styles.railDot} />
+                </View>
+                <View style={{ flex: 1, gap: 4 }}>
+                  <Text style={[type.caption, { color: colors.mint }]}>{e!.published_at}</Text>
                   <Text style={type.small}>{e!.subject} — {e!.statement}</Text>
                   <Row>
                     <ClaimTag kind={e!.claim_kind} />
@@ -118,6 +126,8 @@ export default function Donnees() {
 }
 
 const styles = StyleSheet.create({
-  check: { gap: 2, paddingVertical: space.xs, borderBottomWidth: 1, borderBottomColor: colors.surfaceMuted },
-  event: { flexDirection: "row", gap: space.sm, paddingVertical: space.xs, borderTopWidth: 1, borderTopColor: colors.surfaceMuted },
+  check: { gap: 2, paddingVertical: space.md, borderBottomWidth: 1, borderBottomColor: alpha(colors.mint, 0.07) },
+  event: { flexDirection: "row", gap: space.md, paddingVertical: space.sm },
+  rail: { width: 12, alignItems: "center", paddingTop: 4 },
+  railDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: colors.primary, borderWidth: 2, borderColor: alpha(colors.mint, 0.4) },
 });

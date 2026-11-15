@@ -155,11 +155,16 @@ async function main() {
   const tested = MODE === "api" ? "Tesla" : "Société médiatisée fictive G";
 
   await go("/");
-  await visible("Choisir un persona");
-  await visible("Simulation — aucune transaction réelle");
-  if (MODE === "api") await absent("Données entièrement fictives");
-  else await visible("Données entièrement fictives");
-  await step("Accueil : bandeau de simulation, choix du persona");
+  await visible("Choisissez votre profil d'investisseur");
+  await absent("Simulation — aucune transaction réelle");
+  if (MODE === "api") await absent("Démo");
+  else await visible("Démo");
+  await click("EN");
+  await visible("Choose your investor profile");
+  await step("Accueil en anglais : sélecteur de langue en haut à droite");
+  await click("FR");
+  await visible("Choisissez votre profil d'investisseur");
+  await step("Accueil : choix du profil d'investisseur");
 
   await click("Robert, 59 ans");
   await visible("Voici comment nous avons compris");
@@ -168,17 +173,17 @@ async function main() {
   await click("Confirmer et voir les pistes");
   await visible("pistes cohérentes avec votre profil");
   await step("Pistes à explorer");
-  await click("Déplier ▼");
+  await click("Déplier");
   await visible("Écartées par une règle de votre profil");
   await step("Écartées et pourquoi");
 
-  await click("Pourquoi ? Voir la fiche →");
+  await click("Pourquoi ? Voir la fiche");
   await visible("Pourquoi cette piste");
   await visible("Risque observé");
   await visible("Débat Bull / Réaliste / Bear");
   await visible("Pourquoi ce classement");
   await step("Fiche : raisons, risque, débat, contributions");
-  await click("ⓘ Source");
+  await click("Source");
   await visible("Traitement");
   await visible("Publiée :");
   if (MODE === "api") await visible("Yahoo Finance via yfinance");
@@ -194,8 +199,8 @@ async function main() {
   await page.click(`[aria-label="Tester ${tested}"]`);
   await visible("Incohérent avec le profil");
   await visible("Tensions avec le profil");
-  await visible("Effet sur le panier simulé");
-  await step(`Tester une idée : Robert + ${tested} → incohérent, tensions chiffrées, panier simulé`);
+  await visible("Effet sur votre panier");
+  await step(`Tester une idée : Robert + ${tested} → incohérent, tensions chiffrées, effet sur le panier`);
   await click(`Voir la fiche de ${tested}`);
   await visible("Risque observé");
   await visible("Au-delà du seuil indicatif du profil");
@@ -213,7 +218,7 @@ async function main() {
   await go("/profil");
   await click("Avancé");
   await click("Changer de profil");
-  await click("Créer un profil fictif");
+  await click("Créer mon propre profil");
   await click("Préserver le capital"); await click("Suivant");
   await click("Moins de 5 ans"); await click("Suivant");
   await click("Je serais très inquiet"); await click("Suivant");
@@ -222,10 +227,10 @@ async function main() {
   await click("Voir mon profil");
   await visible("Voici comment nous avons compris");
   await visible("Écarter les placements hautement spéculatifs.");
-  await step("Questionnaire → profil fictif, exclusion devenue une règle");
+  await step("Questionnaire → profil, exclusion devenue une règle");
   await click("Confirmer et voir les pistes");
   await visible("pistes cohérentes avec votre profil");
-  await step("Analyse du profil fictif");
+  await step("Analyse du profil créé");
 
   if (MODE === "api") {
     await go("/profil");

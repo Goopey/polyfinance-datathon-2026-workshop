@@ -13,17 +13,19 @@ import { ContributionBars } from "../../src/components/ContributionBars";
 import { DebateSummary } from "../../src/components/DebateSummary";
 import { ClaimLine, EvidenceChip } from "../../src/components/EvidenceChip";
 import { ConfidenceBadge, FitBadge } from "../../src/components/FitBadge";
+import { Icon } from "../../src/components/Icon";
 import { RiskMeter } from "../../src/components/RiskMeter";
 import { SupplyChainGraph } from "../../src/components/SupplyChainGraph";
 import { UnknownsBlock } from "../../src/components/UnknownsBlock";
 import { Button, Card, ErrorState, Loading, Pill, Row, Screen, Section } from "../../src/components/ui";
-import { fr } from "../../src/i18n/fr";
+import { useT } from "../../src/i18n";
 import { useProfileStore } from "../../src/store/profile";
 import { useSettings } from "../../src/store/settings";
-import { colors, space } from "../../src/theme/tokens";
+import { alpha, colors, space } from "../../src/theme/tokens";
 import { type } from "../../src/theme/typography";
 
 export default function FichePiste() {
+  const t = useT();
   const { ticker, run: runParam } = useLocalSearchParams<{ ticker: string; run?: string }>();
   const currentProfile = useProfileStore((s) => s.profileId);
   const advanced = useSettings((s) => s.mode === "avance");
@@ -47,56 +49,59 @@ export default function FichePiste() {
 
       {/* 1. Aperçu */}
       <View style={{ gap: space.sm }}>
-        <Text style={type.title}>{a.name}</Text>
+        <Text style={type.eyebrow}>
+          {a.ticker} · {t.assetClass[a.asset_class] ?? a.asset_class}
+        </Text>
+        <Text style={type.display}>{a.name}</Text>
         <Text style={type.small}>
-          {a.ticker} · {fr.assetClass[a.asset_class] ?? a.asset_class}
-          {a.sector ? ` · ${a.sector}` : ""} · cotation en {a.currency}
+          {a.sector ? `${a.sector} · ` : ""}{t.fiche.listed(a.currency)}
         </Text>
         {item ? (
-          <Row>
+          <Row style={{ marginTop: space.xs }}>
             <FitBadge fit={item.fit} />
             <ConfidenceBadge confidence={item.confidence} />
-            {item.to_review ? <Pill icon="!" text="À examiner" fg={colors.bad} bg={colors.badBg} /> : null}
+            {item.to_review ? <Pill icon="alert" text={t.pistes.toReview} fg={colors.bad} bg={colors.badBg} /> : null}
           </Row>
         ) : null}
       </View>
       {item ? (
-        <Card>
-          <Text style={type.h3}>Pourquoi cette piste</Text>
+        <Card style={{ gap: space.md }}>
+          <Text style={type.h3}>{t.fiche.whyThis}</Text>
           {item.why.map((c) => <ClaimLine key={c.text} claim={c} runId={runParam} />)}
         </Card>
       ) : rejected ? (
-        <Card style={{ borderColor: colors.warn }}>
-          <Text style={type.h3}>{rejected.kind === "contrainte" ? "⛔ Écartée par une règle de votre profil" : "↓ Moins bien classée"}</Text>
+        <Card style={{ borderColor: alpha(rejected.kind === "contrainte" ? colors.bad : colors.warn, 0.45) }}>
+          <Row>
+            <Icon name={rejected.kind === "contrainte" ? "ban" : "trendingDown"} size={20} color={rejected.kind === "contrainte" ? colors.bad : colors.warn} />
+            <Text style={[type.h3, { flex: 1 }]}>{rejected.kind === "contrainte" ? t.fiche.ruledOut : t.fiche.lowerRanked}</Text>
+          </Row>
           <Text style={type.body}>{rejected.reason}</Text>
           <Row>{(rejected.evidence_ids ?? []).map((id) => <EvidenceChip key={id} id={id} runId={runParam} />)}</Row>
         </Card>
       ) : (
         <Card>
-          <Text style={type.body}>
-            Ce titre n'est pas une piste retenue de cette analyse : pas de débat ni de score pour ce profil. Les indicateurs et le
-            graphe restent consultables.
-          </Text>
+          <Text style={type.body}>{t.fiche.notRetained}</Text>
         </Card>
       )}
 
       {/* 2. Graphe de dépendances */}
-      <Section title="Écosystème de la société">
+      <Section title={t.fiche.ecosystem}>
         {graph.isLoading ? <Loading /> : graph.error ? <ErrorState error={graph.error} /> : <SupplyChainGraph graph={graph.data!} runId={runParam} />}
-        <Text style={type.caption}>
-          Deux pistes qui dépendent du même fournisseur se diversifient moins qu'il n'y paraît : le graphe alimente le critère « diversification ».
-        </Text>
+        <Text style={type.caption}>{t.fiche.ecosystemNote}</Text>
       </Section>
 
       {/* 3. Risque */}
-      <Section title="Risque observé">
-        <Card>
+      <Section title={t.fiche.risk}>
+        <Card style={{ paddingVertical: space.sm }}>
           {metrics.map((m) => <RiskMeter key={m.metric} m={m} runId={runParam} />)}
-          {!advanced ? <Text style={type.caption}>Mode Avancé (onglet Profil) : rendement observé et détails.</Text> : null}
+          {!advanced ? <Text style={[type.caption, { paddingVertical: space.sm }]}>{t.fiche.advancedHint}</Text> : null}
         </Card>
         {item && item.risks.length > 0 ? (
           <Card>
-            <Text style={type.h3}>Points de vigilance</Text>
+            <Row>
+              <Icon name="alert" size={18} color={colors.warn} />
+              <Text style={type.h3}>{t.fiche.vigilance}</Text>
+            </Row>
             {item.risks.map((r) => <Text key={r} style={type.body}>• {r}</Text>)}
           </Card>
         ) : null}
@@ -104,16 +109,16 @@ export default function FichePiste() {
 
       {/* 4. Débat */}
       {item ? (
-        <Section title="Débat Bull / Réaliste / Bear">
+        <Section title={t.fiche.debate}>
           <DebateSummary debate={item.debate} dissent={item.debate_summary.dissent} runId={runParam} />
         </Section>
       ) : null}
 
       {/* 5. Signaux */}
-      <Section title="Signaux datés">
-        <Card>
+      <Section title={t.fiche.signals}>
+        <Card style={{ gap: space.md }}>
           {a.signals.length === 0 ? (
-            <Text style={type.body}>Aucun signal ESG ni nouvelle datée pour cet actif. C'est une information manquante, pas un bon score.</Text>
+            <Text style={type.body}>{t.fiche.noSignals}</Text>
           ) : (
             a.signals.map((c) => <ClaimLine key={c.text} claim={c} runId={runParam} />)
           )}
@@ -122,7 +127,7 @@ export default function FichePiste() {
 
       {/* 6. Pourquoi ce classement */}
       {item ? (
-        <Section title="Pourquoi ce classement">
+        <Section title={t.fiche.ranking}>
           <Card>
             <ContributionBars contributions={item.contributions} weights={profile.data?.weights} />
           </Card>
@@ -130,12 +135,11 @@ export default function FichePiste() {
       ) : null}
 
       {/* 7. Ce que nous ne savons pas */}
-      <UnknownsBlock items={[...(item?.unknowns ?? []), ...(item?.limits ?? ["Fenêtre de 5 ans ; biais du survivant de l'univers."])]} />
+      <UnknownsBlock items={[...(item?.unknowns ?? []), ...(item?.limits ?? [t.fiche.defaultLimit])]} />
 
       {runParam ? (
-        <Button label="Parcours de l'analyse" variant="secondary" onPress={() => router.push({ pathname: "/run/[id]", params: { id: runParam } })} />
+        <Button label={t.common.runTrail} variant="secondary" icon="activity" onPress={() => router.push({ pathname: "/run/[id]", params: { id: runParam } })} />
       ) : null}
-      <Text style={[type.caption, { textAlign: "center" }]}>Simulation à des fins pédagogiques. Ceci n'est pas un conseil financier.</Text>
     </Screen>
   );
 }
