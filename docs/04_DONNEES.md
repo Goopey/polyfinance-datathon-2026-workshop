@@ -36,7 +36,7 @@ Copié dans `data/raw/starter/` (fenêtre du 2021-11-12 au 2026-11-12, extractio
 |---|---|---|---|
 | Fondamentaux US | SEC EDGAR (données XBRL, 10-K, 10-Q) | Critère `qualite`, graphe | MVP |
 | Relations fournisseurs / clients / concurrents | Dépôts 10-K (description de l'activité, facteurs de risque) ; SEDAR+ pour les émetteurs canadiens | Graphe de dépendances | MVP (5 à 8 sociétés) |
-| ESG | Rapports de durabilité des sociétés ; méthodologie et composition du FNB ESGV publiées par l'émetteur ; dépôts réglementaires | Critère `esg`, exclusions de Mateo | MVP |
+| ESG | Rapports de durabilité des sociétés ; méthodologie et composition du FNB ESGV publiées par l'émetteur ; dépôts réglementaires | Critère `esg`, exclusions de Mateo | MVP ; émissions de GES de 7 titres faites (section 12), le reste à saisir |
 | Composition des FNB | Sites des émetteurs (fiches produits, titres détenus) | Diversification, transparence | MVP léger |
 | Macro complémentaire | Banque du Canada, FRED, Statistique Canada | Contexte | Extra |
 | Nouvelles datées | Communiqués des émetteurs, dépôts 8-K | Signaux, graphe | Extra |
@@ -199,3 +199,32 @@ reproductible, ADR 0002).
 **Cours** : `GET /assets/{ticker}/prices`, calculé à partir du jeu de départ (aucune source nouvelle) : clôtures
 ajustées converties en CAD jusqu'à la date d'analyse, dernier jour de cotation de chaque semaine (≈ 260 points sur
 5 ans), variation sur la période et preuve du rendement annualisé sur la même fenêtre. Couvre les 31 actifs.
+
+## 12. Preuves ESG : émissions directes de gaz à effet de serre (2026-11-15)
+
+**Ce qui est fait** : un chargeur (`ingestion/esg.py`, `scripts/ingest_esg.py`) transforme deux fichiers publics en lignes de `data/reference/esg_evidence.csv`. Conditions d'utilisation, sources admises et règles de saisie : `CONTRIBUTING.md`, section « Données ESG ». Lecture des fichiers : `data/external_esg.py`. Sources au registre : `epa_ghgrp`, `canada_ghgrp`.
+
+| Source | Année | Date de publication retenue | Titres couverts | `claim_kind` |
+|---|---|---|---|---|
+| EPA GHGRP (États-Unis) | 2023 | 2024-10-15 (date du fichier dans l'archive de l'EPA) | XOM, PG, GOOGL, TSLA | `FAIT` : la société mère et la part de détention sont déclarées par l'installation |
+| ECCC GHGRP (Canada) | 2024 | 2026-05-27 (hypothèse, à confirmer sur la fiche open.canada.ca) | ENB.TO, CNQ.TO, FTS.TO | `HYPOTHESE` : rattachement par le nom de l'exploitant |
+
+**Ce qui n'est pas couvert** : AAPL, MSFT, AMZN, JNJ, JPM et NVDA (aucune installation déclarante sous leur nom), RY, TD, MFC, CNR, ATD, SHOP, CSU (aucune installation déclarante sous leur nom au Canada), les 9 FNB et la crypto. Pour ces titres l'information est manquante, jamais « zéro ». Les trois autres dimensions de l'ESG (sociale, gouvernance, controverses) ne sont pas couvertes ; la composition d'ESGV et les rapports de durabilité restent à saisir (`etf_issuers`, `issuer_sustainability`, au statut « prévu »).
+
+**Hypothèses de l'équipe** (valeurs dans `ingestion/esg.py` et `data/external_esg.py`)
+
+| Sujet | Valeur retenue | Raison |
+|---|---|---|
+| Émissions EPA retenues | Somme de six onglets directs : installations ponctuelles, production pétrolière et gazière terrestre, collecte et compression, pipelines de transport, distribution locale, SF6 | La FAQ de l'EPA (question 12) les présente comme des catégories séparées du même programme. Les installations présentes dans deux onglets (34 sur 7 539) y déclarent des sources différentes. |
+| Onglets exclus | « Suppliers », « CO2 Injection », « Geologic Sequestration » | Quantités liées aux produits vendus ou au CO2 injecté, pas des émissions directes |
+| Part de détention EPA | Émission × part déclarée ; installation sans part déclarée exclue et signalée | Évite de choisir une part à la place de la société |
+| Société mère EPA | Nom exact en majuscules (`EXXON MOBIL CORP`, `THE PROCTER & GAMBLE CO`, `ALPHABET INC`, `TESLA INC`) | Une recherche par mot ramène des faux positifs (« APPLETON PROPERTY VENTURES » pour Apple) |
+| Rattachement canadien | Exploitant dont le nom commence par `Enbridge`, `Canadian Natural` ou `Fortis` | Le fichier donne « exploitant - installation », sans société mère ni part de détention |
+| Total d'Enbridge | Borne inférieure (749,6 kt CO2e) | « Westcoast Energy Inc. » (1,17 Mt déclarées en 2024) n'est pas rattaché : le lien avec Enbridge n'est pas dans le fichier et reste à documenter |
+| Dernière année canadienne | Année la plus récente du fichier ; refus si sa date de publication n'est pas dans `CANADA_PUBLISHED` | Évite de dater un nouveau jeu au hasard |
+| Comparabilité EPA et ECCC | Non comparables directement | AR4 contre AR5, périmètres nationaux, rattachements de nature différente |
+| Date d'extraction | Horodatage du nom du fichier canadien (2026-11-15), appliquée aux deux sources | Les trois fichiers ont été déposés le même jour |
+
+**Contrôles** : la somme des gaz égale le « Total » du fichier canadien (écart maximal 2·10⁻⁹ t) ; le total des 1 879 installations de 2024 (291,66 Mt) correspond au rapport officiel d'ECCC (292 Mt) ; deux exécutions produisent le même fichier ; chaque ligne a une source « utilisé » au registre, une date valide et un titre de l'univers (`tests/unit/test_esg_ingestion.py`).
+
+**Limite d'usage** : une ligne donne des tonnes absolues dans une phrase (`summary`) et pas un nombre séparé. Pour en tirer un signal chiffré du critère `esg` (S2), il faudra une colonne numérique et une règle de normalisation (par exemple par chiffre d'affaires), décidées avec le moteur.

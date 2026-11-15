@@ -8,5 +8,6 @@ fastapi
 uvicorn
 mangum
 pytest
+openpyxl     # lecture du classeur Excel de l'EPA (scripts/ingest_esg.py ; hors déploiement Lambda)
 httpx        # client de test de l'API (fastapi.testclient)
 jsonschema   # validation du contrat mobile (tests/api)
