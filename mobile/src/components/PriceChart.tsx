@@ -56,6 +56,7 @@ export function PriceChart({ series, runId }: { series: PriceSeries; runId?: str
     <View style={styles.wrap}>
       <View style={styles.head}>
         <View style={{ gap: 2, flex: 1, minWidth: 140 }}>
+          <Text style={type.caption}>{t.priceChart.adjusted(series.currency)}</Text>
           <Text style={styles.price}>{`${fmtNum(fp.value, 2)} ${series.currency}`}</Text>
           <Text style={[type.small, { color: fromStart >= 0 ? colors.good : colors.bad, fontWeight: "700" }]}>
             {`${fromStart >= 0 ? "+" : "−"}${fmtPct(Math.abs(fromStart))} `}

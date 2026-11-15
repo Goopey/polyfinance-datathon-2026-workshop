@@ -37,11 +37,13 @@ STEPS: dict[str, tuple[str, int, bool]] = {
 
 
 def bedrock_policy(stack: Stack) -> iam.PolicyStatement:
-    """Appel des modèles et des profils d'inférence interrégionaux (« us.… », routés vers d'autres régions)."""
+    """Appel des modèles et des profils d'inférence interrégionaux (« us.… », routés vers d'autres régions).
+
+    Limité aux modèles Anthropic (les seuls utilisés) : un rôle compromis ne peut pas appeler d'autres modèles."""
     return iam.PolicyStatement(
         actions=["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream", "bedrock:ApplyGuardrail"],
         resources=[
-            "arn:aws:bedrock:*::foundation-model/*",
+            "arn:aws:bedrock:*::foundation-model/anthropic.*",
             f"arn:aws:bedrock:*:{stack.account}:inference-profile/*",
             f"arn:aws:bedrock:*:{stack.account}:application-inference-profile/*",
             f"arn:aws:bedrock:{stack.region}:{stack.account}:guardrail/*",

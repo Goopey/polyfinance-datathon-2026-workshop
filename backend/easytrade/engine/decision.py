@@ -11,7 +11,7 @@ et `disagreements` ; ici la confiance se fonde sur la couverture des données.
 """
 from __future__ import annotations
 
-from typing import Iterable, Optional
+from typing import Iterable, Mapping, Optional
 
 import pandas as pd
 
@@ -24,7 +24,7 @@ from easytrade.schemas.weights import CRITERIA, CRITERION_LABELS, ProfileWeights
 
 # Libellés lisibles des critères non couverts, pour « ce que nous ne savons pas ».
 MISSING_LABELS = {
-    "esg": "signaux ESG non encore sourcés",
+    "esg": "aucune preuve ESG concluante à cette date",
     "qualite": "fondamentaux (qualité) non publiés à cette date",
     "preferences": "correspondance aux préférences déclarées non encore modélisée",
     "croissance": "historique de prix insuffisant",
@@ -53,17 +53,23 @@ def decide(
     as_of: DateLike,
     *,
     esg_controversial: frozenset[str] = frozenset(),
+    esg_emitters: frozenset[str] = frozenset(),
     candidates: Optional[Iterable[str]] = None,
+    risk: Optional[Mapping[str, tuple[Optional[float], Optional[float]]]] = None,
+    risk_level: Optional[str] = None,
 ) -> Decision:
     """Produit la décision pour un persona sur un univers donné.
 
     `candidates` (P3) : si fourni, seuls ces tickers sont classés. Les scores restent normalisés
     sur tout l'univers admissible : le choix des candidats par l'agent de recherche ne change pas
     le score d'un actif.
+    `risk` (ticker → (volatilité %, perte maximale %)) et `risk_level` : règle de tolérance au risque
+    (`engine.constraints`) ; le pipeline les fournit toujours.
     """
     as_of_date = to_timestamp(as_of).date()
     weights = profile_weights.weights
-    screening = screen_assets(assets, profile_weights.constraints, esg_controversial)
+    screening = screen_assets(assets, profile_weights.constraints, esg_controversial,
+                              esg_emitters=esg_emitters, risk=risk, risk_level=risk_level)
 
     if not screening.eligible:
         return Decision(
@@ -183,14 +189,18 @@ def apply_debate(
     """Intègre le débat sans toucher aux scores : confiance par piste, désaccords, drapeaux.
 
     La confiance d'une piste est le minimum entre la confiance fondée sur la couverture des
-    données (`decision.confidence`) et celle tirée du débat. Une piste non débattue garde la
-    confiance des données. Les désaccords sont recopiés tels quels.
+    données et celle tirée du débat. La couverture est celle **de la piste** : le poids des critères
+    qui lui manquent (une piste sans preuve ESG pour un profil qui pèse l'ESG à 25 % n'est pas
+    « élevée »), jamais meilleure que la couverture commune (`decision.confidence`). Une piste non
+    débattue garde la confiance des données. Les désaccords sont recopiés tels quels.
     """
     records = list(records)
     by_ticker = {record.ticker: record for record in records}
-    data_level = _LEVELS.index(decision.confidence)
+    common_level = _LEVELS.index(decision.confidence)
     confidence: dict[str, Confidence] = {}
     for candidate in decision.ranking:
+        own_missing = sum(c.weight for c in candidate.criteria if c.missing)
+        data_level = min(common_level, _LEVELS.index(_confidence(own_missing)))
         record = by_ticker.get(candidate.ticker)
         level = data_level if record is None else min(data_level, _LEVELS.index(debate_confidence(record)))
         confidence[candidate.ticker] = _LEVELS[level]

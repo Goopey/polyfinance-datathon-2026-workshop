@@ -61,9 +61,15 @@ def test_poids_negatifs_refuses(svc):
         svc.create_profile(ProfileDraft(base_persona="robert", weights_override={"croissance": -1.0}))
 
 
-def test_aucune_recommandation_possible(svc):
+def test_mateo_esg_applique(svc):
+    """Depuis le critère ESG (engine/esg.py) : Mateo reçoit des pistes, le fonds à filtre ESG en tête,
+    les émetteurs majeurs documentés écartés ; les pistes sans preuve ESG le disent. (Le chemin « aucune
+    recommandation » du pipeline est couvert par backend/tests/unit/test_pipeline.py.)"""
     st, _ = _run(svc, "mateo")
-    assert st.result.no_recommendation and not st.result.items
+    assert not st.result.no_recommendation and st.result.items[0].ticker == "ESGV"
+    excluded = {r.ticker for r in st.result.rejected if "émetteur majeur" in r.reason}
+    assert excluded == {"XOM", "CNQ.TO"}
+    assert all(any("preuve ESG" in u for u in i.unknowns) for i in st.result.items[1:])
 
 
 # ---------- adéquation : l'objectif, l'horizon et la tolérance doivent compter ---------------------
@@ -115,6 +121,20 @@ def test_classement_et_tester_une_idee_coherents(svc):
     test, _ = _run(svc, pw.profile_id, top.ticker)
     assert not (top.fit == "élevée" and test.result.coherence.verdict == "incohérent avec le profil"), (
         f"{top.ticker} : n° 1 « élevée » dans les pistes, « incohérent » dans Tester une idée")
+
+
+@pytest.mark.parametrize("profile_id, ticker", [
+    ("robert", "TSLA"), ("robert", "NVDA"), ("robert", "ZST.TO"), ("robert", "BTC-USD"),
+    ("amira", "BTC-USD"), ("amira", "NVDA"), ("amira", "ETH-USD"),
+])
+def test_verdict_incoherent_si_et_seulement_si_ecarte(svc, profile_id, ticker):
+    """« Tester une idée » dit « incohérent » exactement quand le classement du même profil écarte le titre
+    (règle du profil ou tolérance au risque) : les deux écrans ne peuvent pas se contredire."""
+    test, rid = _run(svc, profile_id, ticker)
+    base, _ = _run(svc, profile_id)
+    excluded = ticker in {r.ticker for r in base.result.rejected if r.kind == "contrainte"}
+    assert (test.result.coherence.verdict == "incohérent avec le profil") == excluded, (
+        test.result.coherence.verdict, excluded)
 
 
 def test_profils_officiels_differencies(svc):

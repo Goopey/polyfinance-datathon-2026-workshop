@@ -97,7 +97,8 @@ Sortie valide et attendue dans ces cas :
 - preuves insuffisantes (métriques manquantes, fenêtre trop courte) ;
 - confiance faible sur tous les candidats ;
 - **le critère le plus important du profil n'a aucune donnée** (ajout du 2026-11-15) : on ne recommande pas
-  sans ce que le profil juge prioritaire. Exemple : Mateo (ESG à 25 %) tant que l'ESG n'est pas sourcé.
+  sans ce que le profil juge prioritaire. Exemple : Mateo (ESG à 25 %) si aucune piste admissible n'a de
+  constat ESG concluant (section « Critère ESG »).
 
 Le résultat explique alors ce qui manque.
 
@@ -123,6 +124,106 @@ baisse la confiance.
 
 Effets observés : Robert gagne en confiance (« élevé ») ; GOOGL (ROE 33 %, peu d'endettement) entre dans ses pistes,
 jugée légitime pour un profil attaché à la qualité ; QQQ (10e piste) est suivi dans la tâche de calibrage C7.
+(Depuis la règle de tolérance ci-dessous, GOOGL et QQQ sont écartés pour Robert : ils dépassent ses deux repères de risque.)
+
+## Critère ESG (réalisation, 2026-11-15)
+
+Code : `engine/esg.py` (constats), `orchestration/pipeline.py` (`_add_esg_evidence`), `engine/constraints.py`
+(exclusions), `engine/scoring.py` (`ABSOLUTE_CRITERIA`). Tests : `tests/unit/test_esg_engine.py`, scénario S2.
+
+**Ce que les données permettent de conclure.** Les preuves ESG du dépôt (docs/04, section 12) sont des émissions
+directes de GES absolues et, pour la plupart, des **bornes inférieures** (périmètre national, rattachement par nom
+au Canada). Une borne inférieure peut établir qu'une société émet beaucoup, jamais qu'elle émet peu. Le moteur
+n'en tire donc que quatre constats :
+
+| Constat | Condition | Effet sur le classement | Effet sur les contraintes |
+|---|---|---|---|
+| Controverse documentée | Ligne dont le type de signal commence par « Controverse » (saisie sourcée) | Score ESG 0 (connu) | Écarté si `esg_exclusion` (règle `esg_exclusion`) |
+| Émetteur majeur documenté | Plus grande borne inférieure d'émissions ≥ 10 Mt CO2e | Score ESG 0 (connu) | Écarté si `esg_exclusion` (règle `esg_emissions`) |
+| Fonds à filtre ESG | Classification de l'univers « Broad market (U.S., ESG-screened) » (ESGV) | Score ESG 1 | — |
+| Non concluant | Émissions sous le seuil | Critère **manquant** (preuves visibles dans le dossier) | — |
+
+Un actif sans aucune preuve ESG n'a pas de constat : critère manquant.
+
+**Pourquoi pas un classement par émissions.** Pour Mateo, les seuls actifs admissibles avec une donnée sont
+FTS.TO, ENB.TO, PG et XOM. Un rang centile des émissions placerait un pipelinier (ENB, borne inférieure) et
+une pétrolière au-dessus de tous les actifs inconnus : le profil ESG serait poussé vers l'énergie fossile parce
+que seules ces sociétés déclarent des installations. Refusé.
+
+**Score absolu.** Le critère est catégoriel : son signal est un score dans [0, 1], utilisé tel quel. Avec un rang
+centile, un émetteur majeur documenté obtiendrait un score supérieur à celui d'un actif inconnu (0).
+
+**Confiance par piste.** La confiance fondée sur les données est calculée **par piste**, avec le poids des
+critères qui lui manquent (seuils inchangés : 20 % et 40 %). Une piste sans preuve ESG pour Mateo (25 %) est au
+mieux « moyenne », et le dit dans « ce que nous ne savons pas ».
+
+**Hypothèses de l'équipe**
+
+| Sujet | Valeur | Raison |
+|---|---|---|
+| Seuil d'émetteur majeur | 10 Mt CO2e par an | Un ordre de grandeur au-dessus des écarts de méthode (AR4 / AR5) ; une borne inférieure au-dessus du seuil est concluante. XOM (37,88 Mt, EPA) et CNQ.TO (18,57 Mt, ECCC) le dépassent ; PG (1,66 Mt) non. |
+| Lecture « fort impact environnemental » | Un émetteur majeur est écarté pour un profil qui demande d'éviter les entreprises liées à des controverses environnementales | Lecture assumée de la préférence de Mateo, affichée comme règle d'EasyTrade, distincte d'une controverse |
+| Plusieurs sources pour un titre | Plus grande borne inférieure, sans addition | Périmètres et potentiels de réchauffement différents |
+| Fonds à filtre ESG | Score maximal sur la foi de la classification de l'univers | Méthodologie et composition d'ESGV non saisies (`etf_issuers`, « prévu ») : limite affichée |
+| Dimensions couvertes | Environnement (émissions directes) seulement | Ni sociale ni gouvernance : aucune source admise saisie |
+
+**Effet sur les personas (2026-11-12, agents simulés).** Mateo reçoit 10 pistes, ESGV en tête. XOM et CNQ.TO sont
+écartés sur leurs émissions documentées, et les 9 autres pistes portent « Aucune preuve ESG concluante à cette date »,
+avec une confiance moyenne. Avec le poids ESG à zéro, ESGV quitte la première place (S2, point 3). Amira et Robert
+n'ont pas d'exclusion ESG ; ESGV gagne au plus leur poids ESG (5 %).
+
+## Correctifs issus de l'audit (2026-11-15)
+
+Audit complet : `AUDIT_REPORT.md` (racine du dépôt). Tests : `backend/tests/unit/test_audit_fixes.py` et `audit/`.
+
+### Tolérance au risque : une règle, partagée avec « Tester une idée »
+
+Repères par niveau (`engine/constraints.py`, `RISK_LIMITS`, inchangés) : faible 18 % / -20 %, faible à modérée
+22 % / -25 %, modérée 25 % / -30 %, élevée 45 % / -50 % (volatilité annualisée / perte maximale, toute la période).
+
+| Écart de l'actif | Profil prudent ou modéré | Profil à tolérance élevée |
+|---|---|---|
+| Un repère dépassé de plus de 1,5 fois | Écarté (« risque au-delà de votre tolérance », chiffres cités) | Écarté |
+| Les deux repères dépassés | Écarté | Admissible avec réserve |
+| Un seul repère dépassé | Admissible, adéquation plafonnée à « partielle », risque signalé | Idem |
+
+Une classe autorisée dans une poche plafonnée (crypto avec `max_weight_crypto > 0`) suit la colonne « tolérance élevée » :
+le plafond encadre son risque. Le verdict « incohérent avec le profil » de « Tester une idée » est rendu **exactement**
+quand le classement écarte le titre (règle du profil ou tolérance) ; les comparaisons aux médianes des pistes retenues
+nuancent le verdict sans le rendre incohérent. Le titre testé n'est pas ajouté à la liste « Écartées » : l'analyse de
+cohérence en rend compte.
+
+### Objectif et horizon
+
+- Critère `horizon` : pire **année** glissante si l'horizon minimal déclaré est de moins de 5 ans (Robert, 3 à 5 ans),
+  pire période glissante de **3 ans** sinon (`engine/signals.py`, `horizon_metric`).
+- Questionnaire (`api/service.py`) : l'objectif et l'horizon ajustent les poids du gabarit (préserver : stabilité +10,
+  croissance -10 ; croître : croissance +10, stabilité -5, horizon -5 ; moins de 5 ans : horizon +5, stabilité +5,
+  croissance -10 ; plus de 12 ans : croissance +5, horizon -5 ; points de %, puis renormalisation).
+- Réponses contradictoires : « préserver le capital » plafonne la tolérance appliquée à « faible », un horizon de moins de
+  5 ans à « modérée ». La lecture la plus prudente l'emporte et l'écran de résumé le dit (« Vos réponses se contredisent »).
+
+### Diversification mesurée
+
+Le critère `diversification` est la **corrélation moyenne** des rendements quotidiens (CAD, dates communes, sans
+remplissage) de l'actif avec les 30 autres actifs de l'univers : plus elle est basse, plus l'actif diversifie
+(`engine/signals.py`, `correlation_diversification`). Elle remplace le décompte des actifs du même secteur. Preuve
+`FAIT` par actif, citée dans le « pourquoi ».
+
+### Débat
+
+- Placement sans risque de référence : taux directeur moyen de la Banque du Canada sur la fenêtre des prix (série
+  V39079, valeurs publiées à la date d'analyse), preuve `FAIT` ajoutée au dossier de chaque candidat.
+- Bull : appui sans réserve seulement si le rendement annualisé dépasse ce taux ; sinon appui avec réserve.
+  Réaliste : réserve si le risque pris n'a pas été rémunéré (même comparaison).
+- Désaccord : au moins un agent s'oppose pendant qu'un autre ne s'oppose pas (une simple réserve n'en est plus un).
+- Robustesse : une sortie invalide isolée (après relance) donne une position « non exprimée » ; un candidat dont la
+  majorité des tours est invalide, ou un agent invalide pour **tous** les candidats, fait échouer l'analyse.
+
+### Dates d'analyse
+
+L'API refuse une date postérieure aux dernières données ou disposant de moins d'un an d'historique (HTTP 422). Le
+« rendement de l'année 2022 » n'est calculé qu'une fois l'année terminée à la date d'analyse.
 
 ## Sensibilité
 
@@ -166,4 +267,4 @@ Choix de l'équipe (`HYPOTHESE`), à calibrer. Valeurs dans le code indiqué ; c
 | Aucune recommandation après débat | Confiance faible sur toutes les pistes retenues | Troisième cas de la section « Aucune recommandation » | `orchestration/pipeline.py` |
 | Effet sur le panier simulé | Volatilité du panier à parts égales, sans puis avec le titre testé à la part maximale par actif ; rendements quotidiens en CAD sur les dates communes | Tient compte des corrélations ; preuve `SCENARIO` | `validation/metrics.py` (`basket_volatility_metric`) |
 
-Conséquence sur les scénarios, avec les données du jeu de départ : le critère `preferences` étant couvert, la confiance fondée sur les données passe à « élevé » pour Amira (15 % du poids sur des critères non sourcés) et reste « moyen » pour Robert (30 %) ; Mateo reste à 40 % non sourcés (ESG, qualité), donc « aucune recommandation » jusqu'à la saisie des preuves ESG (P6).
+Conséquence sur les scénarios, avec les données du jeu de départ : le critère `preferences` étant couvert, la confiance fondée sur les données passe à « élevé » pour Amira (15 % du poids sur des critères non sourcés) et reste « moyen » pour Robert (30 %) ; Mateo reste à 40 % non sourcés (ESG, qualité), donc « aucune recommandation » jusqu'à la saisie des preuves ESG (P6). (Dépassé : la qualité puis l'ESG sont maintenant renseignés, voir « Qualité » et « Critère ESG ».)

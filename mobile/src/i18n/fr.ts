@@ -171,6 +171,7 @@ export const fr = {
     weightsHint: "Touchez − ou + pour ajuster ; le total reste à 100 %.",
     decrease: (c: string) => `Diminuer ${c}`,
     increase: (c: string) => `Augmenter ${c}`,
+    conflictTitle: "Vos réponses se contredisent : nous retenons la plus prudente",
     whyTitle: "Pourquoi ces valeurs",
     whySummary: (n: number) => `${n} raison${n > 1 ? "s" : ""} tirée${n > 1 ? "s" : ""} de votre profil`,
     missingTitle: "Informations manquantes",
@@ -266,6 +267,7 @@ export const fr = {
   },
 
   priceChart: {
+    adjusted: (cur: string) => `Cours ajusté (dividendes réinvestis), en ${cur}`,
     since: (d: string) => `depuis le ${d}`,
     asOf: (d: string) => `au ${d}`,
     low: (v: string, cur: string) => `plus bas ${v} ${cur}`,

@@ -71,8 +71,12 @@ class DebateRecord(BaseModel):
 
     @property
     def dissent(self) -> bool:
-        """Vrai dès que les positions finales ne sont pas toutes identiques."""
-        return len(set(self.stances.values())) > 1
+        """Désaccord : au moins un agent s'oppose pendant qu'un autre ne s'oppose pas.
+
+        Une simple réserve (« appui avec réserve ») à côté d'appuis n'est pas un désaccord : l'afficher
+        comme tel sur presque toutes les pistes viderait le signal de son sens (audit H2)."""
+        stances = set(self.stances.values())
+        return "opposition" in stances and len(stances) > 1
 
     @property
     def removed_arguments(self) -> int:

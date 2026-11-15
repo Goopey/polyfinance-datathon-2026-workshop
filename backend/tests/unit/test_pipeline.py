@@ -8,6 +8,7 @@ from datetime import date
 
 import pytest
 
+from easytrade.agents.debate.protocol import UNANSWERED
 from easytrade.agents.simulated import MODEL_ID, NOTE, simulated_client
 from easytrade.orchestration.pipeline import run_pipeline
 
@@ -51,12 +52,31 @@ def test_agents_simules_signales_a_l_utilisateur(pipeline_run):
     assert NOTE in run.explanation.unknowns
 
 
-def test_mateo_aucune_recommandation_tant_que_l_esg_n_est_pas_source(pipeline_run):
+def test_mateo_critere_esg_dans_le_pipeline(pipeline_run):
+    """Mateo : le critère ESG est renseigné (engine.esg) ; les exclusions ESG et crypto sont motivées."""
     run = pipeline_run("mateo")
     explanation = run.explanation
-    assert run.status == "termine" and explanation.no_recommendation and explanation.items == ()
-    assert "ESG" in explanation.missing[0]
-    assert {r.ticker for r in explanation.rejected} == {"BTC-USD", "ETH-USD"}  # aucune piste crypto
+    assert run.status == "termine" and not explanation.no_recommendation and explanation.items
+    rules = {r.ticker: r.rule for r in run.decision.rejected}
+    assert {t for t, r in rules.items() if r == "max_weight_crypto"} == {"BTC-USD", "ETH-USD"}
+    assert {t for t, r in rules.items() if r == "esg_emissions"} == {"XOM", "CNQ.TO"}
+    assert set(rules.values()) == {"max_weight_crypto", "esg_emissions", "tolerance_risque"}
+    note = next(s.note for s in run.trace.steps if s.step == "dossiers_de_preuves")
+    assert "émetteurs majeurs documentés : CNQ.TO, XOM" in note and "fonds à filtre ESG : ESGV" in note
+
+
+def test_pipeline_aucune_recommandation_debat_ignore(workspace):
+    """Aucun candidat admissible (la recherche ne propose que de la crypto à un profil qui l'exclut) :
+    pas de débat, explication assemblée par le code, sortie « aucune recommandation »."""
+    client = simulated_client()
+    client.responders["research"] = lambda payload: {
+        "candidates": [{"ticker": t, "reason": "Cas de test."} for t in ("BTC-USD", "ETH-USD")],
+        "tool_requests": [],
+    }
+    run = run_pipeline("mateo", client=client, workspace=workspace)
+    explanation = run.explanation
+    assert run.status == "termine", run.error
+    assert explanation.no_recommendation and explanation.items == ()
     by_name = {s.step: s for s in run.trace.steps}
     assert by_name["debat"].status == "ignore"
     assert by_name["explication"].kind == "code" and by_name["explication"].model_id is None
@@ -76,6 +96,7 @@ def test_aucune_preuve_posterieure_a_une_date_passee(pipeline_run):
 
 
 def test_sortie_de_modele_invalide_echec_propre(workspace):
+    """Un agent dont la sortie est invalide pour *tous* les candidats : panne systématique, échec propre."""
     client = simulated_client()
     client.responders["debate.bear"] = [{"stance": "peut-être"}]  # invalide, y compris après la relance
     result = run_pipeline("amira", client=client, workspace=workspace)
@@ -83,7 +104,29 @@ def test_sortie_de_modele_invalide_echec_propre(workspace):
     assert "LLMOutputError" in result.error and "debate.bear.round1" in result.error
     last = result.trace.steps[-1]
     assert (last.step, last.status) == ("debat", "echec")
-    assert len([c for c in client.calls if c["step"] == "debate.bear.round1"]) == 2  # une seule relance
+    calls = [c for c in client.calls if c["step"] == "debate.bear.round1"]
+    first, retries = [c for c in calls if c["feedback"] is None], [c for c in calls if c["feedback"]]
+    assert first and len(retries) == len(first)  # une seule relance par appel
+
+
+def test_sortie_invalide_isolee_toleree(workspace):
+    """Une sortie invalide pour un seul agent sur un seul candidat ne fait pas échouer l'analyse (audit H5) :
+    la position de cet agent est « non exprimée » et la piste garde ses autres positions."""
+    client = simulated_client()
+    honest = client.responders["debate.bear"]
+    target: dict = {}
+
+    def flaky(payload):
+        target.setdefault("ticker", payload["ticker"])
+        return {"stance": "peut-être"} if payload["ticker"] == target["ticker"] else honest(payload)
+
+    client.responders["debate.bear"] = flaky
+    result = run_pipeline("amira", client=client, workspace=workspace)
+    assert result.status == "termine", result.error
+    bear = result.debate[target["ticker"]].position("bear")
+    assert bear.arguments == () and UNANSWERED in bear.open_questions
+    others = [t for t in result.debate if t != target["ticker"]]
+    assert others and all(UNANSWERED not in result.debate[t].position("bear").open_questions for t in others)
 
 
 def test_titre_inconnu_refuse_sans_analyse(workspace):

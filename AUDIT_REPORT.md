@@ -275,3 +275,33 @@ No secrets in tracked files or git history (patterns: AWS access keys, secret ke
 - Cost and latency were not measured.
 - Live market data was not re-downloaded. All checks use the frozen starter dataset (2021-11-12 to 2026-11-12) and the team's Finnhub snapshots.
 - Sentiment and quality data were checked for point-in-time logic by inspection only; their values were not recomputed against Finnhub.
+
+---
+
+## 11. Status after fixes (2026-11-15, same day)
+
+Application code was changed after this audit was written. Sections 1 to 10 describe the system **before** these fixes. The rules are documented in `docs/03_DECISION_ENGINE.md`, section "Correctifs issus de l'audit". The regression tests are in `backend/tests/unit/test_audit_fixes.py`.
+
+**Results: audit suite 53/53 passed** (the 8 earlier failures are fixed, and 7 tests were added). Backend: 326 passed, 2 skipped (ESG data). Mobile: 29 unit tests passed, and the end-to-end runs on the real API and on demo data passed.
+
+| # | Status | What changed | Measured effect |
+|---|---|---|---|
+| C1 | Fixed | The horizon criterion uses the worst rolling 1-year return when the horizon is under 5 years, and 3 years otherwise. Objective and horizon shift the questionnaire weights. Contradictory answers cap the tolerance at the most prudent reading, and the summary screen shows this. | Questionnaire profiles that differ only by objective or horizon now get different weights and different rankings. |
+| C2 | Fixed | A single risk-tolerance rule is shared by the ranking and "Test an idea". An asset is excluded if it exceeds a limit by more than 1.5×, or if it exceeds both limits (except for high tolerance or a capped crypto sleeve). If it exceeds only one limit, it stays eligible, its fit is capped at "partial", and it is flagged. "Test an idea" says "inconsistent" exactly when the ranking excludes the asset. | Robert with growth-heavy weights no longer gets NVDA as #1. Robert's run has 12 tolerance exclusions. |
+| H1 | Improved | Through C2 and H3. | Amira and Robert now share 2 ideas (GLD, JNJ), down from 7 of 7. GLD appears in 6 of 9 profiles, down from 9 of 9. |
+| H2 | Improved | Bull and Realist compare returns with a risk-free reference (average Bank of Canada policy rate, series V39079, point-in-time). "Disagreement" now requires at least one opposition. The debate still does not change the ranking, by design. | Disagreement on 35 % of items (was 77 %). Bull qualifies its support on 10 of 81 items (was 0). |
+| H3 | Fixed | Diversification is the asset's mean pairwise correlation of daily CAD returns with the rest of the universe, computed on common dates. | Cited as a `FAIT` evidence record in each "why". |
+| H4 | Fixed in code, **not deployed** | API stage throttling (5 requests/s, burst 10). CORS origins set from CDK context. | Verified by `cdk synth`. |
+| H5 | Fixed | An isolated invalid model output after retry becomes an "unanswered" position. The run fails only if most of a candidate's turns are invalid, or if an agent fails on every candidate. | `test_sortie_invalide_isolee_toleree`. |
+| M1 | Fixed | `as_of` must fall inside the data window and leave at least one year of history (HTTP 422 otherwise). | Unit tests. |
+| M2 | Fixed | The 2022 return is computed only once the year is complete. | Unit test. |
+| M3 | Partial | Captured only through the objective and horizon caps. Liquidity needs and dependants are not modelled. | — |
+| M4 | Open | Mateo still gets "no recommendation": the ESG score is not wired. Greenhouse-gas data appears as signals for 7 companies. | S2 remains skipped. |
+| M5 | Partial | Exceeding a risk limit caps the fit at "partial". Labels are otherwise still relative ranks; Robert's padding ideas (PG, RY) are shown as "low". | — |
+| M6 | Fixed in code, **not deployed** | Bedrock read timeout of 20 s and 1 attempt on the API Lambda (configurable through environment variables). | Verified by `cdk synth`. |
+| L1 | Fixed | The chart caption says "adjusted close, CAD". | — |
+| L2 | Fixed in code, **not deployed** | `bedrock:InvokeModel` restricted to `anthropic.*` foundation models. | Verified by `cdk synth`. |
+| L3 | Unchanged | Documented in the evidence limits. | — |
+| L4 | Unchanged | Rules cover the 2,180 strings the simulated backend emits. Free-form Bedrock text still falls back to French. | `mobile/tests/dataTranslation.test.ts`. |
+
+Spec change: scenario S1 point 5 in `docs/09_SCENARIOS_TEST.md` now accepts "sector cap reached **or** candidate downgraded". With correlation-based diversification, the list diversifies before the cap needs to downgrade anything.

@@ -22,7 +22,7 @@ import json
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 from typing import Any, Optional
 
 import pandas as pd
@@ -70,10 +70,27 @@ from easytrade.validation.data_quality import build_quality_report
 from easytrade.validation.metrics import compute_metrics_table
 
 SOURCE_QUESTIONNAIRE = "profil_questionnaire"
+MIN_HISTORY_DAYS = 365  # historique minimal avant la date d'analyse (indicateurs annualisés)
 
 # --- questionnaire → profil fictif (hypothèses de l'équipe, docs/03_DECISION_ENGINE.md) --------
 TEMPLATE_BY_TOLERANCE = {"faible": "robert", "moderee": "mateo", "elevee": "amira"}
 TOLERANCE_LABEL = {"faible": "faible", "moderee": "modéré", "elevee": "élevé"}
+TOLERANCE_ORDER = ("faible", "moderee", "elevee")  # du plus prudent au plus risqué
+# Réponses qui limitent le risque acceptable, quelle que soit la tolérance déclarée (audit C1) :
+# l'objectif « préserver » et un horizon de moins de 5 ans. La lecture la plus prudente l'emporte.
+TOLERANCE_CAP = {("objectif", "preserver"): "faible", ("horizon", "court"): "moderee"}
+CAP_REASON = {
+    ("objectif", "preserver"): "Votre objectif est de préserver le capital",
+    ("horizon", "court"): "Votre horizon est de moins de 5 ans",
+}
+# Ajustement des poids du gabarit par l'objectif et par l'horizon (points de pourcentage, puis
+# renormalisation à 100 %). Hypothèses de l'équipe, à calibrer.
+WEIGHT_SHIFTS: dict[tuple[str, str], dict[str, float]] = {
+    ("objectif", "preserver"): {"stabilite": +0.10, "croissance": -0.10},
+    ("objectif", "croissance"): {"croissance": +0.10, "stabilite": -0.05, "horizon": -0.05},
+    ("horizon", "court"): {"horizon": +0.05, "stabilite": +0.05, "croissance": -0.10},
+    ("horizon", "long"): {"croissance": +0.05, "horizon": -0.05},
+}
 HORIZON_YEARS: dict[str, tuple[int, Optional[int]]] = {"court": (3, 5), "moyen": (5, 12), "long": (12, None)}
 OBJECTIF_TEXT = {
     "preserver": "Préserver son capital.",
@@ -179,6 +196,8 @@ class ApiService:
         self._profile_views: dict[str, ProfileWeightsView] = {}
         self._quality: dict[date, list[QualityCheck]] = {}
         self._sentiment_table = load_sentiment(self.ws.settings.reference_dir)
+        all_dates = self.ws.store.prices(date(2100, 1, 1))["date"]
+        self._data_window: tuple[date, date] = (all_dates.min().date(), all_dates.max().date())
         self._lock = threading.RLock()
         self._executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="easytrade-run")
 
@@ -236,6 +255,8 @@ class ApiService:
             ),
             weights={c: weights[c] for c in CRITERIA},
             rationale=[
+                *(RationaleView(field="tolerance", because=text, claim_kind="HYPOTHESE")
+                  for text in entry.get("_conflicts", ())),
                 *(RationaleView(field=r.field, because=r.because, claim_kind=r.claim_kind) for r in weighting.rationale),
                 *([RationaleView(field="weights", because="Poids modifiés à la main sur l'écran de résumé.")]
                   if entry.get("_modified") else []),
@@ -272,7 +293,18 @@ class ApiService:
                 entry["_label"] = f"{base['profil']['nom']} (poids modifiés)"
                 entry["_modified"] = True
         else:
-            template = copy.deepcopy(self._entry(TEMPLATE_BY_TOLERANCE[draft.tolerance]))
+            # Tolérance appliquée : la plus prudente entre la tolérance déclarée et ce que permettent
+            # l'objectif et l'horizon. Chaque réduction est dite à l'utilisateur (jamais en silence).
+            applied = draft.tolerance
+            conflicts: list[str] = []
+            for answer in (("objectif", draft.objectif), ("horizon", draft.horizon)):
+                cap = TOLERANCE_CAP.get(answer)
+                if cap is not None and TOLERANCE_ORDER.index(cap) < TOLERANCE_ORDER.index(applied):
+                    conflicts.append(
+                        f"{CAP_REASON[answer]} : tolérance au risque retenue « {TOLERANCE_LABEL[cap]} » "
+                        f"au lieu de « {TOLERANCE_LABEL[draft.tolerance]} » déclarée.")
+                    applied = cap
+            template = copy.deepcopy(self._entry(TEMPLATE_BY_TOLERANCE[applied]))
             low, high = HORIZON_YEARS[draft.horizon]
             constraints = dict(template["contraintes"])
             preferences = [PREFERENCE_TEXT[p] for p in draft.preferences]
@@ -281,6 +313,10 @@ class ApiService:
                 preferences.append(sentence)
                 constraints.update(tightening)
             weights = dict(template["poids"])
+            for answer in (("objectif", draft.objectif), ("horizon", draft.horizon)):
+                for criterion, delta in WEIGHT_SHIFTS.get(answer, {}).items():
+                    weights[criterion] = max(0.0, weights[criterion] + delta)
+            weights = _normalize_weights(weights)
             if draft.weights_override is not None:
                 weights = _normalize_weights({**weights, **draft.weights_override})
             entry = {
@@ -289,10 +325,11 @@ class ApiService:
                 "_label": "Profil fictif",
                 "_source": SOURCE_QUESTIONNAIRE,
                 "_modified": draft.weights_override is not None,
+                "_conflicts": conflicts,
                 "profil": {
                     "nom": "Profil fictif",
                     "experience": "",
-                    "tolerance_risque": TOLERANCE_LABEL[draft.tolerance],
+                    "tolerance_risque": TOLERANCE_LABEL[applied],
                     "horizon_annees": {"min": low, "max": high},
                     "objectif": OBJECTIF_TEXT[draft.objectif],
                     "preferences": preferences,
@@ -314,6 +351,14 @@ class ApiService:
         if ticker and ticker not in self._names:
             raise NotFound(f"Titre absent de l'univers analysé : {ticker}")
         as_of = request.as_of or self.default_as_of
+        # Date d'analyse : jamais après les dernières données (prix périmés présentés comme actuels), et au
+        # moins un an d'historique (un rendement annualisé sur quelques mois n'a pas de sens). Audit M1.
+        first, last = self._data_window
+        earliest = first + timedelta(days=MIN_HISTORY_DAYS)
+        if as_of > last:
+            raise InvalidRequest(f"Date d'analyse postérieure aux dernières données disponibles ({last}).")
+        if as_of < earliest:
+            raise InvalidRequest(f"Date d'analyse trop tôt : au moins un an d'historique est requis (à partir du {earliest}).")
         return entry, ticker, as_of, make_run_id(as_of, request.profile_id, ticker)
 
     def start_run(self, request: RunRequest) -> str:

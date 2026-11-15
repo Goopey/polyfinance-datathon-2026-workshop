@@ -22,10 +22,16 @@ class ApiStack(Stack):
                  models: dict[str, str], **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
+        # Origines autorisées : `cdk deploy -c corsOrigins=https://mon-site.example` (séparées par des virgules).
+        # Par défaut « * » (application Expo en développement) ; à restreindre pour la version hébergée.
+        cors_origins = [o.strip() for o in str(self.node.try_get_context("corsOrigins") or "*").split(",") if o.strip()]
         environment = {
             **runtime_environment(data, models),
             "EASYTRADE_STATE_MACHINE_ARN": pipeline.state_machine.state_machine_arn,
-            "EASYTRADE_CORS_ORIGINS": "*",
+            "EASYTRADE_CORS_ORIGINS": ",".join(cors_origins),
+            # Appel Bedrock synchrone (GET /profiles/{id}) : doit tenir sous la limite de 29 s de l'intégration.
+            "EASYTRADE_BEDROCK_READ_TIMEOUT": "20",
+            "EASYTRADE_BEDROCK_MAX_ATTEMPTS": "1",
         }
         log_group = logs.LogGroup(self, "JournauxApi", retention=logs.RetentionDays.TWO_WEEKS,
                                   removal_policy=RemovalPolicy.DESTROY)
@@ -51,12 +57,17 @@ class ApiStack(Stack):
             self, "HttpApi",
             description="EasyTrade — simulateur d'aide à la décision (aucune transaction réelle)",
             cors_preflight=apigw.CorsPreflightOptions(
-                allow_origins=["*"],
+                allow_origins=cors_origins,
                 allow_methods=[apigw.CorsHttpMethod.GET, apigw.CorsHttpMethod.POST, apigw.CorsHttpMethod.OPTIONS],
                 allow_headers=["*"],
                 max_age=Duration.hours(1),
             ),
             default_integration=integrations.HttpLambdaIntegration("Lambda", fn),
         )
+        # Limite de débit de l'étape par défaut : chaque analyse déclenche des appels Bedrock payants ; une URL
+        # publique sans limite exposerait le compte à un emballement des coûts (audit H4).
+        stage = http.default_stage.node.default_child
+        stage.default_route_settings = apigw.CfnStage.RouteSettingsProperty(
+            throttling_rate_limit=5, throttling_burst_limit=10)
         CfnOutput(self, "ApiUrl", value=http.api_endpoint, description="À mettre dans mobile/.env : EXPO_PUBLIC_API_URL")
         CfnOutput(self, "StateMachineArn", value=pipeline.state_machine.state_machine_arn)

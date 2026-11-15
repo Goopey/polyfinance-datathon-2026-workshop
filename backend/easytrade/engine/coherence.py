@@ -13,7 +13,14 @@ from typing import Optional
 import pandas as pd
 
 from easytrade.data.point_in_time import DateLike
-from easytrade.engine.constraints import screen_assets
+from easytrade.engine.constraints import (  # noqa: F401  (RISK_LIMITS, SEVERE_RATIO, tolerance_level : réexportés)
+    RISK_LIMITS,
+    SEVERE_RATIO,
+    pct_fr,
+    risk_breach,
+    screen_assets,
+    tolerance_level,
+)
 from easytrade.engine.decision import decide
 from easytrade.schemas.coherence import CoherenceReport, Tension
 from easytrade.schemas.weights import ProfileWeights
@@ -36,8 +43,17 @@ def evaluate_idea(
     as_of: DateLike,
     *,
     esg_controversial: frozenset[str] = frozenset(),
+    esg_emitters: frozenset[str] = frozenset(),
+    risk: Optional[dict[str, tuple[Optional[float], Optional[float]]]] = None,
+    risk_level: Optional[str] = None,
+    horizon_label: str = "3 ans",
 ) -> CoherenceReport:
-    """Analyse de cohérence d'un titre soumis, par rapport aux contraintes et aux pistes retenues."""
+    """Analyse de cohérence d'un titre soumis, par rapport aux contraintes et aux pistes retenues.
+
+    `risk` et `risk_level` : mêmes repères que le classement (`decide`), pour que les pistes de référence
+    soient celles que le profil reçoit vraiment. Les écarts aux repères eux-mêmes sont ajoutés par
+    `limit_tensions` (pipeline), avec leurs preuves. `horizon_label` : fenêtre du critère horizon.
+    """
     row = assets[assets["ticker"] == ticker]
     if row.empty:
         return CoherenceReport(
@@ -49,13 +65,13 @@ def evaluate_idea(
     tensions: list[Tension] = []
 
     # 1. Contraintes dures : une exclusion est une incohérence franche.
-    screening = screen_assets(row, profile_weights.constraints, esg_controversial)
+    screening = screen_assets(row, profile_weights.constraints, esg_controversial, esg_emitters=esg_emitters)
     for rejection in screening.rejected:
         tensions.append(Tension(dimension="contrainte", detail=rejection.reason, severe=True))
 
     # Contexte : pistes retenues pour ce profil (sert de référence de comparaison).
-    decision = decide(assets, signals, evidence, profile_weights, as_of,
-                      esg_controversial=esg_controversial)
+    decision = decide(assets, signals, evidence, profile_weights, as_of, esg_controversial=esg_controversial,
+                      esg_emitters=esg_emitters, risk=risk, risk_level=risk_level)
     retained = [c.ticker for c in decision.ranking if c.ticker != ticker]
 
     # 2. Volatilité : signal « stabilite » orienté = -volatilité. Plus bas (plus négatif) = plus volatil.
@@ -71,18 +87,21 @@ def evaluate_idea(
                     f"Volatilité annualisée {idea_vol:.0f} % contre une médiane de {median_vol:.0f} % "
                     "pour les pistes retenues de votre profil."
                 ),
-                severe=idea_vol > median_vol * VOL_TENSION_RATIO * 1.5,
+                # Comparaison de contexte, pas une règle du profil : elle nuance le verdict sans le rendre
+                # « incohérent ». Seules les règles et la tolérance au risque le font (même écran que le
+                # classement, audit C2) ; sinon un titre admis par le classement serait jugé incohérent.
+                severe=False,
                 evidence_id=evidence.get(ticker, {}).get("stabilite"),
             ))
 
-    # 3. Horizon : pire période glissante sur 3 ans (signal orienté, plus bas = pire).
+    # 3. Horizon : pire période glissante sur la fenêtre du profil (signal orienté, plus bas = pire).
     idea_hz = _signal(signals, ticker, "horizon")
     retained_hz = [s for s in (_signal(signals, t, "horizon") for t in retained) if s is not None]
     if idea_hz is not None and retained_hz and idea_hz < statistics.median(retained_hz):
         tensions.append(Tension(
             dimension="horizon",
             detail=(
-                f"Pire période glissante sur 3 ans {idea_hz:.0f} %, sous la médiane "
+                f"Pire période glissante sur {horizon_label} {idea_hz:.0f} %, sous la médiane "
                 f"{statistics.median(retained_hz):.0f} % des pistes retenues."
             ),
             evidence_id=evidence.get(ticker, {}).get("horizon"),
@@ -118,30 +137,8 @@ def evaluate_idea(
 
 
 # --- repères de risque du profil (P3) -----------------------------------------------------------
-# Repères indicatifs par niveau de tolérance : (volatilité annualisée maximale en %, perte
-# maximale tolérée en %). Hypothèses de l'équipe (docs/03_DECISION_ENGINE.md), affichées comme
-# telles ; reprises de l'écran « Tester une idée » du mobile.
-RISK_LIMITS: dict[str, tuple[float, float]] = {
-    "faible": (18.0, -20.0),
-    "faible à modérée": (22.0, -25.0),  # entre les deux niveaux voisins (persona Robert)
-    "modérée": (25.0, -30.0),
-    "élevée": (45.0, -50.0),
-}
-SEVERE_RATIO = 1.5  # dépassement d'un repère au-delà duquel la tension est jugée sévère
-
-
-def tolerance_level(tolerance_risque: str) -> str:
-    """Niveau de tolérance normalisé, clé de `RISK_LIMITS`. Un libellé inconnu est lu « modérée »."""
-    text = tolerance_risque.casefold()
-    if "faible" in text and "mod" in text:
-        return "faible à modérée"
-    if "faible" in text:
-        return "faible"
-    if "mod" in text:
-        return "modérée"
-    if "lev" in text:  # élevé, élevée, eleve
-        return "élevée"
-    return "modérée"
+# RISK_LIMITS, SEVERE_RATIO et tolerance_level sont définis dans `engine.constraints` (règle de
+# tolérance partagée avec le classement) et réexportés ici.
 
 
 def verdict_from(tensions: tuple[Tension, ...] | list[Tension]) -> str:
@@ -158,19 +155,25 @@ def limit_tensions(
     volatility_evidence: Optional[str] = None,
     drawdown_evidence: Optional[str] = None,
     limit_evidence: Optional[dict[str, str]] = None,
+    capped_class: bool = False,
 ) -> list[Tension]:
-    """Tensions entre un titre et les repères de risque du profil (valeurs en points de %)."""
+    """Tensions entre un titre et les repères de risque du profil (valeurs en points de %).
+
+    Une tension est sévère (verdict « incohérent ») exactement quand la règle de tolérance du
+    classement écarterait le titre (`engine.constraints.risk_breach`) : les deux écrans concordent.
+    """
     max_vol, max_loss = RISK_LIMITS[level]
     limit_evidence = limit_evidence or {}
+    breach = risk_breach(level, volatility, max_drawdown, capped_class=capped_class)
     tensions: list[Tension] = []
     if volatility is not None and volatility > max_vol:
         tensions.append(Tension(
             dimension="repère de volatilité",
             detail=(
-                f"Volatilité annualisée de {volatility:.0f} %, au-dessus du repère de {max_vol:.0f} % "
+                f"Volatilité annualisée de {pct_fr(volatility)} %, au-dessus du repère de {max_vol:.0f} % "
                 f"retenu pour une tolérance au risque {level}."
             ),
-            severe=volatility > max_vol * SEVERE_RATIO,
+            severe=breach.excluded,
             evidence_id=volatility_evidence,
             evidence_ids=tuple(i for i in (limit_evidence.get("volatilite"),) if i),
         ))
@@ -178,10 +181,10 @@ def limit_tensions(
         tensions.append(Tension(
             dimension="repère de perte maximale",
             detail=(
-                f"Perte maximale observée de {abs(max_drawdown):.0f} %, au-delà du repère de "
+                f"Perte maximale observée de {pct_fr(abs(max_drawdown))} %, au-delà du repère de "
                 f"{abs(max_loss):.0f} % retenu pour une tolérance au risque {level}."
             ),
-            severe=max_drawdown < max_loss * SEVERE_RATIO,
+            severe=breach.excluded,
             evidence_id=drawdown_evidence,
             evidence_ids=tuple(i for i in (limit_evidence.get("perte_max"),) if i),
         ))

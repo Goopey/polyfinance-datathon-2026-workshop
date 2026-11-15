@@ -60,7 +60,13 @@ Le lecteur d'Excel demande `openpyxl` (dans `backend/requirements.txt`).
 - Émissions directes seulement. L'EPA calcule avec les potentiels de réchauffement AR4, ECCC avec AR5 : les deux séries ne s'additionnent pas.
 - Années 2023 (EPA) et 2024 (ECCC), antérieures à la date d'analyse.
 - Rattachement canadien par le nom de l'exploitant : une filiale sous un autre nom est omise (« Westcoast Energy Inc. » pour Enbridge), donc le total d'ENB est une borne inférieure.
-- Ces preuves ne notent pas encore le critère `esg` : le moteur le traite toujours comme « non sourcé » (scénario S2 non fait).
+- Usage par le moteur (`engine/esg.py`, docs/03, section « Critère ESG ») : une valeur d'au moins 10 Mt CO2e
+  classe la société comme émetteur majeur documenté. Elle est alors écartée pour un profil qui exclut les
+  controverses, et son score ESG vaut 0. Une valeur plus basse n'est pas concluante, car c'est une borne
+  inférieure : le critère reste « information manquante ».
+- Une controverse se saisit à la main : `signal_type` commençant par « Controverse » (ex. « Controverse
+  environnementale »). Il faut aussi un document daté et une source au registre avec le statut `utilisé`.
+  Elle écarte le titre pour un profil qui exclut les controverses.
 
 ### Attribution à afficher
 

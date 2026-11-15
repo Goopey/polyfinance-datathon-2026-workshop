@@ -209,8 +209,13 @@ class BedrockClient:
 
             # Délai de lecture large : un modèle qui raisonne avant de répondre dépasse souvent les 60 s
             # par défaut, ce qui déclenchait des relances silencieuses (exécution qui semble figée).
+            # La Lambda API (appel synchrone sous la limite de 29 s d'API Gateway) le réduit par variables
+            # d'environnement : EASYTRADE_BEDROCK_READ_TIMEOUT, EASYTRADE_BEDROCK_MAX_ATTEMPTS.
+            read_timeout = int(os.environ.get("EASYTRADE_BEDROCK_READ_TIMEOUT", "300"))
+            attempts = int(os.environ.get("EASYTRADE_BEDROCK_MAX_ATTEMPTS", "3"))
             self._client = boto3.client("bedrock-runtime", region_name=self.region, config=Config(
-                connect_timeout=10, read_timeout=300, retries={"max_attempts": 3, "mode": "standard"}))
+                connect_timeout=min(10, read_timeout), read_timeout=read_timeout,
+                retries={"max_attempts": attempts, "mode": "standard"}))
         return self._client
 
     def invoke(self, *, step, system, payload, schema, tier, feedback=None) -> Any:
