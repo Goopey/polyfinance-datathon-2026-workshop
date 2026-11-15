@@ -84,7 +84,35 @@ AWS CDK en Python, dans `infra/`. Une pile par domaine pour pouvoir déployer pa
 - Étiquettes de coût sur toutes les ressources ; estimation du coût d'une analyse dans la documentation.
 - Délais d'expiration et relances configurés dans Step Functions ; échec propre d'une étape visible dans la trace.
 
-## À confirmer dès que possible
+## Réalisation (P4)
+
+Code prêt à déployer ; déploiement et premier run sur le compte d'atelier : tâche E4. Commandes : `infra/README.md`.
+
+- **Étapes en série** : Profil → Validation → Recherche → Dossiers de preuves → Débat → Décision → Explication.
+  La branche parallèle Recherche ∥ Validation du schéma d'origine est abandonnée : les deux étapes ajoutent des
+  preuves au registre, et des écritures concurrentes rendraient les identifiants (`EV-000001`…) non reproductibles.
+- **Débat en état `Map`** : une Lambda par candidat, quatre en parallèle. Possible parce que le débat lit le
+  registre sans y écrire (`clean_turn` → `check_claim`).
+- **Même code qu'en local** : `orchestration/pipeline.py` est découpé en fonctions d'étape (`stage_*`) qui
+  partagent un `RunContext` ; `run_pipeline` les enchaîne en local, chaque Lambda en exécute une sur AWS. Le
+  contexte est enregistré sur S3 entre deux étapes. `backend/tests/aws` exécute la vraie machine d'états
+  (interprétée) et vérifie un résultat identique au pipeline local.
+- **Erreurs** : Bedrock indisponible → relances par Step Functions depuis le dernier point enregistré ; autre
+  erreur → run marqué « echec », trace à l'appui, sans relance ; délai dépassé → `MarquerEchec`.
+- **Écart avec le tableau ci-dessus** : le registre de preuves est servi depuis l'artefact du run sur S3, pas
+  depuis DynamoDB. DynamoDB porte l'état et la progression des runs et les profils fictifs. Arêtes du graphe :
+  fichier de référence copié sur S3.
+- **Modèles** (au choix de l'équipe, budget 500 $) : rapide pour le débat (ex. Claude Haiku 5.5), fort pour le
+  profil, la recherche et l'explication (ex. Claude Sonnet 5.5 ou Opus 5.5). Le client Converse n'envoie ni
+  `temperature` ni `toolChoice` forcé, refusés par ces modèles.
+
+## Points confirmés (A2, 2026-11-14)
+
+Compte d'atelier temporaire, région **us-east-1**, Amazon Bedrock, modèles au choix de l'équipe, **500 $ de
+crédits**. Encore à vérifier sur le compte : que Lambda, Step Functions, API Gateway, S3 et DynamoDB sont
+ouverts, et que `cdk bootstrap` peut créer des rôles IAM.
+
+## À confirmer dès que possible (état d'origine)
 
 1. Type de compte AWS fourni par le datathon et **services autorisés**.
 2. Région imposée et modèles Bedrock ouverts dans ce compte.

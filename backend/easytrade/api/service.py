@@ -289,13 +289,17 @@ class ApiService:
         return self.profile_view(entry["id"])
 
     # --- runs ---------------------------------------------------------------------------------
-    def start_run(self, request: RunRequest) -> str:
+    def _prepare_run(self, request: RunRequest) -> tuple[dict, Optional[str], date, str]:
+        """Valide une demande d'analyse : (entrée du profil, titre demandé, date, identifiant du run)."""
         entry = self._entry(request.profile_id)
         ticker = request.requested_ticker.strip().upper() if request.requested_ticker else None
         if ticker and ticker not in self._names:
             raise NotFound(f"Titre absent de l'univers analysé : {ticker}")
         as_of = request.as_of or self.default_as_of
-        run_id = make_run_id(as_of, request.profile_id, ticker)
+        return entry, ticker, as_of, make_run_id(as_of, request.profile_id, ticker)
+
+    def start_run(self, request: RunRequest) -> str:
+        entry, ticker, as_of, run_id = self._prepare_run(request)
         with self._lock:
             existing = self._runs.get(run_id)
             # Le pipeline est déterministe : un run identique déjà lancé ou terminé est réutilisé.

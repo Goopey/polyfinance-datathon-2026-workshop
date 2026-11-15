@@ -1,86 +1,99 @@
 {
-  "Comment": "EasyTrade — pipeline d'analyse. Squelette : les ARN sont injectés par CDK. Voir docs/01_ARCHITECTURE.md.",
+  "Comment": "EasyTrade — pipeline d'analyse (docs/01_ARCHITECTURE.md, docs/06_AWS.md). Mêmes étapes que orchestration/pipeline.py ; les ARN sont injectés par CDK. Étapes en série pour garder des identifiants de preuves reproductibles ; le débat est un état Map (un candidat par Lambda, registre de preuves en lecture seule).",
   "StartAt": "PonderationDuProfil",
   "States": {
     "PonderationDuProfil": {
       "Type": "Task",
       "Resource": "${ProfileFunctionArn}",
-      "ResultPath": "$.weights",
-      "Next": "RechercheEtValidation"
-    },
-    "RechercheEtValidation": {
-      "Type": "Parallel",
-      "ResultPath": "$.parallel",
-      "Branches": [
-        {
-          "StartAt": "Recherche",
-          "States": {
-            "Recherche": {
-              "Type": "Task",
-              "Resource": "${ResearchFunctionArn}",
-              "End": true
-            }
-          }
-        },
-        {
-          "StartAt": "ValidationFinanciere",
-          "States": {
-            "ValidationFinanciere": {
-              "Type": "Task",
-              "Resource": "${ValidationFunctionArn}",
-              "End": true
-            }
-          }
-        }
+      "Retry": [
+        {"ErrorEquals": ["RetryableStageError"], "IntervalSeconds": 5, "MaxAttempts": 2, "BackoffRate": 3},
+        {"ErrorEquals": ["Lambda.ServiceException", "Lambda.TooManyRequestsException", "Lambda.SdkClientException"], "IntervalSeconds": 2, "MaxAttempts": 2, "BackoffRate": 2}
       ],
+      "Catch": [{"ErrorEquals": ["States.ALL"], "ResultPath": "$.error", "Next": "MarquerEchec"}],
+      "Next": "ValidationFinanciere"
+    },
+    "ValidationFinanciere": {
+      "Type": "Task",
+      "Resource": "${ValidationFunctionArn}",
+      "Retry": [
+        {"ErrorEquals": ["Lambda.ServiceException", "Lambda.TooManyRequestsException", "Lambda.SdkClientException"], "IntervalSeconds": 2, "MaxAttempts": 2, "BackoffRate": 2}
+      ],
+      "Catch": [{"ErrorEquals": ["States.ALL"], "ResultPath": "$.error", "Next": "MarquerEchec"}],
+      "Next": "Recherche"
+    },
+    "Recherche": {
+      "Type": "Task",
+      "Resource": "${ResearchFunctionArn}",
+      "Retry": [
+        {"ErrorEquals": ["RetryableStageError"], "IntervalSeconds": 5, "MaxAttempts": 2, "BackoffRate": 3},
+        {"ErrorEquals": ["Lambda.ServiceException", "Lambda.TooManyRequestsException", "Lambda.SdkClientException"], "IntervalSeconds": 2, "MaxAttempts": 2, "BackoffRate": 2}
+      ],
+      "Catch": [{"ErrorEquals": ["States.ALL"], "ResultPath": "$.error", "Next": "MarquerEchec"}],
       "Next": "DossiersDePreuves"
     },
     "DossiersDePreuves": {
       "Type": "Task",
       "Resource": "${EvidencePacksFunctionArn}",
-      "ResultPath": "$.packs",
+      "Retry": [
+        {"ErrorEquals": ["Lambda.ServiceException", "Lambda.TooManyRequestsException", "Lambda.SdkClientException"], "IntervalSeconds": 2, "MaxAttempts": 2, "BackoffRate": 2}
+      ],
+      "Catch": [{"ErrorEquals": ["States.ALL"], "ResultPath": "$.error", "Next": "MarquerEchec"}],
       "Next": "ConseilDeDebat"
     },
     "ConseilDeDebat": {
       "Type": "Map",
-      "ItemsPath": "$.packs.debate_jobs",
-      "MaxConcurrency": 6,
+      "ItemsPath": "$.debate_jobs",
+      "MaxConcurrency": 4,
       "ResultPath": "$.debate",
       "ItemProcessor": {
-        "ProcessorConfig": {
-          "Mode": "INLINE"
-        },
-        "StartAt": "AgentDeDebat",
+        "ProcessorConfig": {"Mode": "INLINE"},
+        "StartAt": "DebatDUnCandidat",
         "States": {
-          "AgentDeDebat": {
+          "DebatDUnCandidat": {
             "Type": "Task",
             "Resource": "${DebateFunctionArn}",
             "Retry": [
-              {
-                "ErrorEquals": [
-                  "States.TaskFailed"
-                ],
-                "MaxAttempts": 1,
-                "IntervalSeconds": 2
-              }
+              {"ErrorEquals": ["RetryableStageError"], "IntervalSeconds": 5, "MaxAttempts": 3, "BackoffRate": 3},
+              {"ErrorEquals": ["Lambda.ServiceException", "Lambda.TooManyRequestsException", "Lambda.SdkClientException"], "IntervalSeconds": 2, "MaxAttempts": 2, "BackoffRate": 2}
             ],
             "End": true
           }
         }
       },
+      "Catch": [{"ErrorEquals": ["States.ALL"], "ResultPath": "$.error", "Next": "MarquerEchec"}],
       "Next": "MoteurDeDecision"
     },
     "MoteurDeDecision": {
       "Type": "Task",
       "Resource": "${DecisionFunctionArn}",
-      "ResultPath": "$.decision",
+      "Retry": [
+        {"ErrorEquals": ["Lambda.ServiceException", "Lambda.TooManyRequestsException", "Lambda.SdkClientException"], "IntervalSeconds": 2, "MaxAttempts": 2, "BackoffRate": 2}
+      ],
+      "Catch": [{"ErrorEquals": ["States.ALL"], "ResultPath": "$.error", "Next": "MarquerEchec"}],
       "Next": "Explication"
     },
     "Explication": {
       "Type": "Task",
       "Resource": "${ExplanationFunctionArn}",
-      "ResultPath": "$.explanation",
+      "Retry": [
+        {"ErrorEquals": ["RetryableStageError"], "IntervalSeconds": 5, "MaxAttempts": 2, "BackoffRate": 3},
+        {"ErrorEquals": ["Lambda.ServiceException", "Lambda.TooManyRequestsException", "Lambda.SdkClientException"], "IntervalSeconds": 2, "MaxAttempts": 2, "BackoffRate": 2}
+      ],
+      "Catch": [{"ErrorEquals": ["States.ALL"], "ResultPath": "$.error", "Next": "MarquerEchec"}],
       "End": true
+    },
+    "MarquerEchec": {
+      "Type": "Task",
+      "Resource": "${FailureFunctionArn}",
+      "Retry": [
+        {"ErrorEquals": ["States.ALL"], "IntervalSeconds": 2, "MaxAttempts": 2, "BackoffRate": 2}
+      ],
+      "Next": "AnalyseEchouee"
+    },
+    "AnalyseEchouee": {
+      "Type": "Fail",
+      "Error": "AnalyseEchouee",
+      "Cause": "Une étape a échoué : le run est marqué « echec », trace à l'appui (GET /runs/{id}/trace)."
     }
   }
 }

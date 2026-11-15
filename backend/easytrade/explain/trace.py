@@ -48,6 +48,10 @@ class TraceRecorder:
         self._steps: list[TraceStep] = []
         self._on_step = on_step  # appelé à la fermeture de chaque étape (progression suivie par l'API)
 
+    def set_on_step(self, on_step: Optional[Callable[[TraceStep], None]]) -> None:
+        """Change le rappel de progression (retiré avant l'enregistrement d'un run entre deux Lambda)."""
+        self._on_step = on_step
+
     def _append(self, step: TraceStep) -> None:
         self._steps.append(step)
         if self._on_step is not None:

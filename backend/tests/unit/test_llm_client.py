@@ -106,10 +106,13 @@ def test_bedrock_requete_converse_et_sortie_par_outil():
     request = runtime.requests[0]
     assert request["modelId"] == "modele-rapide"
     assert request["system"] == [{"text": "Consigne de test."}]
-    assert request["inferenceConfig"]["temperature"] == 0
+    # Modèles Claude actuels : `temperature` et `toolChoice` forcé sont refusés (HTTP 400).
+    assert "temperature" not in request["inferenceConfig"]
+    assert request["inferenceConfig"]["maxTokens"] >= 16000  # place pour le raisonnement du modèle
     tool = request["toolConfig"]["tools"][0]["toolSpec"]
     assert tool["inputSchema"]["json"]["required"] == ["stance", "score"]
-    assert request["toolConfig"]["toolChoice"] == {"tool": {"name": tool["name"]}}
+    assert "toolChoice" not in request["toolConfig"]
+    assert tool["name"] in request["messages"][0]["content"][0]["text"]  # consigne d'appel de l'outil
     assert request["guardrailConfig"]["guardrailIdentifier"] == "gr-1"
 
 
@@ -120,3 +123,23 @@ def test_bedrock_sortie_vide_relancee_puis_echec():
         call(client)
     assert len(runtime.requests) == 2
     assert "rejetée" in runtime.requests[1]["messages"][0]["content"][0]["text"]
+
+
+def test_bedrock_raisonnement_ignore_sortie_par_outil():
+    """Le modèle raisonne d'abord (bloc `reasoningContent`), puis appelle l'outil : seul l'outil compte."""
+    runtime = _FakeRuntime([
+        {"reasoningContent": {"reasoningText": {"text": "Je compare les preuves."}}},
+        {"toolUse": {"name": "rendre_sortie", "input": {"stance": "appui", "score": 2}}},
+    ])
+    client = BedrockClient(model_fast="m", model_strong="m", client=runtime)
+    answer, _ = structured_call(client, step="etape", prompt=PROMPT, payload={}, schema=Answer, tier="fast")
+    assert answer.score == 2 and len(runtime.requests) == 1
+
+
+def test_bedrock_reponse_texte_sans_outil_relancee():
+    """Sans `toolChoice` forcé, le modèle peut répondre en texte : la validation le rejette et relance."""
+    runtime = _FakeRuntime([{"text": "Voici mon analyse, sans JSON."}])
+    client = BedrockClient(model_fast="m", model_strong="m", client=runtime)
+    with pytest.raises(LLMOutputError):
+        call(client)
+    assert len(runtime.requests) == 2

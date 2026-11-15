@@ -1,5 +1,8 @@
-"""Lambda : étape 2, recherche.
+"""Lambda : étape 2, recherche (agent et outils filtrés par la date de référence).
 
-État : squelette, à implémenter (suivi dans avancement.md).
 Conception : docs/06_AWS.md
 """
+from easytrade.orchestration.handlers.common import stage_handler
+from easytrade.orchestration.pipeline import stage_research
+
+handler = stage_handler("recherche", stage_research)

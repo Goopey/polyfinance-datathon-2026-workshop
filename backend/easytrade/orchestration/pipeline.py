@@ -354,7 +354,317 @@ def _llm_fields(infos: Iterable[CallInfo]) -> dict[str, Any]:
     }
 
 
-# --- exécution ----------------------------------------------------------------------------------
+# --- exécution par étapes -------------------------------------------------------------------------
+# Le pipeline est découpé en étapes qui partagent un `RunContext`. En local, `run_pipeline` les
+# enchaîne dans le même processus. Sur AWS, chaque étape est une fonction Lambda de la machine
+# d'états (orchestration/handlers) : le contexte est enregistré sur S3 entre deux étapes.
+# Le débat est la seule étape découpée par candidat (état `Map`) : il lit le registre de preuves
+# sans jamais y écrire, ce qui permet d'exécuter les candidats en parallèle sans changer les
+# identifiants de preuves.
+STAGES = ("profil", "validation", "recherche", "dossiers_de_preuves", "debat", "decision", "explication")
+
+
+@dataclass
+class RunContext:
+    """État d'une analyse entre deux étapes (sérialisable : enregistré sur S3 sur AWS)."""
+
+    run_id: str
+    as_of: date
+    profile_id: str
+    requested_ticker: Optional[str]
+    profile_source: str
+    reading_level: str
+    max_candidates: Optional[int]
+    ledger: EvidenceLedger
+    trace: TraceRecorder
+    result: RunResult
+    profile: Optional[Profile] = None
+    persona: Optional[dict] = None  # entrée de profil fictif (absente de personas.json), transmise par l'API
+    weighting: Optional[WeightingResult] = None
+    metrics: Optional[pd.DataFrame] = None
+    candidates: Optional[CandidateList] = None
+    signals: dict = field(default_factory=dict)
+    evidence: dict = field(default_factory=dict)
+    without_metrics: list = field(default_factory=list)
+    decision: Optional[Decision] = None
+    selection: Optional[governance.BasketSelection] = None
+    packs: dict = field(default_factory=dict)
+    debate_started: Optional[str] = None
+    records: dict = field(default_factory=dict)
+    coherence: Optional[CoherenceAnalysis] = None
+    finished: bool = False
+
+    def detach(self) -> "RunContext":
+        """Retire le rappel de progression (non sérialisable) avant l'enregistrement."""
+        self.trace.set_on_step(None)
+        return self
+
+
+def _universe(ws: Workspace) -> tuple[pd.DataFrame, dict, dict, tuple]:
+    assets = ws.store.assets()
+    assets_by_ticker = {str(r["ticker"]): {k: str(r[k]) for k in ("name", "asset_class", "sector")}
+                        for _, r in assets.iterrows()}
+    names = {ticker: a["name"] for ticker, a in assets_by_ticker.items()}
+    ignore = (*names.values(), *names.keys())  # noms contenant des chiffres (« S&P 500 ») et tickers
+    return assets, assets_by_ticker, names, ignore
+
+
+def with_persona(ws: Workspace, persona: Optional[dict]) -> Workspace:
+    """Espace de travail dont les personas comprennent un profil fictif transmis avec l'analyse."""
+    if not persona or any(p["id"] == persona["id"] for p in ws.personas["personas"]):
+        return ws
+    personas = {**ws.personas, "personas": [*ws.personas["personas"], persona]}
+    return Workspace(settings=ws.settings, store=ws.store, registry=ws.registry, personas=personas,
+                     forbidden=ws.forbidden)
+
+
+def new_context(
+    ws: Workspace, client: LLMClient, profile_id: str, *, as_of: Optional[DateLike] = None,
+    requested_ticker: Optional[str] = None, profile: Optional[Profile] = None, persona: Optional[dict] = None,
+    reading_level: str = "simple", max_candidates: Optional[int] = None,
+    on_step: Optional[Callable[[TraceStep], None]] = None, profile_source: str = SOURCE_PROFILE,
+) -> RunContext:
+    as_of_date = to_timestamp(as_of if as_of is not None else ws.settings.as_of).date()
+    requested_ticker = requested_ticker.strip().upper() if requested_ticker else None
+    run_id = make_run_id(as_of_date, profile_id, requested_ticker)
+    ledger = EvidenceLedger(as_of_date)
+    trace = TraceRecorder(run_id, as_of_date, profile_id, on_step=on_step)
+    result = RunResult(run_id=run_id, status="echec", as_of=as_of_date, profile_id=profile_id,
+                       requested_ticker=requested_ticker, model_id=client.model_id("strong"),
+                       trace=trace.to_trace(), ledger=ledger)
+    return RunContext(run_id=run_id, as_of=as_of_date, profile_id=profile_id, requested_ticker=requested_ticker,
+                      profile_source=profile_source, reading_level=reading_level, max_candidates=max_candidates,
+                      ledger=ledger, trace=trace, result=result, profile=profile, persona=persona)
+
+
+# 1. Profil → ProfileWeights
+def stage_profile(ctx: RunContext, ws: Workspace, client: LLMClient) -> None:
+    ws = with_persona(ws, ctx.persona)
+    _, _, names, _ = _universe(ws)
+    if ctx.requested_ticker and ctx.requested_ticker not in names:
+        raise UnknownTickerError(f"Titre absent de l'univers analysé : {ctx.requested_ticker}")
+    with ctx.trace.step("profil", "llm") as step:
+        profile = ctx.profile or ws.profile(ctx.profile_id)
+        weighting, info = weigh_profile(profile, template_for(profile, ws.personas), client, ctx.ledger,
+                                        ws.registry, forbidden=ws.forbidden, profile_source=ctx.profile_source)
+        step.set(**_llm_fields([info]), outputs=weighting.evidence_ids)
+        step.note(f"Niveau de risque : {weighting.risk_level} ; thèmes : "
+                  f"{', '.join(weighting.preferred_themes) or 'aucun'} ; écarts au gabarit : "
+                  f"{', '.join(weighting.deviations) or 'aucun'}.")
+    ctx.profile = profile
+    ctx.weighting = ctx.result.weighting = weighting
+
+
+# 2a. Validation : indicateurs déterministes pour tout l'univers, à la date as_of
+def stage_validation(ctx: RunContext, ws: Workspace, client: LLMClient) -> None:
+    with ctx.trace.step("validation", "code", version=f"validation@{VERSION}", inputs=STARTER_INPUTS) as step:
+        before = len(ctx.ledger)
+        metrics = compute_metrics_table(ws.store, ctx.as_of, ctx.ledger, ws.registry, ws.settings.quality)
+        step.note(f"{len(metrics)} indicateurs calculés, {len(ctx.ledger) - before} preuves créées, "
+                  f"aucune donnée publiée après le {ctx.as_of}.")
+    ctx.metrics = ctx.result.metrics = metrics
+
+
+# 2b. Recherche : candidats et preuves qualitatives
+def stage_research(ctx: RunContext, ws: Workspace, client: LLMClient) -> None:
+    assets, _, _, _ = _universe(ws)
+    with ctx.trace.step("recherche", "llm") as step:
+        tools = ResearchTools(assets, ctx.as_of, ws.settings.reference_dir, ctx.ledger, ws.registry)
+        candidates, info = run_research(ctx.weighting, tools, client, requested_ticker=ctx.requested_ticker,
+                                        max_candidates=ctx.max_candidates, forbidden=ws.forbidden)
+        step.set(**_llm_fields([info]), tools_called=candidates.tools_called, outputs=candidates.tickers)
+        notes = sorted({c["note"] for c in tools.calls if c["note"]})
+        step.note(f"{len(candidates.candidates)} candidats. " + " ".join(notes))
+        if candidates.dropped:
+            step.note(f"Propositions retirées (hors univers) : {', '.join(candidates.dropped)}.")
+    ctx.candidates = ctx.result.candidates = candidates
+
+
+# 3. Dossiers de preuves : jointure, contraintes dures, pré-classement (aucun LLM)
+def stage_evidence_packs(ctx: RunContext, ws: Workspace, client: LLMClient) -> None:
+    assets, assets_by_ticker, _, _ = _universe(ws)
+    weighting, candidates, metrics = ctx.weighting, ctx.candidates, ctx.metrics
+    weights = weighting.profile_weights
+    with ctx.trace.step("dossiers_de_preuves", "code", version=f"engine@{VERSION}") as step:
+        signals, evidence = build_signals(metrics, assets)
+        _add_signal_evidence(assets, weighting, signals, evidence, ctx.ledger, ws.registry)
+        without_metrics = [t for t in candidates.tickers
+                           if any(signals[t].get(c) is None for c in REQUIRED_SIGNALS)]
+        classable = [t for t in candidates.tickers if t not in without_metrics]
+        decision = decide(assets, signals, evidence, weights, ctx.as_of, candidates=classable)
+        selection = governance.select_basket(() if decision.no_recommendation else decision.ranking,
+                                             weights.constraints)
+        to_debate = list(dict.fromkeys(
+            [*selection.tickers, *(r.ticker for r in selection.displaced),
+             *([ctx.requested_ticker] if ctx.requested_ticker and ctx.requested_ticker in classable else [])]))
+        packs = {t: _build_pack(t, assets_by_ticker, metrics, evidence, weighting, candidates, ctx.ledger)
+                 for t in to_debate}
+        step.set(outputs=tuple(to_debate))
+        step.note(f"{len(decision.ranking)} candidats classés ; {len(to_debate)} dossiers de preuves.")
+    control = governance.control_pre_debate(
+        universe=len(assets), rejected_by_rule=len(decision.rejected), without_evidence=len(without_metrics),
+        candidates=len(decision.ranking))
+    ctx.trace.control(control.name, control.passed, control.note)
+    ctx.signals, ctx.evidence, ctx.without_metrics = signals, evidence, without_metrics
+    ctx.decision, ctx.selection, ctx.packs = decision, selection, packs
+    ctx.debate_started = ctx.trace.now()
+
+
+# 4. Débat : Bull ∥ Réaliste ∥ Bear, mêmes preuves, tours 1 et 3
+def debate_jobs(ctx: RunContext) -> list[str]:
+    """Candidats à débattre, dans l'ordre (un élément de l'état `Map` par candidat sur AWS)."""
+    return list(ctx.packs)
+
+
+def debate_one(ctx: RunContext, ws: Workspace, client: LLMClient, ticker: str,
+               max_workers: int = 1) -> tuple[DebateRecord, list[CallInfo]]:
+    """Débat d'un candidat. Lit le registre de preuves sans y écrire : exécutable en parallèle."""
+    _, _, _, ignore = _universe(ws)
+    return run_debate(ctx.packs[ticker], ctx.weighting, client, ctx.ledger, forbidden=ws.forbidden,
+                      ignore=ignore, max_workers=max_workers)
+
+
+def record_debate_failure(ctx: RunContext, error: "BaseException | str") -> None:
+    note = error if isinstance(error, str) else f"{type(error).__name__} : {error}"
+    ctx.trace.record("debat", "llm", "echec", started_at=ctx.debate_started, note=note)
+
+
+def record_debate(ctx: RunContext, results: dict[str, tuple[DebateRecord, list[CallInfo]]]) -> None:
+    """Rassemble les débats des candidats (dans l'ordre des dossiers) et les inscrit dans la trace."""
+    trace, packs, started = ctx.trace, ctx.packs, ctx.debate_started
+    records: dict[str, DebateRecord] = {}
+    if packs:
+        infos: list[CallInfo] = []
+        for ticker in packs:
+            record, calls = results[ticker]
+            records[ticker] = record
+            infos.extend(calls)
+        for round_number in (1, 3):
+            for agent in AGENTS:
+                name = step_name(agent, round_number)
+                turns = [t for r in records.values() for t in (r.round1 if round_number == 1 else r.final)
+                         if t.agent == agent]
+                removed = sum(t.removed_arguments for t in turns)
+                trace.record(
+                    name, "llm", started_at=started, **_llm_fields(i for i in infos if i.step == name),
+                    outputs=tuple(records),
+                    evidence_in=tuple(sorted({i for p in packs.values() for i in p.evidence_ids})),
+                    note=f"{len(turns)} candidats ; {sum(len(t.arguments) for t in turns)} arguments gardés, "
+                         f"{removed} supprimés (preuve absente ou nombre non étayé).",
+                )
+    else:
+        trace.record("debat", "llm", "ignore",
+                     note="Aucun candidat à débattre : " + (ctx.decision.reason or "aucun dossier."))
+    ctx.records = ctx.result.debate = records
+
+
+def stage_debate(ctx: RunContext, ws: Workspace, client: LLMClient, max_workers: int = 1) -> None:
+    """Débat de tous les candidats dans le même processus (exécution locale)."""
+    results: dict[str, tuple[DebateRecord, list[CallInfo]]] = {}
+    try:
+        for ticker in debate_jobs(ctx):
+            results[ticker] = debate_one(ctx, ws, client, ticker, max_workers=max_workers)
+    except Exception as error:
+        record_debate_failure(ctx, error)
+        raise
+    record_debate(ctx, results)
+
+
+# 5. Décision : confiance, désaccords, panier, cohérence d'une demande (aucun LLM)
+def stage_decision(ctx: RunContext, ws: Workspace, client: LLMClient) -> None:
+    assets, _, names, ignore = _universe(ws)
+    weighting, selection, records = ctx.weighting, ctx.selection, ctx.records
+    weights = weighting.profile_weights
+    decision = ctx.decision
+    dropped_claims: list[str] = []
+    coherence: Optional[CoherenceAnalysis] = None
+    with ctx.trace.step("decision", "code", version=f"engine@{VERSION}") as step:
+        decision = apply_debate(decision, records.values(), profile_evidence_ids=weighting.evidence_ids)
+        updates: dict[str, Any] = {"retained": selection.tickers, "displaced": selection.displaced}
+        confidences = [decision.candidate_confidence.get(t) for t in selection.tickers]
+        if selection.tickers and all(c == "faible" for c in confidences):
+            updates.update(no_recommendation=True, reason=LOW_CONFIDENCE_REASON)
+        decision = decision.model_copy(update=updates)
+        if ctx.requested_ticker:
+            coherence = _build_coherence(
+                ctx.requested_ticker, ws=ws, assets=assets, names=names, metrics=ctx.metrics, signals=ctx.signals,
+                evidence=ctx.evidence, weighting=weighting, decision=decision, ledger=ctx.ledger, ignore=ignore,
+                dropped=dropped_claims)
+            step.note(f"Tester une idée — {ctx.requested_ticker} : {coherence.verdict}, "
+                      f"{len(coherence.tensions)} tension(s).")
+        step.set(outputs=decision.retained)
+        step.note(f"{len(decision.retained)} pistes retenues ; {len(decision.disagreements)} désaccord(s) conservé(s) ; "
+                  f"{len(decision.to_review)} à examiner.")
+        if dropped_claims:
+            step.note("Affirmations retirées par le vérificateur : " + " | ".join(dropped_claims))
+    ctx.decision = ctx.result.decision = decision
+    ctx.coherence = coherence
+    for control in (governance.control_basket(selection, weights.constraints),
+                    governance.control_diversification(selection),
+                    governance.control_no_recommendation(decision.no_recommendation, decision.reason)):
+        ctx.trace.control(control.name, control.passed, control.note)
+
+
+# 6. Explication : rédaction, vérificateur de fidélité, filtre de formulations
+def stage_explanation(ctx: RunContext, ws: Workspace, client: LLMClient) -> None:
+    _, _, _, ignore = _universe(ws)
+    decision, weighting = ctx.decision, ctx.weighting
+    rejected = [
+        RejectedItem(ticker=r.ticker, reason=r.reason, kind="contrainte",
+                     evidence_ids=_rule_evidence(r.rule, weighting))
+        for r in decision.rejected
+    ]
+    if not decision.no_recommendation:
+        rejected.extend(
+            RejectedItem(ticker=r.ticker, reason=r.reason, kind="classement",
+                         evidence_ids=_rule_evidence(r.rule, weighting))
+            for r in decision.displaced
+        )
+    rejected.extend(
+        RejectedItem(ticker=t, kind="preuves",
+                     reason="Écarté faute d'indicateurs valides : historique de prix insuffisant à cette date.")
+        for t in ctx.without_metrics
+    )
+    simulated_run = client.model_id("strong") == simulated.MODEL_ID
+    with ctx.trace.step("explication", "llm") as step:
+        explanation, report, infos = explain(
+            run_id=ctx.run_id, decision=decision, weighting=weighting, packs=ctx.packs, records=ctx.records,
+            rejected=rejected, coherence=ctx.coherence, client=client, ledger=ctx.ledger, forbidden=ws.forbidden,
+            ignore=ignore, reading_level=ctx.reading_level, notes=(simulated.NOTE,) if simulated_run else (),
+        )
+        step.set(**_llm_fields(infos))
+        if not infos:
+            step.set(kind="code")
+            step.note("Aucune piste à rédiger : explication assemblée par le code, sans appel au modèle.")
+        if report.retried:
+            step.note("Une relance après refus du vérificateur de fidélité.")
+    control = governance.control_display(
+        checked=report.final_checked, first_pass_ok=report.first_pass_ok,
+        first_pass_checked=report.first_pass_checked, removed=report.removed,
+        remaining_issues=len(report.final_issues))
+    ctx.trace.control(control.name, control.passed, control.note)
+    ctx.result.fidelity = report
+    if not report.faithful:
+        raise RuntimeError(
+            "Explication non affichée : le vérificateur de fidélité relève encore "
+            f"{len(report.final_issues)} écart(s) : "
+            + " | ".join(f"{i.where} ({', '.join(i.codes)})" for i in report.final_issues[:5]))
+    ctx.result.explanation, ctx.result.status = explanation, "termine"
+
+
+def fail(ctx: RunContext, error: "BaseException | str") -> RunResult:
+    """Échec propre : visible dans le résultat et dans la trace."""
+    ctx.result.status = "echec"
+    ctx.result.error = error if isinstance(error, str) else f"{type(error).__name__} : {error}"
+    return finish(ctx)
+
+
+def finish(ctx: RunContext) -> RunResult:
+    ctx.result.trace = ctx.trace.to_trace()
+    ctx.finished = True
+    return ctx.result
+
+
 def run_pipeline(
     profile_id: str,
     *,
@@ -373,181 +683,21 @@ def run_pipeline(
 
     `on_step` est appelé à la fermeture de chaque étape (progression affichée par le mobile).
     `profile_source` : source des phrases du profil (énoncé du case, ou questionnaire de l'application).
+    Les étapes sont celles de la machine d'états AWS, enchaînées dans le même processus.
     """
     ws = workspace or Workspace.load()
     client = client or make_client("auto")
-    as_of_date = to_timestamp(as_of if as_of is not None else ws.settings.as_of).date()
-    requested_ticker = requested_ticker.strip().upper() if requested_ticker else None
-    run_id = make_run_id(as_of_date, profile_id, requested_ticker)
-    ledger = EvidenceLedger(as_of_date)
-    trace = TraceRecorder(run_id, as_of_date, profile_id, on_step=on_step)
-    result = RunResult(run_id=run_id, status="echec", as_of=as_of_date, profile_id=profile_id,
-                       requested_ticker=requested_ticker, model_id=client.model_id("strong"),
-                       trace=trace.to_trace(), ledger=ledger)
+    ctx = new_context(ws, client, profile_id, as_of=as_of, requested_ticker=requested_ticker, profile=profile,
+                      reading_level=reading_level, max_candidates=max_candidates, on_step=on_step,
+                      profile_source=profile_source)
     try:
-        assets = ws.store.assets()
-        assets_by_ticker = {str(r["ticker"]): {k: str(r[k]) for k in ("name", "asset_class", "sector")}
-                            for _, r in assets.iterrows()}
-        names = {ticker: a["name"] for ticker, a in assets_by_ticker.items()}
-        if requested_ticker and requested_ticker not in names:
-            raise UnknownTickerError(f"Titre absent de l'univers analysé : {requested_ticker}")
-        ignore = (*names.values(), *names.keys())  # noms contenant des chiffres (« S&P 500 ») et tickers
-
-        # 1. Profil → ProfileWeights
-        with trace.step("profil", "llm") as step:
-            profile = profile or ws.profile(profile_id)
-            weighting, info = weigh_profile(profile, template_for(profile, ws.personas), client, ledger,
-                                            ws.registry, forbidden=ws.forbidden, profile_source=profile_source)
-            weights = weighting.profile_weights
-            step.set(**_llm_fields([info]), outputs=weighting.evidence_ids)
-            step.note(f"Niveau de risque : {weighting.risk_level} ; thèmes : "
-                      f"{', '.join(weighting.preferred_themes) or 'aucun'} ; écarts au gabarit : "
-                      f"{', '.join(weighting.deviations) or 'aucun'}.")
-        result.weighting = weighting
-
-        # 2a. Validation : indicateurs déterministes pour tout l'univers, à la date as_of
-        with trace.step("validation", "code", version=f"validation@{VERSION}", inputs=STARTER_INPUTS) as step:
-            before = len(ledger)
-            metrics = compute_metrics_table(ws.store, as_of_date, ledger, ws.registry, ws.settings.quality)
-            step.note(f"{len(metrics)} indicateurs calculés, {len(ledger) - before} preuves créées, "
-                      f"aucune donnée publiée après le {as_of_date}.")
-        result.metrics = metrics
-
-        # 2b. Recherche : candidats et preuves qualitatives
-        with trace.step("recherche", "llm") as step:
-            tools = ResearchTools(assets, as_of_date, ws.settings.reference_dir, ledger, ws.registry)
-            candidates, info = run_research(weighting, tools, client, requested_ticker=requested_ticker,
-                                            max_candidates=max_candidates, forbidden=ws.forbidden)
-            step.set(**_llm_fields([info]), tools_called=candidates.tools_called, outputs=candidates.tickers)
-            notes = sorted({c["note"] for c in tools.calls if c["note"]})
-            step.note(f"{len(candidates.candidates)} candidats. " + " ".join(notes))
-            if candidates.dropped:
-                step.note(f"Propositions retirées (hors univers) : {', '.join(candidates.dropped)}.")
-        result.candidates = candidates
-
-        # 3. Dossiers de preuves : jointure, contraintes dures, pré-classement (aucun LLM)
-        with trace.step("dossiers_de_preuves", "code", version=f"engine@{VERSION}") as step:
-            signals, evidence = build_signals(metrics, assets)
-            _add_signal_evidence(assets, weighting, signals, evidence, ledger, ws.registry)
-            without_metrics = [t for t in candidates.tickers
-                               if any(signals[t].get(c) is None for c in REQUIRED_SIGNALS)]
-            classable = [t for t in candidates.tickers if t not in without_metrics]
-            decision = decide(assets, signals, evidence, weights, as_of_date, candidates=classable)
-            selection = governance.select_basket(() if decision.no_recommendation else decision.ranking,
-                                                 weights.constraints)
-            to_debate = list(dict.fromkeys(
-                [*selection.tickers, *(r.ticker for r in selection.displaced),
-                 *([requested_ticker] if requested_ticker and requested_ticker in classable else [])]))
-            packs = {t: _build_pack(t, assets_by_ticker, metrics, evidence, weighting, candidates, ledger)
-                     for t in to_debate}
-            step.set(outputs=tuple(to_debate))
-            step.note(f"{len(decision.ranking)} candidats classés ; {len(to_debate)} dossiers de preuves.")
-        control = governance.control_pre_debate(
-            universe=len(assets), rejected_by_rule=len(decision.rejected), without_evidence=len(without_metrics),
-            candidates=len(decision.ranking))
-        trace.control(control.name, control.passed, control.note)
-
-        # 4. Débat : Bull ∥ Réaliste ∥ Bear, mêmes preuves, tours 1 et 3
-        records: dict[str, DebateRecord] = {}
-        if packs:
-            started = trace.now()
-            infos: list[CallInfo] = []
-            try:
-                for ticker, pack in packs.items():
-                    record, calls = run_debate(pack, weighting, client, ledger, forbidden=ws.forbidden,
-                                               ignore=ignore, max_workers=max_workers)
-                    records[ticker] = record
-                    infos.extend(calls)
-            except Exception as error:
-                trace.record("debat", "llm", "echec", started_at=started, note=f"{type(error).__name__} : {error}")
-                raise
-            for round_number in (1, 3):
-                for agent in AGENTS:
-                    name = step_name(agent, round_number)
-                    turns = [t for r in records.values() for t in (r.round1 if round_number == 1 else r.final)
-                             if t.agent == agent]
-                    removed = sum(t.removed_arguments for t in turns)
-                    trace.record(
-                        name, "llm", started_at=started, **_llm_fields(i for i in infos if i.step == name),
-                        outputs=tuple(records), evidence_in=tuple(sorted({i for p in packs.values() for i in p.evidence_ids})),
-                        note=f"{len(turns)} candidats ; {sum(len(t.arguments) for t in turns)} arguments gardés, "
-                             f"{removed} supprimés (preuve absente ou nombre non étayé).",
-                    )
-        else:
-            trace.record("debat", "llm", "ignore", note="Aucun candidat à débattre : " + (decision.reason or "aucun dossier."))
-        result.debate = records
-
-        # 5. Décision : confiance, désaccords, panier, cohérence d'une demande (aucun LLM)
-        coherence: Optional[CoherenceAnalysis] = None
-        dropped_claims: list[str] = []
-        with trace.step("decision", "code", version=f"engine@{VERSION}") as step:
-            decision = apply_debate(decision, records.values(), profile_evidence_ids=weighting.evidence_ids)
-            updates: dict[str, Any] = {"retained": selection.tickers, "displaced": selection.displaced}
-            confidences = [decision.candidate_confidence.get(t) for t in selection.tickers]
-            if selection.tickers and all(c == "faible" for c in confidences):
-                updates.update(no_recommendation=True, reason=LOW_CONFIDENCE_REASON)
-            decision = decision.model_copy(update=updates)
-            if requested_ticker:
-                coherence = _build_coherence(
-                    requested_ticker, ws=ws, assets=assets, names=names, metrics=metrics, signals=signals,
-                    evidence=evidence, weighting=weighting, decision=decision, ledger=ledger, ignore=ignore,
-                    dropped=dropped_claims)
-                step.note(f"Tester une idée — {requested_ticker} : {coherence.verdict}, "
-                          f"{len(coherence.tensions)} tension(s).")
-            step.set(outputs=decision.retained)
-            step.note(f"{len(decision.retained)} pistes retenues ; {len(decision.disagreements)} désaccord(s) conservé(s) ; "
-                      f"{len(decision.to_review)} à examiner.")
-            if dropped_claims:
-                step.note("Affirmations retirées par le vérificateur : " + " | ".join(dropped_claims))
-        result.decision = decision
-        for control in (governance.control_basket(selection, weights.constraints),
-                        governance.control_diversification(selection),
-                        governance.control_no_recommendation(decision.no_recommendation, decision.reason)):
-            trace.control(control.name, control.passed, control.note)
-
-        # 6. Explication : rédaction, vérificateur de fidélité, filtre de formulations
-        rejected = [
-            RejectedItem(ticker=r.ticker, reason=r.reason, kind="contrainte",
-                         evidence_ids=_rule_evidence(r.rule, weighting))
-            for r in decision.rejected
-        ]
-        if not decision.no_recommendation:
-            rejected.extend(
-                RejectedItem(ticker=r.ticker, reason=r.reason, kind="classement",
-                             evidence_ids=_rule_evidence(r.rule, weighting))
-                for r in decision.displaced
-            )
-        rejected.extend(
-            RejectedItem(ticker=t, kind="preuves",
-                         reason="Écarté faute d'indicateurs valides : historique de prix insuffisant à cette date.")
-            for t in without_metrics
-        )
-        simulated_run = client.model_id("strong") == simulated.MODEL_ID
-        with trace.step("explication", "llm") as step:
-            explanation, report, infos = explain(
-                run_id=run_id, decision=decision, weighting=weighting, packs=packs, records=records,
-                rejected=rejected, coherence=coherence, client=client, ledger=ledger, forbidden=ws.forbidden,
-                ignore=ignore, reading_level=reading_level, notes=(simulated.NOTE,) if simulated_run else (),
-            )
-            step.set(**_llm_fields(infos))
-            if not infos:
-                step.set(kind="code")
-                step.note("Aucune piste à rédiger : explication assemblée par le code, sans appel au modèle.")
-            if report.retried:
-                step.note("Une relance après refus du vérificateur de fidélité.")
-        control = governance.control_display(
-            checked=report.final_checked, first_pass_ok=report.first_pass_ok,
-            first_pass_checked=report.first_pass_checked, removed=report.removed,
-            remaining_issues=len(report.final_issues))
-        trace.control(control.name, control.passed, control.note)
-        result.fidelity = report
-        if not report.faithful:
-            raise RuntimeError(
-                "Explication non affichée : le vérificateur de fidélité relève encore "
-                f"{len(report.final_issues)} écart(s) : "
-                + " | ".join(f"{i.where} ({', '.join(i.codes)})" for i in report.final_issues[:5]))
-        result.explanation, result.fidelity, result.status = explanation, report, "termine"
-    except Exception as error:  # échec propre : visible dans le résultat et dans la trace
-        result.status, result.error = "echec", f"{type(error).__name__} : {error}"
-    result.trace = trace.to_trace()
-    return result
+        stage_profile(ctx, ws, client)
+        stage_validation(ctx, ws, client)
+        stage_research(ctx, ws, client)
+        stage_evidence_packs(ctx, ws, client)
+        stage_debate(ctx, ws, client, max_workers=max_workers)
+        stage_decision(ctx, ws, client)
+        stage_explanation(ctx, ws, client)
+    except Exception as error:
+        return fail(ctx, error)
+    return finish(ctx)

@@ -158,7 +158,14 @@ class FakeLLMClient:
 
 # --- Amazon Bedrock ---------------------------------------------------------------------------
 class BedrockClient:
-    """Amazon Bedrock, API Converse. La sortie structurée passe par un outil dont l'usage est forcé.
+    """Amazon Bedrock, API Converse. La sortie structurée passe par un outil que le modèle est invité à appeler.
+
+    Compatibilité avec les modèles Claude actuels (Opus 5.5, Sonnet 5.5, Haiku 5.5) :
+    - pas de `temperature` (valeur non par défaut refusée) ;
+    - pas de `toolChoice` forcé (refusé par Opus 5.5 et Sonnet 5.5) : choix automatique et consigne dans le
+      message ; une réponse sans appel d'outil est rejetée par la validation, donc relancée une fois ;
+    - `max_tokens` assez grand pour le raisonnement du modèle (activé par défaut) ; les blocs
+      `reasoningContent` sont ignorés à la lecture.
 
     Configuration par variables d'environnement (voir `.env.example`) : `AWS_REGION`,
     `BEDROCK_MODEL_ID_FAST`, `BEDROCK_MODEL_ID_STRONG`, `BEDROCK_GUARDRAIL_ID` (optionnel).
@@ -169,7 +176,7 @@ class BedrockClient:
 
     def __init__(self, *, region: Optional[str] = None, model_fast: Optional[str] = None,
                  model_strong: Optional[str] = None, guardrail_id: Optional[str] = None,
-                 guardrail_version: str = "DRAFT", max_tokens: int = 4096, client: Any = None):
+                 guardrail_version: str = "DRAFT", max_tokens: int = 16000, client: Any = None):
         self.region = region or os.environ.get("AWS_REGION") or None
         self.models = {
             TIER_FAST: model_fast or os.environ.get("BEDROCK_MODEL_ID_FAST", ""),
@@ -204,7 +211,8 @@ class BedrockClient:
     def invoke(self, *, step, system, payload, schema, tier, feedback=None) -> Any:
         user = (
             "Données d'entrée (JSON) :\n" + json.dumps(payload, ensure_ascii=False, default=str)
-            + f"\n\nRéponds en appelant l'outil `{self.TOOL_NAME}` avec un objet conforme au schéma."
+            + f"\n\nRéponds uniquement en appelant l'outil `{self.TOOL_NAME}` avec un objet conforme au schéma, "
+            "sans texte autour."
         )
         if feedback:
             user += "\n\n" + feedback
@@ -212,14 +220,14 @@ class BedrockClient:
             "modelId": self.model_id(tier),
             "system": [{"text": system}],
             "messages": [{"role": "user", "content": [{"text": user}]}],
-            "inferenceConfig": {"maxTokens": self.max_tokens, "temperature": 0},
+            # Ni `temperature` ni `toolChoice` forcé : refusés par les modèles Claude actuels (voir la classe).
+            "inferenceConfig": {"maxTokens": self.max_tokens},
             "toolConfig": {
                 "tools": [{"toolSpec": {
                     "name": self.TOOL_NAME,
                     "description": "Rend la sortie structurée de l'étape.",
                     "inputSchema": {"json": schema.model_json_schema()},
                 }}],
-                "toolChoice": {"tool": {"name": self.TOOL_NAME}},
             },
         }
         if self.guardrail_id:

@@ -4,7 +4,7 @@
 > En cas d'interruption : joindre ce fichier dans une nouvelle conversation et reprendre à la **première tâche non cochée** de la section 4.
 > **Règle : ne jamais recommencer une étape marquée ✅.**
 
-Dernière mise à jour : 2026-11-14 — étape 3 (P3) terminée en local : agents, débat, explication, vérificateur de fidélité, pipeline complet (`scripts/run_local.py`) ; S1, S3, S6, S11 au vert, S8 partiel. Les agents tournent en mode **simulé** (règles Python, aucun modèle) : le client Bedrock est écrit mais n'a pas été exécuté contre AWS (A2 non levé). C6 fait avec P3 ; C7 (calibrage) reste ouvert. Étape 5 (P5) : F9 fait, l'application est branchée sur l'API réelle en local (`backend/easytrade/api/`), contrat vérifié par des tests des deux côtés et par un parcours complet dans un navigateur ; restent l'essai sur téléphone et le déploiement (P4)
+Dernière mise à jour : 2026-11-14 — étape 4 (P4) : code AWS prêt à déployer (CDK, 8 Lambda, Step Functions, API sur DynamoDB / S3), résultat identique au local vérifié par `tests/aws` ; client Bedrock corrigé pour les modèles Claude actuels ; restent le déploiement et le premier run sur le compte d'atelier (E4, D8). Avant : étape 3 (P3) terminée en local : agents, débat, explication, vérificateur de fidélité, pipeline complet (`scripts/run_local.py`) ; S1, S3, S6, S11 au vert, S8 partiel. Les agents tournent en mode **simulé** (règles Python, aucun modèle) : le client Bedrock est écrit mais n'a pas été exécuté contre AWS (A2 non levé). C6 fait avec P3 ; C7 (calibrage) reste ouvert. Étape 5 (P5) : F9 fait, l'application est branchée sur l'API réelle en local (`backend/easytrade/api/`), contrat vérifié par des tests des deux côtés et par un parcours complet dans un navigateur ; restent l'essai sur téléphone et le déploiement (P4)
 
 ---
 
@@ -16,12 +16,31 @@ Dernière mise à jour : 2026-11-14 — étape 3 (P3) terminée en local : agent
 | 1 | Socle données (P1) | ✅ terminée | S5, S7, S9 verts ; `pytest` : 42 réussis, 14 en attente (P2 et suivantes) |
 | 2 | Moteur de décision (P2) | 🟦 en cours | S4, S12 verts ; C6 fait avec P3 ; reste C7 (calibrage) |
 | 3 | Agents et explicabilité (P3) | ✅ terminée en local (agents simulés) ; exécution sur Bedrock à faire dès A2 | S1, S3, S6, S11 verts ; `pytest` : 195 réussis, 4 en attente |
-| 4 | AWS (P4) | ⬜ à faire | Un run complet sur AWS |
+| 4 | AWS (P4) | 🟨 code prêt, non déployé : E1, E2, E3, E5 ✅ en local ; E4 (déploiement, run sur AWS) à faire par l'équipe | `cdk synth` réussi (3 piles) ; `tests/aws` : machine d'états = pipeline local ; `pytest` : 261 réussis, 3 en attente |
 | 5 | Mobile (P5) | 🟨 F1 à F9 ✅ : application branchée sur l'API réelle en local ; restent l'essai sur téléphone et l'API déployée (P4) | `npm run e2e:api` : parcours complet sur l'API réelle, 14 étapes, aucune erreur ; `pytest` : 247 réussis, 3 en attente ; `npm test` : 20 réussis |
 | 6 | Mateo / ESG + extras (P6) | ⬜ à faire | S2 |
 | 7 | Livrables (P7) | ⬜ à faire | Vidéo, documentation, one-pager, README |
 
 ## 2. Fichiers créés ou modifiés
+
+### Étape 4 — P4 AWS (2026-11-14), code prêt, non déployé
+
+Commandes de déploiement : `infra/README.md`. Conception : `docs/06_AWS.md` (section « Réalisation (P4) »).
+
+| Fichier | Contenu |
+|---|---|
+| `orchestration/pipeline.py` | `run_pipeline` découpé en `RunContext` + fonctions d'étape (`stage_profile` … `stage_explanation`, `debate_one`, `record_debate`) ; comportement local inchangé (les 247 tests d'avant restent verts) |
+| `orchestration/aws_runtime.py` (nouveau) | Données copiées de S3 au démarrage à froid ; contexte des runs (`S3StateStore` / `LocalStateStore`) ; table (`DynamoRunTable` / `LocalRunTable`) |
+| `orchestration/handlers/*` | Une Lambda par état + `common.py` (règle d'erreur : relance si Bedrock indisponible, sinon échec visible) + `failure.py` |
+| `api/aws_service.py` (nouveau), `api/deps.py`, `api/service.py` | `AwsApiService` choisi par `EASYTRADE_ENV=aws` ; `_prepare_run` extrait |
+| `agents/llm_client.py` | Bedrock : sans `temperature` ni `toolChoice` forcé, `max_tokens` 16 000, blocs de raisonnement ignorés |
+| `explain/trace.py` | `set_on_step` |
+| `infra/app.py`, `infra/stacks/{data,pipeline,api}_stack.py`, `infra/build_lambda.py`, `infra/statemachine/pipeline.asl.json`, `infra/cdk.json`, `infra/requirements.txt` | CDK (us-east-1), paquets Lambda sans Docker (93,8 Mo), machine d'états |
+| `scripts/seed_aws.py` | Recopie de `data/` vers S3 sans redéployer |
+| `backend/tests/aws/` (nouveau) | Interpréteur de la machine d'états ; 12 tests : résultat identique au local (amira, robert + TSLA, mateo), artefacts, relances puis échec visible, échec sans relance, API sur deux « conteneurs », profil fictif, lanceur |
+
+**Non vérifié** : aucune exécution sur AWS (pas d'identifiants) ; import du paquet sur Linux / Python 3.12 (construit pour, non exécuté) ; quotas Bedrock du compte d'atelier.
+
 
 ### Branchement mobile ↔ backend — F9 et routes de E3 en local (2026-11-14)
 
@@ -316,7 +335,7 @@ Cocher au fur et à mesure. Les blocs A et F peuvent avancer en parallèle des a
 ### A. Décisions et confirmations (bloquantes pour certaines tâches)
 
 - [ ] A1. Confirmer dates limites, plateforme de dépôt et formats (consignes logistiques officielles).
-- [ ] A2. Confirmer le compte AWS : services autorisés, région, modèles Bedrock ouverts, budget. Bloque E.
+- [x] A2. Compte AWS : atelier temporaire, us-east-1, Bedrock, modèles au choix, 500 $ de crédits. Reste à vérifier sur le compte : Lambda / Step Functions / API Gateway / S3 / DynamoDB ouverts, `cdk bootstrap` autorisé.
 - [ ] A3. Trancher le nom et le sous-titre (ADR 0005) et le vocabulaire « pistes à explorer ».
 - [ ] A4. Trancher Alpaca / Finnhub après lecture de leurs conditions (ADR 0002).
 - [ ] A5. Répartir les rôles (`docs/10_PLAN.md`) ; dépôt public ou privé.
@@ -350,15 +369,15 @@ Cocher au fur et à mesure. Les blocs A et F peuvent avancer en parallèle des a
 - [x] D5. `agents/explanation.py`, `explain/fidelity.py`, `explain/wording.py`. → `test_fidelity`, `test_wording`, **S6**, **S8** (points 1 et 2)
 - [x] D6. `explain/trace.py`, `engine/governance.py`.
 - [x] D7. Scénarios **S1** et **S3** au vert en local ; runs des personas enregistrés dans `data/curated/runs/` (agents simulés).
-- [ ] D8. Rejouer S1, S3, S6 avec Amazon Bedrock (`--llm bedrock`) dès que A2 est levé : vérifier la requête Converse sur le compte réel, mesurer le taux de fidélité d'un vrai modèle, ajuster les prompts `v1`, puis réenregistrer les runs des personas.
+- [ ] D8. Rejouer S1, S3, S6 avec Amazon Bedrock (`--llm bedrock`) dès que les identifiants du compte d'atelier sont disponibles (client corrigé en P4 : ni `temperature` ni `toolChoice` forcé, refusés par Opus 5.5 / Sonnet 5.5 / Haiku 5.5) : vérifier la requête Converse sur le compte réel, mesurer le taux de fidélité d'un vrai modèle, ajuster les prompts `v1`, puis réenregistrer les runs des personas.
 
 ### E. AWS — P4 (dès que A2 est levé)
 
-- [ ] E1. `DataStack` : S3, DynamoDB ; `scripts/seed_aws.py`.
-- [ ] E2. `PipelineStack` : Lambda par étape, machine d'états, droits Bedrock.
-- [ ] E3. `ApiStack` : API Gateway. `api/app.py` et les routes sont faits et testés en local (F9) ; reste le déploiement et le passage du stockage des runs à DynamoDB / S3 (`ApiService`).
-- [ ] E4. Un run complet sur AWS ; trace visible ; captures pour la vidéo.
-- [ ] E5. IAM à privilège minimal, secrets, étiquettes de coût.
+- [x] E1. `DataStack` : S3 chiffré (données copiées au déploiement), DynamoDB ; `scripts/seed_aws.py`.
+- [x] E2. `PipelineStack` : 8 Lambda (`orchestration/handlers/*`), machine d'états en série + `Map` du débat, droits Bedrock. Pipeline découpé en étapes (`stage_*`, `RunContext`), même code qu'en local.
+- [x] E3. `ApiStack` : API Gateway HTTP + Lambda API ; `api/aws_service.py` (runs dans DynamoDB, lancement Step Functions, résultat sur S3, profils fictifs dans la table).
+- [ ] E4. Déployer (`infra/README.md`) puis un run complet sur AWS ; trace visible ; captures pour la vidéo.
+- [x] E5. Un rôle IAM par fonction (compartiment, table, Bedrock seulement si besoin) ; aucun secret nécessaire (rôle de la fonction) ; étiquettes `projet`, `evenement`, `environnement`.
 
 ### F. Mobile — P5 (démarre tout de suite avec les données fictives)
 

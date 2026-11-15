@@ -28,3 +28,6 @@ data/curated/*
 # Divers
 .DS_Store
 *.log
+
+# P4 : paquets des Lambda (infra/build_lambda.py, régénérables)
+infra/build/

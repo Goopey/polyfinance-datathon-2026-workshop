@@ -1,3 +1,9 @@
 {
-  "app": "python3 app.py"
+  "app": "python app.py",
+  "context": {
+    "region": "us-east-1",
+    "bedrock_model_fast": "",
+    "bedrock_model_strong": "",
+    "bedrock_guardrail_id": ""
+  }
 }
