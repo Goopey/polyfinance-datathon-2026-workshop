@@ -4,7 +4,7 @@
 > En cas d'interruption : joindre ce fichier dans une nouvelle conversation et reprendre à la **première tâche non cochée** de la section 4.
 > **Règle : ne jamais recommencer une étape marquée ✅.**
 
-Dernière mise à jour : 2026-11-15 (soir) — graphe sourcé (G1, S10 ✅), critère qualité (G3), cours et sentiment dans la fiche (F11, H7) faits et testés **en local, pas encore déployés** ; les analyses précalculées sur AWS sont à refaire. Avant, le même jour : étape 4 (P4) **déployée** sur le compte d'atelier (us-east-1) : 3 piles CDK, API en ligne, premières analyses réelles sur AWS terminées (amira, mateo, robert ; ~2 min chacune ; vérificateur de fidélité passé) ; coût mesuré ≈ 0,35 $ par analyse ; précalcul : 3 / 96. Avant, le 2026-11-14 : code AWS prêt à déployer (CDK, 8 Lambda, Step Functions, API sur DynamoDB / S3), résultat identique au local vérifié par `tests/aws` ; client Bedrock corrigé pour les modèles Claude actuels ; restent le déploiement et le premier run sur le compte d'atelier (E4, D8). Avant : étape 3 (P3) terminée en local : agents, débat, explication, vérificateur de fidélité, pipeline complet (`scripts/run_local.py`) ; S1, S3, S6, S11 au vert, S8 partiel. Les agents tournent en mode **simulé** (règles Python, aucun modèle) : le client Bedrock est écrit mais n'a pas été exécuté contre AWS (A2 non levé). C6 fait avec P3 ; C7 (calibrage) reste ouvert. Étape 5 (P5) : F9 fait, l'application est branchée sur l'API réelle en local (`backend/easytrade/api/`), contrat vérifié par des tests des deux côtés et par un parcours complet dans un navigateur ; restent l'essai sur téléphone et le déploiement (P4)
+Dernière mise à jour : 2026-11-15 (nuit) — preuves ESG, première partie de G2 : chargeur des émissions de GES (EPA, ECCC) pour 7 titres, sources au registre, conditions dans `CONTRIBUTING.md` ; `pytest` : 300 réussis, 1 en attente (S2 : le moteur ne note pas encore le critère `esg`). Avant, le même soir : graphe sourcé (G1, S10 ✅), critère qualité (G3), cours et sentiment dans la fiche (F11, H7) faits et testés **en local, pas encore déployés** ; les analyses précalculées sur AWS sont à refaire. Avant, le même jour : étape 4 (P4) **déployée** sur le compte d'atelier (us-east-1) : 3 piles CDK, API en ligne, premières analyses réelles sur AWS terminées (amira, mateo, robert ; ~2 min chacune ; vérificateur de fidélité passé) ; coût mesuré ≈ 0,35 $ par analyse ; précalcul : 3 / 96. Avant, le 2026-11-14 : code AWS prêt à déployer (CDK, 8 Lambda, Step Functions, API sur DynamoDB / S3), résultat identique au local vérifié par `tests/aws` ; client Bedrock corrigé pour les modèles Claude actuels ; restent le déploiement et le premier run sur le compte d'atelier (E4, D8). Avant : étape 3 (P3) terminée en local : agents, débat, explication, vérificateur de fidélité, pipeline complet (`scripts/run_local.py`) ; S1, S3, S6, S11 au vert, S8 partiel. Les agents tournent en mode **simulé** (règles Python, aucun modèle) : le client Bedrock est écrit mais n'a pas été exécuté contre AWS (A2 non levé). C6 fait avec P3 ; C7 (calibrage) reste ouvert. Étape 5 (P5) : F9 fait, l'application est branchée sur l'API réelle en local (`backend/easytrade/api/`), contrat vérifié par des tests des deux côtés et par un parcours complet dans un navigateur ; restent l'essai sur téléphone et le déploiement (P4)
 
 ---
 
@@ -18,10 +18,30 @@ Dernière mise à jour : 2026-11-15 (soir) — graphe sourcé (G1, S10 ✅), cri
 | 3 | Agents et explicabilité (P3) | ✅ terminée en local (agents simulés) ; exécution sur Bedrock à faire dès A2 | S1, S3, S6, S11 verts ; `pytest` : 195 réussis, 4 en attente |
 | 4 | AWS (P4) | 🟨 déployé le 2026-11-15 : E1 à E5 ✅ ; **à redéployer** (graphe, qualité, cours, sentiment ajoutés depuis : `python build_lambda.py` puis `cdk deploy`) ; E6 (précalcul) 3 / 96, périmées ; D8 (rejouer S1, S3, S6 sur Bedrock) en cours | `cdk synth` réussi (3 piles) ; `tests/aws` : machine d'états = pipeline local ; `pytest` : 261 réussis, 3 en attente |
 | 5 | Mobile (P5) | 🟨 F1 à F9 ✅ : application branchée sur l'API réelle en local ; restent l'essai sur téléphone et l'API déployée (P4) | `npm run e2e:api` : parcours complet sur l'API réelle, 14 étapes, aucune erreur ; `pytest` : 247 réussis, 3 en attente ; `npm test` : 20 réussis |
-| 6 | Mateo / ESG + extras (P6) | ⬜ à faire | S2 |
+| 6 | Mateo / ESG + extras (P6) | 🟨 G2 partiel : preuves d'émissions de GES de 7 titres (EPA, ECCC) ; reste le signal `esg` du moteur, ESGV et les rapports de durabilité | S2 |
 | 7 | Livrables (P7) | ⬜ à faire | Vidéo, documentation, one-pager, README |
 
 ## 2. Fichiers créés ou modifiés
+
+### Preuves ESG, première partie de G2 (2026-11-15)
+
+Conditions d'utilisation, sources admises et règles de saisie : `CONTRIBUTING.md`, section « Données ESG ». Conception et hypothèses : `docs/04_DONNEES.md`, section 12.
+
+| Fichier | Contenu |
+|---|---|
+| `backend/easytrade/data/external_esg.py` | **Créé.** Lecture des fichiers bruts de `data/raw/external/` : parents et émissions de l'EPA (six onglets directs du classeur), installations d'ECCC ; encodage cp1252 de l'EPA ; date de publication tirée de l'archive |
+| `backend/easytrade/ingestion/esg.py` | **Implémenté** (squelette remplacé). Rattachement aux titres, pondération par la part de détention, lignes `esg_evidence.csv`, fusion qui conserve les lignes manuelles, contrôle des sources au registre |
+| `scripts/ingest_esg.py` | **Créé.** `--dry-run` (audit sans écriture), `--retrieved-at`, `--external-dir` |
+| `data/reference/esg_evidence.csv` | **7 lignes** produites par le script (`entered_by = script:ingest_esg`) : XOM, PG, GOOGL, TSLA (`FAIT`), ENB.TO, CNQ.TO, FTS.TO (`HYPOTHESE`) |
+| `data/reference/sources_registry.csv` | **2 lignes ajoutées** : `epa_ghgrp`, `canada_ghgrp` (statut « utilisé » ; `verifie_par` et `verifie_le` vides, à remplir par une personne) |
+| `backend/easytrade/agents/tools.py` | **Modifié** (`preuves_esg`) : la trace indique l'auteur réel de la ligne (script ou saisie manuelle) et la preuve reprend les limites du registre |
+| `backend/tests/unit/test_esg_ingestion.py` | **Créé** (18 tests) |
+| `backend/tests/unit/test_agents.py` | **Modifié** : `test_recherche_titre_demande_toujours_analyse` n'affirme plus « aucune preuve ESG » (FTS.TO en a maintenant une) |
+| `backend/requirements.txt` | `openpyxl` ajouté (lecture du classeur Excel ; absent du déploiement Lambda, dont la liste de dépendances est dans `infra/build_lambda.py`) |
+| `CONTRIBUTING.md` | Section « Données ESG : conditions d'utilisation » ; commande `ingest_esg.py` |
+| `docs/04_DONNEES.md`, `docs/ARBORESCENCE.md` | Section 12 ; trois fichiers ajoutés à l'arborescence (le reste de l'arborescence n'a pas été régénéré) |
+
+Résultat : XOM 37,88 Mt CO2e (59 installations américaines, part de détention appliquée), PG 1,66 Mt, TSLA 80,5 kt, GOOGL 15,9 kt ; CNQ.TO 18,57 Mt (92 installations), ENB.TO 749,6 kt (borne inférieure), FTS.TO 157,0 kt. Aucune ligne pour les autres titres : information manquante. `owid-co2-data.csv` (émissions par pays) n'est pas utilisé.
 
 ### Étape 4 — P4 AWS (2026-11-14), code prêt, non déployé
 
@@ -303,7 +323,7 @@ Définitions : `docs/09_SCENARIOS_TEST.md`. Commande : `cd backend && pytest tes
 | ID | Scénario | État | Écart constaté |
 |---|---|---|---|
 | S1 | Amira : le risque élevé garde une diversification | ✅ passe (local, agents simulés) | `test_s01` (5 tests) : pistes technologiques présentes (QQQ, GOOGL), plafonds tenus, 5 groupes hors technologies, NVDA déclassée pour concentration avec le motif rattaché au souhait de diversification du profil. Aucune piste crypto n'est retenue (classement, pas règle) |
-| S2 | Mateo : l'ESG change le résultat | ⏳ non exécuté | Test en attente ; données ESG absentes. En attendant, le run de Mateo rend « aucune recommandation » et n'a aucune piste crypto (`test_pipeline`) |
+| S2 | Mateo : l'ESG change le résultat | ⏳ non exécuté | Test en attente. Preuves d'émissions de GES saisies pour 7 titres (G2, première partie) mais pas encore transformées en signal `esg` du moteur ; ESGV et rapports de durabilité non saisis. En attendant, le run de Mateo rend « aucune recommandation » et n'a aucune piste crypto (`test_pipeline`) |
 | S3 | Robert : la demande incohérente est remise en question | ✅ passe (local, agents simulés) | `test_s03` (13 tests, TSLA et NVDA) : titre débattu, verdict « incohérent avec le profil », tensions chiffrées et sourcées (volatilité, perte maximale ; pire période de 3 ans pour TSLA), effet sur le panier simulé, alternatives, pistes par défaut sans crypto. Pour NVDA, la tension d'horizon ne se déclenche pas (sa pire période de 3 ans est positive) |
 | S4 | « Aucune recommandation » | ✅ passe | `test_s04` : univers crypto-only exclu (Mateo) → aucun admissible ; et signaux manquants → preuves insuffisantes |
 | S5 | Aucune fuite du futur | ✅ passe | `test_s05_aucune_fuite_du_futur.py` ; analyse à 2023-06-30 identique sur un jeu amputé du futur |
@@ -326,6 +346,7 @@ Définitions : `docs/09_SCENARIOS_TEST.md`. Commande : `cd backend && pytest tes
 | Tests unitaires P2 : `test_constraints` (4), `test_scoring` (6) | ✅ | — |
 | Tests unitaires P3 : `test_wording` (16), `test_fidelity` (23), `test_llm_client` (12), `test_agents` (15), `test_governance` (11), `test_pipeline` (8) | ✅ | — |
 | Contrat mobile ↔ backend : `backend/tests/api` (51), `mobile/tests` (20), `npm run e2e:api` | ✅ | — |
+| Tests unitaires ESG : `test_esg_ingestion` (18 : pondération, noms exacts, onglet « Suppliers » exclu, dates de publication, fusion avec les lignes manuelles, cohérence du fichier de référence, filtre point-in-time via `ResearchTools`) | ✅ | Les 2 anomalies sensibles (onglet « Suppliers » compté, pondération ignorée) ont été injectées pour vérifier que les tests échouent |
 | `test_graph_edges` (G) | ⏳ en attente | Squelette |
 | Validité de tous les fichiers JSON et Python du dépôt | ✅ | — |
 
@@ -399,7 +420,7 @@ Cocher au fur et à mesure. Les blocs A et F peuvent avancer en parallèle des a
 ### G. Graphe et ESG — P1 / P6
 
 - [x] G1. Graphe : 90 arêtes `CONCURRENT` (sociétés comparables Finnhub, 20 actions, une arête par paire, claim `HYPOTHESE` daté au 2026-11-12) dans `graph_edges.csv`, produites par `scripts/fetch_finnhub.py` ; servies par l'API existante (`tools.relations`, `service.graph`) sans changement du mobile. → `test_graph_edges` (3), **S10** (3). Reste possible : liens de corrélation (nouveau type de relation, contrat mobile).
-- [ ] G2. Saisir les preuves ESG dans `esg_evidence.csv` ; `ingestion/esg.py`. → **S2**. En attendant, Mateo : « aucune recommandation » par la règle du critère prioritaire (`docs/03_DECISION_ENGINE.md`).
+- [ ] G2. Preuves ESG (`esg_evidence.csv`, `ingestion/esg.py`) → **S2**. **Fait (2026-11-15)** : émissions directes de GES de XOM, PG, GOOGL, TSLA (EPA 2023, `FAIT`) et ENB.TO, CNQ.TO, FTS.TO (ECCC 2024, `HYPOTHESE`), 7 lignes, `scripts/ingest_esg.py`. **Reste** : (1) un signal chiffré du critère `esg` dans `engine/signals.py` (colonne numérique et normalisation à décider) ; (2) saisir ESGV (exclusions de l'indice, Vanguard) et les rapports de durabilité (ENB, CNQ, XOM) ; (3) afficher l'attribution de la licence canadienne ; (4) remplir `verifie_par` / `verifie_le` des deux sources ; (5) rendre S2 exécutable. En attendant, Mateo : « aucune recommandation » par la règle du critère prioritaire (`docs/03_DECISION_ENGINE.md`).
 - [x] G3. Critère `qualite` des 20 actions (2026-11-15) : `data/fundamentals.csv` (Finnhub, séries annuelles, publication supposée fin d'exercice + 90 j), `engine/quality.py` (ROE, endettement comparé au secteur, marge), « non applicable » aux FNB et à la crypto (`signals.NOT_APPLICABLE`, poids réparti). Règle ajoutée : critère le plus important du profil sans donnée ⇒ aucune recommandation. → `test_quality` (8). EDGAR (dates de dépôt exactes) non utilisé : amélioration possible.
 - [x] G4. Affichage d'un critère « non applicable » (2026-11-15) : champ `not_applicable` d'`ExplanationItem` (contrat, `schemas/explanation.py`, `agents/explanation.py`, serveur fictif, `explanation.exemple.json`) ; `ContributionBars` affiche « sans objet » avec l'explication et rapporte les poids aux critères applicables (Robert, FNB : stabilité 40 au lieu de 30). Vérifié par capture de la fiche de XIU.TO.
 
@@ -478,3 +499,18 @@ Détail et valeurs : `docs/03_DECISION_ENGINE.md`, section « Hypothèses ajout�
 7. Repères de risque de la fiche : `RISK_LIMITS` du moteur, selon la tolérance du profil ; la fiche situe chaque indicateur entre le minimum et le maximum de l'univers à la même date.
 8. Cinq étapes affichées pendant l'analyse, déduites de la trace : profil ; recherche et validation (fin de `recherche`) ; débat (`debate.*`) ; décision ; explication.
 9. CORS ouvert à toutes les origines en local (`EASYTRADE_CORS_ORIGINS` pour restreindre) ; à restreindre au domaine de l'application une fois déployé.
+
+## 10. Hypothèses prises pour les preuves ESG (à valider par l'équipe)
+
+Valeurs et justifications : `docs/04_DONNEES.md`, section 12.
+
+1. Les preuves ESG de ce lot décrivent l'environnement seulement (émissions directes de GES). Ni la dimension sociale, ni la gouvernance, ni les controverses ne sont couvertes.
+2. EPA : le rattachement vient du fichier (société mère et part de détention déclarées), donc `FAIT`. ECCC : rattachement par le début du nom de l'exploitant, donc `HYPOTHESE`.
+3. Total d'ENB : borne inférieure. « Westcoast Energy Inc. » (1,17 Mt en 2024) n'est pas rattaché, faute de document dans le dépôt qui le lie à Enbridge ; à documenter, puis à ajouter à `CANADA_OPERATORS`.
+4. Date de publication du jeu canadien 2024 : 2026-05-27, relevée dans les métadonnées de recherche de la fiche open.canada.ca. **À confirmer** sur la fiche. Une date trop tardive est sans risque pour S5 ; une date trop précoce ne l'est pas.
+5. Date d'extraction : 2026-11-15, tirée du nom du fichier canadien et appliquée aux deux sources (les trois fichiers ont été déposés le même jour).
+6. Les deux sources sont au statut « utilisé » pour que `preuves_esg` les lise. `verifie_par` et `verifie_le` sont vides : les conditions ont été lues par l'agent qui a écrit les lignes (EPA : page des clauses ; ECCC : Licence du gouvernement ouvert – Canada 2.0), pas par une personne de l'équipe.
+7. EPA : usage non commercial, scientifique et éducatif libre. Un prototype de datathon entre dans ce cadre ; une diffusion commerciale ou hors datathon est à revoir.
+8. Licence canadienne : l'attribution est obligatoire partout où les données sont montrées. **Pas encore ajoutée** à l'application ni aux livrables.
+9. `tools.preuves_esg` et `test_agents.py` ont été modifiés (voir le tableau ci-dessus) : changement mineur de trace et de limites, hors périmètre strict du chargeur, nécessaire pour que les réserves de la source accompagnent chaque preuve.
+10. Le chargeur ne note rien. Le passage d'une phrase de preuve à un signal chiffré du critère `esg` reste à décider avec le moteur (normalisation, traitement des titres sans installation).

@@ -38,6 +38,7 @@ easytrade/
 │   │   ├── data/
 │   │   │   ├── __init__.py
 │   │   │   ├── calendar.py
+│   │   │   ├── external_esg.py
 │   │   │   ├── fx.py
 │   │   │   ├── loaders.py
 │   │   │   ├── point_in_time.py
@@ -130,6 +131,7 @@ easytrade/
 │   │   │   ├── test_agents.py
 │   │   │   ├── test_constraints.py
 │   │   │   ├── test_data_quality.py
+│   │   │   ├── test_esg_ingestion.py
 │   │   │   ├── test_evidence_ledger.py
 │   │   │   ├── test_fidelity.py
 │   │   │   ├── test_fx_calendar.py
@@ -304,6 +306,7 @@ easytrade/
 │   └── README.md
 ├── scripts/
 │   ├── bootstrap_data.py
+│   ├── ingest_esg.py
 │   ├── run_local.py
 │   ├── run_scenarios.py
 │   └── seed_aws.py

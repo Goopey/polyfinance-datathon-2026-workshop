@@ -123,9 +123,12 @@ class ResearchTools:
                 observed_at=day, published_at=day,
                 retrieved_at=pd.Timestamp(row["retrieved_at"]).date() if row["retrieved_at"] else None,
                 source=source.as_evidence_source(),
-                processing=f"Saisie manuelle depuis « {row['document_title']} » ({row['document_url']}) ; extrait : {row['excerpt']}",
+                processing=(f"{'Extraction par script' if str(row['entered_by']).startswith('script:') else 'Saisie manuelle'} "
+                            f"({row['entered_by']}) depuis « {row['document_title']} » ({row['document_url']}) ; "
+                            f"extrait : {row['excerpt']}"),
                 produced_by=f"agents.tools.preuves_esg@{VERSION}",
-                limits="Information publiée par l'émetteur ou un tiers cité ; couverture ESG partielle.",
+                limits=("Information publiée par l'émetteur ou un tiers cité ; couverture ESG partielle."
+                        + (f" Limites de la source : {source.limites}." if source.limites else "")),
             ))
             out.append({"evidence_id": evidence.evidence_id, "signal_type": row["signal_type"],
                         "summary": row["summary"], "document_date": str(day)})
