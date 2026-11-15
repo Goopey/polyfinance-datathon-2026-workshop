@@ -103,6 +103,50 @@ PREFERENCE_TEXT = {
     "stabilite": "Accorde de l'importance à la stabilité et préfère les entreprises établies",
     "diversification": "Souhaite maintenir une certaine diversification et éviter de miser exclusivement sur un seul secteur",
 }
+# Intérêt ESG déclaré (hypothèses de l'équipe, docs/03 « Critère ESG ») : le poids ESG est porté au niveau de
+# Mateo, dont le profil dit la même phrase (25 %). Quand l'ESG est le **seul** intérêt coché, il devient le
+# critère le plus important du profil (au moins 30 %, et au-dessus de tout autre critère). Sans intérêt ESG
+# coché, le poids ESG revient à 5 %, celui des profils sans cette préférence (Amira, Robert) : le gabarit
+# « modéré » est Mateo, dont les 25 % viennent de sa phrase sur l'ESG. Les autres poids gardent leurs proportions.
+ESG_DEFAULT_WEIGHT = 0.05
+ESG_INTEREST_WEIGHT = 0.25
+ESG_ONLY_WEIGHT = 0.30
+
+
+def _with_esg(weights: dict[str, float], others: dict[str, float], esg: float) -> dict[str, float]:
+    """Poids ESG fixé exactement à `esg` ; les autres gardent leurs proportions, l'arrondi va au plus grand."""
+    total = sum(others.values())
+    out = {c: round(w * (1.0 - esg) / total, 6) for c, w in others.items()}
+    largest = max(out, key=out.get)
+    out[largest] = round(out[largest] + (1.0 - esg - sum(out.values())), 6)
+    return {**out, "esg": esg}
+
+
+def _esg_emphasis(weights: dict[str, float], preferences: list[str]) -> tuple[dict[str, float], list[str]]:
+    """Poids après prise en compte de l'intérêt ESG, et la phrase qui l'explique (vide si inchangé)."""
+    only = list(preferences) == ["esg"]
+    others = {c: w for c, w in weights.items() if c != "esg"}
+    total = sum(others.values())
+    if "esg" not in preferences:
+        if weights["esg"] <= ESG_DEFAULT_WEIGHT or total <= 0:
+            return weights, []
+        out = _with_esg(weights, others, ESG_DEFAULT_WEIGHT)
+        return out, [f"Aucun intérêt ESG déclaré : le poids ESG est ramené à {out['esg'] * 100:.0f} %, celui des "
+                     "profils sans préférence ESG. Les autres poids gardent leurs proportions (hypothèse de l'équipe)."]
+    target = ESG_INTEREST_WEIGHT
+    if only and total > 0:
+        top = max(others.values())
+        # Au-dessus du plus grand autre poids après réduction proportionnelle : t > top·(1 − t)/total.
+        target = max(ESG_ONLY_WEIGHT, round(top / (total + top), 2) + 0.01)
+    if weights["esg"] >= target or total <= 0:
+        return weights, []
+    out = _with_esg(weights, others, target)
+    why = ("L'ESG est le seul intérêt déclaré : il devient le critère le plus important du profil "
+           f"({out['esg'] * 100:.0f} %)." if only else
+           f"Intérêt déclaré pour l'ESG : son poids est porté à {out['esg'] * 100:.0f} %.")
+    return out, [why + " Les autres poids gardent leurs proportions (hypothèse de l'équipe)."]
+
+
 # Exclusion → (phrase du profil, resserrement d'une contrainte dure). Seules les règles que le moteur
 # sait appliquer sont proposées : une exclusion non appliquée serait une promesse non tenue.
 EXCLUSION_RULES: dict[str, tuple[str, dict[str, Any]]] = {
@@ -257,6 +301,8 @@ class ApiService:
             rationale=[
                 *(RationaleView(field="tolerance", because=text, claim_kind="HYPOTHESE")
                   for text in entry.get("_conflicts", ())),
+                *(RationaleView(field="weights.esg", because=text, claim_kind="HYPOTHESE")
+                  for text in entry.get("_weight_notes", ())),
                 *(RationaleView(field=r.field, because=r.because, claim_kind=r.claim_kind) for r in weighting.rationale),
                 *([RationaleView(field="weights", because="Poids modifiés à la main sur l'écran de résumé.")]
                   if entry.get("_modified") else []),
@@ -317,6 +363,7 @@ class ApiService:
                 for criterion, delta in WEIGHT_SHIFTS.get(answer, {}).items():
                     weights[criterion] = max(0.0, weights[criterion] + delta)
             weights = _normalize_weights(weights)
+            weights, weight_notes = _esg_emphasis(weights, list(draft.preferences))
             if draft.weights_override is not None:
                 weights = _normalize_weights({**weights, **draft.weights_override})
             entry = {
@@ -326,6 +373,7 @@ class ApiService:
                 "_source": SOURCE_QUESTIONNAIRE,
                 "_modified": draft.weights_override is not None,
                 "_conflicts": conflicts,
+                "_weight_notes": weight_notes,
                 "profil": {
                     "nom": "Profil fictif",
                     "experience": "",

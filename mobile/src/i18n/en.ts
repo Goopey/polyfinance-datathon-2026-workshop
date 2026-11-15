@@ -191,6 +191,7 @@ export const en: Dict = {
     score: (n) => `${n} / 100`,
     dissent: "Debate disagreement",
     toReview: "Needs review",
+    warningsTitle: "Warning",
     noRecoTitle: "No ideas to explore for this profile",
     noRecoBody: "Rather than force an idea, here's what's missing:",
     profileLostTitle: "This profile is no longer available",

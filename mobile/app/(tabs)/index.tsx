@@ -117,6 +117,7 @@ function Results({ result, runId }: { result: Explanation; runId: string }) {
       <FadeIn>
         <Text style={type.title} accessibilityRole="header">{tx(result.headline)}</Text>
       </FadeIn>
+      <WarningsCard warnings={result.warnings ?? []} />
       {result.items.map((item, i) => (
         <FadeIn key={item.ticker} index={i + 1}>
           <MoveCard item={item} rank={i + 1} runId={runId} />
@@ -125,6 +126,26 @@ function Results({ result, runId }: { result: Explanation; runId: string }) {
       <RejectedList rejected={result.rejected} runId={runId} />
       <UnknownsBlock items={result.unknowns} />
     </>
+  );
+}
+
+/** Avertissements du moteur (ex. aucune piste ne répond au critère le plus important du profil). */
+function WarningsCard({ warnings }: { warnings: string[] }) {
+  const t = useT();
+  const tx = useTx();
+  if (!warnings.length) return null;
+  return (
+    <FadeIn>
+      <Card style={{ borderColor: alpha(colors.warn, 0.4), backgroundColor: colors.warnBg, gap: space.sm }}>
+        <Row>
+          <Icon name="alert" size={20} color={colors.warn} />
+          <Text style={[type.h2, { flex: 1 }]} accessibilityRole="header">{t.pistes.warningsTitle}</Text>
+        </Row>
+        {warnings.map((w) => (
+          <Text key={w} style={type.body}>{tx(w).replace(/^(?:Avertissement :|Warning:) /, "")}</Text>
+        ))}
+      </Card>
+    </FadeIn>
   );
 }
 

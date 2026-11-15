@@ -21,7 +21,7 @@ from easytrade.engine.constraints import (  # noqa: F401  (RISK_LIMITS, SEVERE_R
     screen_assets,
     tolerance_level,
 )
-from easytrade.engine.decision import decide
+from easytrade.engine.decision import esg_focused, decide
 from easytrade.schemas.coherence import CoherenceReport, Tension
 from easytrade.schemas.weights import ProfileWeights
 
@@ -65,7 +65,8 @@ def evaluate_idea(
     tensions: list[Tension] = []
 
     # 1. Contraintes dures : une exclusion est une incohérence franche.
-    screening = screen_assets(row, profile_weights.constraints, esg_controversial, esg_emitters=esg_emitters)
+    screening = screen_assets(row, profile_weights.constraints, esg_controversial, esg_emitters=esg_emitters,
+                              esg_focus=esg_focused(profile_weights.weights))
     for rejection in screening.rejected:
         tensions.append(Tension(dimension="contrainte", detail=rejection.reason, severe=True))
 

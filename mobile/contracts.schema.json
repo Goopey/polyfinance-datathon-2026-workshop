@@ -629,6 +629,12 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "required": [
@@ -638,6 +644,7 @@
         "headline",
         "no_recommendation",
         "missing",
+        "warnings",
         "items",
         "rejected",
         "coherence",

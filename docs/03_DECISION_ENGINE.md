@@ -139,11 +139,11 @@ n'en tire donc que quatre constats :
 | Constat | Condition | Effet sur le classement | Effet sur les contraintes |
 |---|---|---|---|
 | Controverse documentée | Ligne dont le type de signal commence par « Controverse » (saisie sourcée) | Score ESG 0 (connu) | Écarté si `esg_exclusion` (règle `esg_exclusion`) |
-| Émetteur majeur documenté | Plus grande borne inférieure d'émissions ≥ 10 Mt CO2e | Score ESG 0 (connu) | Écarté si `esg_exclusion` (règle `esg_emissions`) |
-| Fonds à filtre ESG | Classification de l'univers « Broad market (U.S., ESG-screened) » (ESGV) | Score ESG 1 | — |
+| Émetteur majeur documenté | Plus grande borne inférieure d'émissions ≥ 10 Mt CO2e (lignes du script EPA / ECCC) | Score ESG 0 (connu) | Écarté si `esg_exclusion` **ou** si le profil pèse l'ESG à 25 % ou plus (règle `esg_emissions`) |
+| Titre ESG prouvé | Ligne de `esg_evidence.csv` dont le type de signal commence par « Filtre ESG » ou « Filtrage ESG », datée et sourcée (aujourd'hui : ESGV, document de Vanguard) | Score ESG 1 ; seul rattachement au thème « filtre ESG » | — |
 | Non concluant | Émissions sous le seuil | Critère **manquant** (preuves visibles dans le dossier) | — |
 
-Un actif sans aucune preuve ESG n'a pas de constat : critère manquant.
+Un actif sans aucune preuve ESG n'a pas de constat : critère manquant. **Seule une ligne du fichier prouve qu'un titre est ESG** (décision de l'équipe, 2026-11-15) : ni la classification de l'univers, ni le nom du fonds, ni la simple présence dans le fichier (qui contient surtout des émissions) ne suffisent. Les lignes saisies à la main sans constat (émissions publiées par les sociétés, périmètre ESG des FNB) sont montrées dans la fiche et le débat, mais leurs chiffres ne sont pas relus par le moteur.
 
 **Pourquoi pas un classement par émissions.** Pour Mateo, les seuls actifs admissibles avec une donnée sont
 FTS.TO, ENB.TO, PG et XOM. Un rang centile des émissions placerait un pipelinier (ENB, borne inférieure) et
@@ -166,6 +166,25 @@ mieux « moyenne », et le dit dans « ce que nous ne savons pas ».
 | Plusieurs sources pour un titre | Plus grande borne inférieure, sans addition | Périmètres et potentiels de réchauffement différents |
 | Fonds à filtre ESG | Score maximal sur la foi de la classification de l'univers | Méthodologie et composition d'ESGV non saisies (`etf_issuers`, « prévu ») : limite affichée |
 | Dimensions couvertes | Environnement (émissions directes) seulement | Ni sociale ni gouvernance : aucune source admise saisie |
+
+**Critère prioritaire sans donnée : pistes et avertissement** (décision de l'équipe, 2026-11-15, remplace la
+sortie « aucune recommandation » de ce cas). Quand aucun candidat n'a de donnée pour le critère le plus important du
+profil, les pistes sont classées sur les autres critères. `Decision.warnings` et `Explanation.warnings` portent un
+avertissement, affiché en tête de l'écran des pistes, et chaque piste qui n'a pas ce critère a une confiance
+« faible ». La règle « confiance faible partout ⇒ aucune recommandation » ne s'applique pas dans ce cas, puisque
+l'avertissement l'explique. Pour un profil centré sur l'ESG (≥ 25 %), un second avertissement s'ajoute si aucune
+piste retenue n'est un titre ESG prouvé. Il nomme les titres prouvés de l'univers et dit pourquoi ils ne sont pas
+retenus, ou qu'il n'y en a aucun.
+
+**Questionnaire** (`api/service.py`, `_esg_emphasis`) :
+
+| Intérêts cochés | Poids ESG |
+|---|---|
+| ESG seul | Critère le plus important : au moins 30 %, au-dessus de tout autre critère |
+| ESG parmi d'autres | 25 % (niveau de Mateo, même phrase de profil) |
+| Sans ESG | 5 % (niveau d'Amira et de Robert). Corrige le gabarit « modéré », qui héritait des 25 % de Mateo |
+
+Les autres poids gardent leurs proportions ; la phrase qui explique le changement figure dans le résumé du profil.
 
 **Effet sur les personas (2026-11-12, agents simulés).** Mateo reçoit 10 pistes, ESGV en tête. XOM et CNQ.TO sont
 écartés sur leurs émissions documentées, et les 9 autres pistes portent « Aucune preuve ESG concluante à cette date »,

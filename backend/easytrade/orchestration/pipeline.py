@@ -44,7 +44,7 @@ from easytrade.engine import governance
 from easytrade.engine.coherence import evaluate_idea, limit_tensions, reference_medians, verdict_from
 from easytrade.engine.constraints import RULE_TOLERANCE, is_capped_class
 from easytrade.engine import esg
-from easytrade.engine.decision import apply_debate, decide
+from easytrade.engine.decision import apply_debate, decide, esg_focused
 from easytrade.engine.quality import quality_scores
 from easytrade.engine.signals import (
     THEMES,
@@ -171,13 +171,14 @@ def make_run_id(as_of: date, profile_id: str, requested_ticker: Optional[str] = 
 def _add_signal_evidence(
     assets: pd.DataFrame, weighting: WeightingResult, signals: dict, evidence: dict,
     ledger: EvidenceLedger, registry: SourcesRegistry, store: PointInTimeStore, min_common: int,
+    esg_proven: frozenset[str] = frozenset(),
 ) -> None:
     """Renseigne les critères `diversification` (corrélation observée) et `preferences`, avec leur
     preuve (les autres critères sourcés ont déjà la preuve de leur indicateur)."""
     as_of = ledger.as_of
     prices_src = registry.require_used(SOURCE_PRICES).as_evidence_source()
     hypothesis_src = registry.require_used(SOURCE_HYPOTHESES).as_evidence_source()
-    preferences = preference_signals(assets, weighting.preferred_themes, weighting.avoided_themes)
+    preferences = preference_signals(assets, weighting.preferred_themes, weighting.avoided_themes, esg_proven)
     tickers = [str(t) for t in assets["ticker"]]
     aligned = align_prices(store.prices(as_of, tickers), tickers, "adj_close_cad")
     correlations = correlation_diversification(aligned, min_common)
@@ -225,7 +226,8 @@ def _add_signal_evidence(
             type="profile", claim_kind="HYPOTHESE", subject=ticker, statement=statement, value=value,
             unit="thème(s)", observed_at=as_of, published_at=as_of, source=hypothesis_src,
             processing="Thèmes lus dans le profil par l'agent de pondération ; rattachement de l'actif à un thème "
-                       "par sa classe d'actifs et son secteur (table du moteur)",
+                       "par sa classe d'actifs et son secteur (table du moteur), et au thème ESG par une preuve "
+                       "« Filtre ESG » datée",
             produced_by=f"engine.signals.preferences@{VERSION}",
             limits="Rattachement par secteur, sans analyse de l'activité réelle de l'émetteur (hypothèse de l'équipe).",
         )).evidence_id
@@ -363,20 +365,8 @@ def _add_esg_evidence(assets: pd.DataFrame, signals: dict, evidence: dict, ledge
             statement = "ESG (méthode EasyTrade) : controverse documentée"
             processing = "Preuve de type « Controverse » publiée à la date d'analyse ; score ESG nul"
         elif found.finding == "filtre_esg":
-            row = assets[assets["ticker"] == ticker].iloc[0]
-            basis.append(ledger.add(EvidenceDraft(
-                type="esg", claim_kind="FAIT", subject=ticker,
-                statement=f"Fonds classé « {row['sector']} » dans l'univers analysé : il applique un filtre ESG",
-                observed_at=as_of, published_at=as_of,
-                retrieved_at=registry.get(SOURCE_UNIVERSE).date_extraction,
-                source=registry.require_used(SOURCE_UNIVERSE).as_evidence_source(),
-                processing="Classification sectorielle du fichier d'univers fourni par les organisateurs",
-                produced_by=f"engine.esg@{VERSION}",
-                limits=("Filtre et méthodologie de l'émetteur non vérifiés par l'équipe (composition non saisie) ; "
-                        "ne mesure pas les émissions du fonds."),
-            )).evidence_id)
-            statement = "ESG (méthode EasyTrade) : fonds à filtre ESG documenté"
-            processing = "Classification de l'univers (fonds à filtre ESG) ; score ESG maximal"
+            statement = "ESG (méthode EasyTrade) : titre ESG prouvé par un document daté (filtre ESG)"
+            processing = "Preuve « Filtre ESG » de esg_evidence.csv publiée à la date d'analyse ; score ESG maximal"
         else:  # non concluant : critère manquant, preuves gardées pour le dossier
             continue
         signals[ticker]["esg"] = found.score
@@ -734,10 +724,10 @@ def stage_evidence_packs(ctx: RunContext, ws: Workspace, client: LLMClient) -> N
     weights = weighting.profile_weights
     with ctx.trace.step("dossiers_de_preuves", "code", version=f"engine@{VERSION}") as step:
         signals, evidence = build_signals(metrics, assets, horizon=_horizon(weighting))
-        _add_signal_evidence(assets, weighting, signals, evidence, ctx.ledger, ws.registry, ws.store,
-                             ws.settings.quality.min_common_observations)
-        _add_quality_evidence(assets, signals, evidence, ctx.ledger, ws.registry, ws.settings.reference_dir)
         assessments = _add_esg_evidence(assets, signals, evidence, ctx.ledger, ws.registry, ws.settings.reference_dir)
+        _add_signal_evidence(assets, weighting, signals, evidence, ctx.ledger, ws.registry, ws.store,
+                             ws.settings.quality.min_common_observations, frozenset(esg.proven(assessments)))
+        _add_quality_evidence(assets, signals, evidence, ctx.ledger, ws.registry, ws.settings.reference_dir)
         controversial, emitters = _esg_sets(assessments)
         without_metrics = [t for t in candidates.tickers
                            if any(signals[t].get(c) is None for c in REQUIRED_SIGNALS)]
@@ -864,8 +854,17 @@ def stage_decision(ctx: RunContext, ws: Workspace, client: LLMClient) -> None:
         decision = apply_debate(decision, records.values(), profile_evidence_ids=weighting.evidence_ids)
         updates: dict[str, Any] = {"retained": selection.tickers, "displaced": selection.displaced}
         confidences = [decision.candidate_confidence.get(t) for t in selection.tickers]
-        if selection.tickers and all(c == "faible" for c in confidences):
+        # Confiance faible partout : aucune recommandation, sauf si un avertissement l'explique déjà (critère
+        # prioritaire sans donnée) : les pistes sont alors montrées avec cet avertissement.
+        if selection.tickers and all(c == "faible" for c in confidences) and not decision.warnings:
             updates.update(no_recommendation=True, reason=LOW_CONFIDENCE_REASON)
+        showing = not (decision.no_recommendation or updates.get("no_recommendation"))
+        if showing and esg_focused(weights.weights):
+            warning = esg.focus_warning(esg.proven(ctx.esg), selection.tickers,
+                                        {r.ticker: r.rule for r in decision.rejected},
+                                        [c.ticker for c in decision.ranking])
+            if warning:
+                updates["warnings"] = (*decision.warnings, warning)
         decision = decision.model_copy(update=updates)
         if ctx.requested_ticker:
             coherence = _build_coherence(

@@ -189,9 +189,11 @@ THEMES: dict[str, dict] = {
     },
     "obligations": {"label": "obligations", "sectors": frozenset(), "asset_classes": frozenset({"etf_bond"})},
     "or": {"label": "or", "sectors": frozenset(), "asset_classes": frozenset({"etf_commodity"})},
+    # Thème ESG : aucun rattachement par secteur. Un titre s'y rattache seulement s'il est prouvé ESG par une
+    # ligne « Filtre ESG » de esg_evidence.csv (`engine.esg.proven`, passé à `preference_signals`).
     "esg": {
         "label": "filtre ESG",
-        "sectors": frozenset({"Broad market (U.S., ESG-screened)"}),
+        "sectors": frozenset(),
         "asset_classes": frozenset(),
     },
 }
@@ -206,14 +208,18 @@ def asset_themes(asset_class: str, sector: str) -> tuple[str, ...]:
 
 
 def preference_signals(
-    assets: pd.DataFrame, preferred: tuple[str, ...], avoided: tuple[str, ...] = ()
+    assets: pd.DataFrame, preferred: tuple[str, ...], avoided: tuple[str, ...] = (),
+    esg_proven: frozenset[str] = frozenset(),
 ) -> dict[str, tuple[float, tuple[str, ...], tuple[str, ...]]]:
     """Signal « preferences » par ticker : (thèmes préférés touchés − thèmes évités touchés,
     thèmes préférés touchés, thèmes évités touchés). Un actif sans thème touché vaut 0 : le
-    critère est couvert pour tout l'univers, il n'est pas « manquant »."""
+    critère est couvert pour tout l'univers, il n'est pas « manquant ». `esg_proven` : titres
+    prouvés ESG (`engine.esg.proven`), seuls rattachés au thème « esg »."""
     out: dict[str, tuple[float, tuple[str, ...], tuple[str, ...]]] = {}
     for _, row in assets.iterrows():
         themes = asset_themes(str(row["asset_class"]), str(row["sector"]))
+        if str(row["ticker"]) in esg_proven:
+            themes = (*themes, "esg")
         liked = tuple(t for t in themes if t in preferred)
         disliked = tuple(t for t in themes if t in avoided)
         out[str(row["ticker"])] = (float(len(liked) - len(disliked)), liked, disliked)

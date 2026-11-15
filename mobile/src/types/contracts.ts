@@ -207,6 +207,7 @@ export interface Explanation {
   headline: string;
   no_recommendation: boolean; // proposé (P5)
   missing: string[]; // proposé (P5) : ce qui manque quand no_recommendation est vrai
+  warnings: string[]; // avertissements en tête des pistes (ex. critère prioritaire sans donnée, aucun titre ESG prouvé)
   items: ExplanationItem[];
   rejected: RejectedItem[];
   coherence: CoherenceAnalysis | null; // présent si requested_ticker

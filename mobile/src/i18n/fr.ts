@@ -194,6 +194,7 @@ export const fr = {
     score: (n: number) => `${n} / 100`,
     dissent: "Désaccord du débat",
     toReview: "À examiner",
+    warningsTitle: "Attention",
     noRecoTitle: "Aucune piste à explorer pour ce profil",
     noRecoBody: "Plutôt que de forcer une piste, voici ce qui manque :",
     profileLostTitle: "Ce profil n'est plus disponible",

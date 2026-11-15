@@ -57,7 +57,7 @@ const SPLITS: { re: RegExp; join: string; keep?: string }[] = [
  * Rend `null` si une partie n'est pas couverte (le test de couverture s'en sert).
  */
 export function translateToEnglish(input: string): string | null {
-  const s = input.trim();
+  const s = input.trim().replace(/\u2019/g, "'"); // apostrophe typographique = apostrophe droite
   if (!s) return input;
   const whole = applyRules(s, EN_EXACT, EN_RULES);
   if (whole !== null) return enNumbers(whole);

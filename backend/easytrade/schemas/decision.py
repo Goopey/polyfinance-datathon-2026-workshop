@@ -28,6 +28,7 @@ class Decision(BaseModel):
     no_recommendation: bool = False
     reason: str = ""                          # pourquoi aucune reco / réserves
     missing_info: tuple[str, ...] = ()
+    warnings: tuple[str, ...] = ()         # avertissements affichés en tête des pistes
     confidence: Confidence = "moyen"
     disagreements: tuple[str, ...] = ()       # recopiés tels quels du débat (engine.decision.apply_debate)
     # --- remplis après le débat et les garde-fous de panier (P3) ---

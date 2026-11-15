@@ -183,16 +183,134 @@ export const EN_EXACT: Record<string, string> = {
   "ESG (méthode EasyTrade) : controverse documentée": "ESG (EasyTrade method): documented controversy",
   "Preuve de type « Controverse » publiée à la date d'analyse ; score ESG nul":
     "Evidence of the \"Controversy\" type published as of the analysis date; ESG score of zero",
-  "ESG (méthode EasyTrade) : fonds à filtre ESG documenté": "ESG (EasyTrade method): documented ESG-screened fund",
-  "Classification de l'univers (fonds à filtre ESG) ; score ESG maximal":
-    "Universe classification (ESG-screened fund); maximum ESG score",
-  "Classification sectorielle du fichier d'univers fourni par les organisateurs":
-    "Sector classification from the universe file provided by the organizers",
-  "Filtre et méthodologie de l'émetteur non vérifiés par l'équipe (composition non saisie) ; ne mesure pas les émissions du fonds.":
-    "Issuer's screen and methodology not verified by the team (holdings not entered); does not measure the fund's emissions.",
   "Méthode de l'équipe (hypothèse) ; dimension environnementale seulement (émissions directes) ou classification d'un fonds ; ni sociale ni gouvernance.":
     "Team method (assumption); environmental dimension only (direct emissions) or a fund's classification; neither social nor governance.",
   EasyTrade: "EasyTrade",
+  // Preuves ESG saisies à la main (data/reference/esg_evidence.csv) : « type de signal : résumé ».
+  "Émissions directes de GES (scope 1) : CN indique 4 838 442 tCO2e d'émissions mondiales de scope 1 en 2024, provenant des activités ferroviaires et non ferroviaires.":
+    "Direct GHG emissions (scope 1): CN reports 4 838 442 tCO2e of global scope 1 emissions in 2024, from rail and non-rail activities.",
+  "Émissions directes de GES (scope 1) : Fortis déclare 8 069 kt CO2e de scope 1 pour 2024 au niveau consolidé selon le contrôle financier; la couverture diffère de la ligne ECCC initiale.":
+    "Direct GHG emissions (scope 1): Fortis reports 8 069 kt CO2e of scope 1 for 2024 at the consolidated level (financial control); the coverage differs from the original ECCC row.",
+  "Émissions du réseau Bitcoin estimées : Une étude Cambridge estime la consommation annuelle du réseau Bitcoin à 138 TWh et ses émissions à 39,8 Mt CO2e, extrapolées à partir de données représentant environ 48 % du minage mondial; il ne s'agit pas d'une entreprise.":
+    "Estimated Bitcoin network emissions: a Cambridge study estimates the Bitcoin network's annual consumption at 138 TWh and its emissions at 39,8 Mt CO2e, extrapolated from data covering about 48 % of global mining; this is not a company.",
+  "Émissions opérationnelles GES (scopes 1 et 2) : Alphabet/Google indique en 2025 environ 86 100 tCO2e de scope 1 et 2,8 Mt CO2e de scope 2 market-based; ce périmètre mondial n'est pas comparable à l'unique installation EPA dans la ligne initiale.":
+    "Operational GHG emissions (scopes 1 and 2): Alphabet/Google reports about 86 100 tCO2e of scope 1 and 2,8 Mt CO2e of market-based scope 2 in 2025; this global scope is not comparable with the single EPA facility in the original row.",
+  "Émissions opérationnelles GES (scopes 1 et 2) : Apple rapporte pour son exercice 2024 55 200 tCO2e de scope 1 et 3 300 tCO2e de scope 2 market-based pour ses propriétés occupées à l'échelle mondiale.":
+    "Operational GHG emissions (scopes 1 and 2): for fiscal 2024, Apple reports 55 200 tCO2e of scope 1 and 3 300 tCO2e of market-based scope 2 for the properties it occupies worldwide.",
+  "Émissions opérationnelles GES (scopes 1 et 2) : Couche-Tard indique pour l'exercice 2026 171 082 tCO2e de scope 1 et 638 209 tCO2e de scope 2 location-based.":
+    "Operational GHG emissions (scopes 1 and 2): for fiscal 2026, Couche-Tard reports 171 082 tCO2e of scope 1 and 638 209 tCO2e of location-based scope 2.",
+  "Émissions opérationnelles GES (scopes 1 et 2) : En exercice 2025, RBC rapporte 25 927 tCO2e de scope 1 et 3 562 tCO2e de scope 2 market-based, soit 29 489 tCO2e au total; hors émissions financées.":
+    "Operational GHG emissions (scopes 1 and 2): for fiscal 2025, RBC reports 25 927 tCO2e of scope 1 and 3 562 tCO2e of market-based scope 2, 29 489 tCO2e in total; financed emissions excluded.",
+  "Émissions opérationnelles GES (scopes 1 et 2) : ExxonMobil rapporte 97 Mt CO2e de scopes 1 et 2 sur une base exploitée en 2025, incluant 90 Mt de scope 1; périmètre mondial différent de la ligne EPA américaine.":
+    "Operational GHG emissions (scopes 1 and 2): ExxonMobil reports 97 Mt CO2e of scopes 1 and 2 on an operated basis in 2025, including 90 Mt of scope 1; a global scope, different from the U.S. EPA row.",
+  "Émissions opérationnelles GES (scopes 1 et 2) : Microsoft rapporte pour FY2024 143 510 tCO2e de scope 1 et 259 090 tCO2e de scope 2 market-based, soit 402 600 tCO2e; le scope 2 location-based est de 9 955 368 tCO2e.":
+    "Operational GHG emissions (scopes 1 and 2): for FY2024, Microsoft reports 143 510 tCO2e of scope 1 and 259 090 tCO2e of market-based scope 2, 402 600 tCO2e in total; location-based scope 2 is 9 955 368 tCO2e.",
+  "Émissions opérationnelles GES (scopes 1 et 2) : NVIDIA rapporte FY2025 12 952 tCO2e de scope 1 et 0 tCO2e de scope 2 market-based, mais 228 378 tCO2e de scope 2 location-based; voir changements de méthodologie ultérieurs.":
+    "Operational GHG emissions (scopes 1 and 2): for FY2025, NVIDIA reports 12 952 tCO2e of scope 1 and 0 tCO2e of market-based scope 2, but 228 378 tCO2e of location-based scope 2; see later methodology changes.",
+  "Émissions opérationnelles GES (scopes 1 et 2) : P&G publie pour FY2025 environ 2,080 Mt CO2e scopes 1 et 2 market-based (1,966 Mt scope 1 et 0,113 Mt scope 2); périmètre mondial distinct des seules installations EPA.":
+    "Operational GHG emissions (scopes 1 and 2): for FY2025, P&G publishes about 2,080 Mt CO2e of market-based scopes 1 and 2 (1,966 Mt scope 1 and 0,113 Mt scope 2); a global scope, distinct from the EPA facilities alone.",
+  "Émissions opérationnelles GES (scopes 1 et 2) : TD rapporte en 2025 40 690 tCO2e de scope 1 et 6 669 tCO2e de scope 2 market-based, soit 47 359 tCO2e; émissions financées exclues.":
+    "Operational GHG emissions (scopes 1 and 2): in 2025, TD reports 40 690 tCO2e of scope 1 and 6 669 tCO2e of market-based scope 2, 47 359 tCO2e in total; financed emissions excluded.",
+  "Émissions opérationnelles et actifs gérés (scopes 1 et 2) : Manulife rapporte 123 897 tCO2e de scope 1 et 85 677 tCO2e de scope 2 location-based en 2024, périmètre comprenant l'immobilier et des actifs forestiers et agricoles gérés; non comparable à un simple siège social.":
+    "Operational emissions and managed assets (scopes 1 and 2): Manulife reports 123 897 tCO2e of scope 1 and 85 677 tCO2e of location-based scope 2 in 2024, a scope that includes real estate and managed timberland and farmland; not comparable with a simple head office.",
+  "Émissions opérationnelles mondiales (scope 1) : Enbridge déclare 7,532 Mt CO2e scope 1 en 2024 sur son périmètre opérationnel global; ne pas additionner avec la ligne ECCC partielle sur trois installations canadiennes.":
+    "Global operational emissions (scope 1): Enbridge reports 7,532 Mt CO2e of scope 1 in 2024 across its global operations; not to be added to the partial ECCC row on three Canadian facilities.",
+  "Émissions évitées estimées des produits : Tesla estime que ses clients ont évité près de 32 Mt CO2e en 2024 par l'utilisation de ses produits; estimation contrefactuelle et non émissions de ses propres sites.":
+    "Estimated emissions avoided by products: Tesla estimates that its customers avoided nearly 32 Mt CO2e in 2024 by using its products; a counterfactual estimate, not the emissions of its own sites.",
+  "Empreinte carbone globale (scopes 1-3) : Amazon indique 68,25 Mt CO2e d'empreinte carbone totale en 2024, incluant émissions directes et indirectes; ne pas comparer directement au scope 1 seul.":
+    "Global carbon footprint (scopes 1-3): Amazon reports a total carbon footprint of 68,25 Mt CO2e in 2024, including direct and indirect emissions; not directly comparable with scope 1 alone.",
+  "Filtrage ESG du portefeuille : ESGV suit un indice américain filtré ESG excluant notamment certaines activités liées aux combustibles fossiles, aux armes et au tabac ainsi que des entreprises ne satisfaisant pas certains critères sociaux et de gouvernance.":
+    "ESG screening of the portfolio: ESGV tracks an ESG-screened U.S. index that excludes, among others, certain activities related to fossil fuels, weapons and tobacco, as well as companies that fail certain social and governance criteria.",
+  "Financement de l'élimination du carbone : Shopify déclare avoir signé en 2024 pour 36,3 M$ US d'accords d'achat d'élimination de carbone avec 23 entreprises; ces achats ne sont pas une mesure de ses propres émissions.":
+    "Carbon removal funding: Shopify reports signing US$36,3 million of carbon removal purchase agreements with 23 companies in 2024; these purchases do not measure its own emissions.",
+  "Périmètre ESG des obligations souveraines : TLT détient une exposition ciblée aux obligations du Trésor américain de maturité résiduelle supérieure à 20 ans; son analyse ESG relève de l'émetteur souverain, pas des émissions opérationnelles d'une société.":
+    "ESG scope of sovereign bonds: TLT holds targeted exposure to U.S. Treasury bonds with remaining maturities over 20 years; its ESG analysis concerns the sovereign issuer, not a company's operational emissions.",
+  "Périmètre ESG d'un fonds indiciel : QQQ suit le Nasdaq-100, regroupant de grandes entreprises non financières cotées au Nasdaq; ne pas présenter une émission corporate unique comme celle du fonds.":
+    "ESG scope of an index fund: QQQ tracks the Nasdaq-100, made up of large non-financial companies listed on the Nasdaq; a single company's emissions should not be presented as the fund's.",
+  "Périmètre ESG d'un fonds indiciel : SPY suit le S&P 500, composé de grandes entreprises américaines de 11 secteurs; les risques ESG du portefeuille doivent être calculés à partir des participations.":
+    "ESG scope of an index fund: SPY tracks the S&P 500, made up of large U.S. companies across 11 sectors; the portfolio's ESG risks must be computed from its holdings.",
+  "Périmètre ESG d'un fonds indiciel : XIU réplique le S&P/TSX 60; l'analyse ESG doit agréger les émetteurs détenus et leurs pondérations, pas lui attribuer des émissions propres équivalentes au portefeuille.":
+    "ESG scope of an index fund: XIU replicates the S&P/TSX 60; ESG analysis must aggregate the issuers held and their weights, not attribute to the fund emissions of its own equivalent to the portfolio.",
+  "Périmètre ESG d'un fonds obligataire : XBB réplique le FTSE Canada Universe Bond Index d'obligations canadiennes investment grade; l'évaluation ESG doit distinguer émetteurs privés et obligations gouvernementales.":
+    "ESG scope of a bond fund: XBB replicates the FTSE Canada Universe Bond Index of investment-grade Canadian bonds; ESG assessment must distinguish corporate issuers from government bonds.",
+  "Périmètre ESG d'un fonds obligataire : ZST investit dans des obligations de qualité investissement et peut détenir des titres gouvernementaux et des notes à taux variable; score ESG de portefeuille non inférable de la seule composition par classe.":
+    "ESG scope of a bond fund: ZST invests in investment-grade bonds and may hold government securities and floating-rate notes; a portfolio ESG score cannot be inferred from its composition by class alone.",
+  "Périmètre ESG d'un fonds obligataire : AGG suit l'indice Bloomberg US Aggregate Bond Index; les risques ESG sont à apprécier par émetteur et classe de dette et non par scope 1 du fonds.":
+    "ESG scope of a bond fund: AGG tracks the Bloomberg US Aggregate Bond Index; ESG risks are to be assessed by issuer and debt class, not by the fund's scope 1.",
+  "Périmètre des émissions opérationnelles : JPMorganChase explique que ses émissions opérationnelles 2024 sont principalement liées aux bâtiments, et que le scope 1 comprend notamment bâtiments, avions et véhicules détenus; pas de valeur chiffrée retenue ici.":
+    "Scope of operational emissions: JPMorganChase explains that its 2024 operational emissions come mainly from buildings, and that scope 1 includes owned buildings, aircraft and vehicles; no figure is used here.",
+  "Réduction des émissions opérationnelles GES : Johnson & Johnson rapporte pour 2025 une diminution de 38 % de ses émissions absolues scopes 1 et 2 comparativement à 2021; performance de l'entreprise, non des émissions de produits.":
+    "Reduction of operational GHG emissions: Johnson & Johnson reports a 38 % reduction in absolute scope 1 and 2 emissions in 2025 compared with 2021; company performance, not product emissions.",
+  "Transition énergétique du protocole Ethereum : Ethereum a adopté la preuve d'enjeu lors de The Merge le 15 septembre 2022; ethereum.org indique une réduction d'environ 99,95 % de la consommation d'énergie du protocole par rapport à la preuve de travail.":
+    "Energy transition of the Ethereum protocol: Ethereum adopted proof of stake at The Merge on September 15, 2022; ethereum.org reports a reduction of about 99,95 % in the protocol's energy consumption compared with proof of work.",
+  "Chaîne de valeur de l'or : GLD vise à suivre le cours des lingots d'or sous déduction des frais; les impacts ESG pertinents incluent la traçabilité et la chaîne d'approvisionnement de l'or, non des émissions attribuées automatiquement au trust.":
+    "Gold value chain: GLD seeks to track the price of gold bullion, less expenses; the relevant ESG impacts include the traceability and supply chain of gold, not emissions automatically attributed to the trust.",
+  "Disponibilité des données environnementales : Constellation Software affirme ne pas exiger de ses unités d'affaires la mesure de métriques environnementales, y compris les émissions de GES; aucune valeur consolidée ne peut être déduite de cette page.":
+    "Availability of environmental data: Constellation Software states that it does not require its business units to measure environmental metrics, including GHG emissions; no consolidated value can be inferred from this page.",
+  // Titres des documents ESG (registre des sources) : déjà en anglais, affichés tels quels.
+  "2024 Manulife Sustainability Report": "2024 Manulife Sustainability Report",
+  "2025 Microsoft Environmental Data Fact Sheet": "2025 Microsoft Environmental Data Fact Sheet",
+  "Alimentation Couche-Tard Sustainability Report 2026": "Alimentation Couche-Tard Sustainability Report 2026",
+  "Alphabet Environmental & Social Information 2025": "Alphabet Environmental & Social Information 2025",
+  "Amazon 2024 Sustainability Report": "Amazon 2024 Sustainability Report",
+  "Apple 2025 Environmental Progress Report": "Apple 2025 Environmental Progress Report",
+  "BMO Ultra Short-Term Bond ETF — Factsheet": "BMO Ultra Short-Term Bond ETF — Factsheet",
+  "CN 2025 CDP Corporate Questionnaire": "CN 2025 CDP Corporate Questionnaire",
+  "Cambridge study: sustainable energy rising in Bitcoin mining": "Cambridge study: sustainable energy rising in Bitcoin mining",
+  "Constellation Software — Environment": "Constellation Software — Environment",
+  "Enbridge 2024 Sustainability Datasheet": "Enbridge 2024 Sustainability Datasheet",
+  "Ethereum.org — The Merge": "Ethereum.org — The Merge",
+  "ExxonMobil Advancing Climate Solutions 2026": "ExxonMobil Advancing Climate Solutions 2026",
+  "Fortis Sustainability 2025 Update Report": "Fortis Sustainability 2025 Update Report",
+  "Invesco QQQ Trust, Series 1 — Product Details": "Invesco QQQ Trust, Series 1 — Product Details",
+  "J&J 2025 Health for Humanity — Environmental Stewardship": "J&J 2025 Health for Humanity — Environmental Stewardship",
+  "JPMorganChase 2024 Sustainability Report": "JPMorganChase 2024 Sustainability Report",
+  "NVIDIA Sustainability Report Fiscal Year 2025": "NVIDIA Sustainability Report Fiscal Year 2025",
+  "P&G Investor Relations — ESG Environmental Climate": "P&G Investor Relations — ESG Environmental Climate",
+  "RBC 2025 Sustainability Report": "RBC 2025 Sustainability Report",
+  "SPDR Gold Shares — Official Fund Overview": "SPDR Gold Shares — Official Fund Overview",
+  "SPY — State Street Fact Sheet": "SPY — State Street Fact Sheet",
+  "Shopify committed more to climate technologies in 2024 than ever before": "Shopify committed more to climate technologies in 2024 than ever before",
+  "TD Bank Group 2025 Sustainability Report": "TD Bank Group 2025 Sustainability Report",
+  "Tesla Impact Report 2024 — Environment": "Tesla Impact Report 2024 — Environment",
+  "Vanguard ESG U.S. Stock ETF — Investment Approach": "Vanguard ESG U.S. Stock ETF — Investment Approach",
+  "XIU ETF Facts and Exposure": "XIU ETF Facts and Exposure",
+  "iShares 20+ Year Treasury Bond ETF — Product Page": "iShares 20+ Year Treasury Bond ETF — Product Page",
+  "iShares Core Canadian Universe Bond Index ETF — Fact Sheet": "iShares Core Canadian Universe Bond Index ETF — Fact Sheet",
+  "iShares Core U.S. Aggregate Bond ETF — Product Page": "iShares Core U.S. Aggregate Bond ETF — Product Page",
+  "ESG (méthode EasyTrade) : titre ESG prouvé par un document daté (filtre ESG)":
+    "ESG (EasyTrade method): ESG security proven by a dated document (ESG screen)",
+  "Preuve « Filtre ESG » de esg_evidence.csv publiée à la date d'analyse ; score ESG maximal":
+    "\"ESG screen\" evidence from esg_evidence.csv published as of the analysis date; maximum ESG score",
+  "Écarté : émissions directes de gaz à effet de serre documentées au-dessus du seuil d'émetteur majeur retenu par EasyTrade ; votre profil accorde une grande importance à l'ESG.":
+    "Excluded: documented direct greenhouse gas emissions above the major-emitter threshold chosen by EasyTrade; your profile gives ESG great importance.",
+  "Avertissement : aucun titre de l'univers n'est prouvé ESG à cette date (aucune preuve « Filtre ESG » publiée dans esg_evidence.csv). Aucune piste ne répond donc à votre intérêt pour l'ESG.":
+    "Warning: no security in the universe is proven ESG as of this date (no \"ESG screen\" evidence published in esg_evidence.csv). No idea therefore meets your interest in ESG.",
+  "information ESG publiée par l'émetteur":
+    "ESG information published by the issuer",
+  "description d'un fonds par son émetteur":
+    "description of a fund by its issuer",
+  "étude ou documentation de tiers sur un réseau de cryptoactif":
+    "third-party study or documentation on a crypto-asset network",
+  "Information publiée par l'émetteur, non auditée par l'équipe ; périmètre et méthode propres à l'émetteur, non comparables d'une société à l'autre":
+    "Information published by the issuer, not audited by the team; scope and method specific to each issuer, not comparable from one company to another",
+  "Décrit le fonds (indice suivi, filtres), pas les émissions de ses participations":
+    "Describes the fund (index tracked, screens), not the emissions of its holdings",
+  "Estimation de tiers pour un réseau, pas une entreprise ; hypothèses de l'étude":
+    "Third-party estimate for a network, not a company; the study's assumptions",
+  "Saisie manuelle d'un chiffre ou d'une phrase du document, avec un court extrait ; aucun calcul":
+    "A figure or sentence from the document entered by hand, with a short excerpt; no calculation",
+  // Mêmes limites citées dans les limites d'une preuve (« Limites de la source : … . »).
+  "Information publiée par l'émetteur, non auditée par l'équipe ; périmètre et méthode propres à l'émetteur, non comparables d'une société à l'autre.":
+    "Information published by the issuer, not audited by the team; scope and method specific to each issuer, not comparable from one company to another.",
+  "Décrit le fonds (indice suivi, filtres), pas les émissions de ses participations.":
+    "Describes the fund (index tracked, screens), not the emissions of its holdings.",
+  "Estimation de tiers pour un réseau, pas une entreprise ; hypothèses de l'étude.":
+    "Third-party estimate for a network, not a company; the study's assumptions.",
+  "Document public ; conditions d'utilisation du site non lues par l'équipe":
+    "Public document; the site's terms of use not read by the team",
+  "ponctuelle":
+    "one-off",
   "Actif signalé comme hautement spéculatif par une règle de votre profil.": "Asset flagged as highly speculative by a rule of your profile.",
   "Cryptoactif écarté : votre profil n'autorise aucune part en crypto.": "Crypto asset excluded: your profile allows no share in crypto.",
   "Écarté faute d'indicateurs valides : historique de prix insuffisant à cette date.":
@@ -247,6 +365,8 @@ export const EN_EXACT: Record<string, string> = {
   "Repère indicatif par niveau de tolérance au risque": "Indicative benchmark by risk tolerance level",
   "Thèmes lus dans le profil par l'agent de pondération ; rattachement de l'actif à un thème par sa classe d'actifs et son secteur (table du moteur)":
     "Themes read from the profile by the weighting agent; asset matched to a theme by its asset class and sector (engine table)",
+  "Thèmes lus dans le profil par l'agent de pondération ; rattachement de l'actif à un thème par sa classe d'actifs et son secteur (table du moteur), et au thème ESG par une preuve « Filtre ESG » datée":
+    "Themes read from the profile by the weighting agent; asset matched to a theme by its asset class and sector (engine table), and to the ESG theme by dated \"ESG screen\" evidence",
   "Hypothèse de l'équipe, à calibrer ; ne décrit aucun fait de marché.": "Team assumption, to be calibrated; describes no market fact.",
   "Opinions d'analystes, pas une prévision ; affiché seulement, sans effet sur le score.":
     "Analyst opinions, not a forecast; shown only, with no effect on the score.",
@@ -485,6 +605,22 @@ export const EN_RULES: Rule[] = [
   r("{n} candidats ; {n} arguments gardés, {n} supprimés (preuve absente ou nombre non étayé).",
     "$1 candidates; $2 arguments kept, $3 removed (missing evidence or unsupported number)."),
   r("{n} candidats classés ; {n} dossiers de preuves.", "$1 candidates ranked; $2 evidence packs."),
+  r("Saisie manuelle ({s}) depuis « {s} » ({s}) ; extrait : {s}", (_m, who: string, title: string, url: string, excerpt: string) =>
+    `Entered by hand (${who}) from "${EN_EXACT[title] ?? title}" (${url}); excerpt: ${sentences(excerpt)}`),
+  r("Aucun intérêt ESG déclaré : le poids ESG est ramené à {n} %, celui des profils sans préférence ESG. Les autres poids gardent leurs proportions (hypothèse de l'équipe).",
+    "No ESG interest stated: the ESG weight is brought back to $1%, the level of profiles without an ESG preference. The other weights keep their proportions (team assumption)."),
+  r("Intérêt déclaré pour l'ESG : son poids est porté à {n} %. Les autres poids gardent leurs proportions (hypothèse de l'équipe).",
+    "Stated interest in ESG: its weight is raised to $1%. The other weights keep their proportions (team assumption)."),
+  r("L'ESG est le seul intérêt déclaré : il devient le critère le plus important du profil ({n} %). Les autres poids gardent leurs proportions (hypothèse de l'équipe).",
+    "ESG is the only stated interest: it becomes the profile's most important criterion ($1%). The other weights keep their proportions (team assumption)."),
+  r("Avertissement : aucune piste admissible n'a de donnée pour le critère le plus important de votre profil ({s}, {n} %) : {s}. Les pistes sont classées sur vos autres critères : elles ne répondent pas à ce critère et leur confiance est faible.",
+    (_m, crit: string, weight: string, why: string) =>
+      `Warning: no eligible idea has data for your profile's most important criterion (${CRITERION[crit] ?? crit}, ${weight}%): ${MISSING[why] ?? why}. The ideas are ranked on your other criteria: they do not meet this criterion and their confidence is low.`),
+  r("Avertissement : aucune piste retenue n'est un titre ESG prouvé. Titres prouvés ESG dans l'univers : {s}.", (_m, list: string) =>
+    `Warning: no selected idea is a proven ESG security. Proven ESG securities in the universe: ${list
+      .replace(/ \(écarté par une règle de votre profil\)/g, " (excluded by a rule of your profile)")
+      .replace(/ \(classé, hors des pistes retenues\)/g, " (ranked, not among the selected ideas)")
+      .replace(/ \(non classé\)/g, " (not ranked)")}.`),
   r("{n} candidats classés ; {n} dossiers de preuves. Critère ESG — controverses documentées : {s} ; émetteurs majeurs documentés : {s} ; fonds à filtre ESG : {s} ; preuves non concluantes : {s} ; actifs sans preuve ESG : {n}.",
     (_m, ranked: string, packs: string, controversies: string, emitters: string, screened: string, inconclusive: string, none: string) => {
       const list = (s: string) => (s === "aucun" ? "none" : s);
@@ -492,8 +628,6 @@ export const EN_RULES: Rule[] = [
         + `documented major emitters: ${list(emitters)}; ESG-screened funds: ${list(screened)}; inconclusive evidence: `
         + `${list(inconclusive)}; assets without ESG evidence: ${none}.`;
     }),
-  r("Fonds classé « {s} » dans l'univers analysé : il applique un filtre ESG",
-    (_m, sector: string) => `Fund classified as "${sector}" in the analyzed universe: it applies an ESG screen`),
   r("{n} actifs examinés ; {n} écartés par une règle du profil ; {n} écartés faute d'indicateurs valides ; {n} candidats classés.",
     "$1 assets reviewed; $2 excluded by a profile rule; $3 excluded for lack of valid indicators; $4 candidates ranked."),
   r("{n} candidats.", "$1 candidates."),

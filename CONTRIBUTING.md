@@ -64,6 +64,10 @@ Le lecteur d'Excel demande `openpyxl` (dans `backend/requirements.txt`).
   classe la société comme émetteur majeur documenté. Elle est alors écartée pour un profil qui exclut les
   controverses, et son score ESG vaut 0. Une valeur plus basse n'est pas concluante, car c'est une borne
   inférieure : le critère reste « information manquante ».
+- Un **titre ESG** se prouve à la main : `signal_type` commençant par « Filtre ESG » ou « Filtrage ESG ». La ligne
+  doit citer un document de l'émetteur décrivant le filtre (ex. ESGV, indice FTSE US All Cap Choice). C'est la seule
+  preuve qu'un titre est ESG ; une ligne d'émissions n'en est pas une.
+- `document_date` d'une ligne manuelle : la date de **publication** du rapport, pas la fin de l'exercice décrit.
 - Une controverse se saisit à la main : `signal_type` commençant par « Controverse » (ex. « Controverse
   environnementale »). Il faut aussi un document daté et une source au registre avec le statut `utilisé`.
   Elle écarte le titre pour un profil qui exclut les controverses.

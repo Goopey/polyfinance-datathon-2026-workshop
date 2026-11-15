@@ -8,6 +8,10 @@ et `disagreements` ; ici la confiance se fonde sur la couverture des données.
 - aucun actif ne passe les contraintes dures ;
 - preuves insuffisantes (tous les candidats ont un score d'adéquation nul) ;
 - confiance faible sur tous les candidats (trop de poids sur des critères non sourcés).
+
+Le critère le plus important du profil sans aucune donnée sur les candidats ne bloque plus (décision de
+l'équipe, 2026-11-15) : les pistes sont classées sur les autres critères, un avertissement le dit en tête,
+et chaque piste à qui manque ce critère a une confiance « faible » (`apply_debate`).
 """
 from __future__ import annotations
 
@@ -17,6 +21,7 @@ import pandas as pd
 
 from easytrade.data.point_in_time import DateLike, to_timestamp
 from easytrade.engine.constraints import screen_assets
+from easytrade.engine.esg import ESG_FOCUS_WEIGHT
 from easytrade.engine.scoring import score_candidates
 from easytrade.schemas.debate import AGENT_LABELS, STANCE_LABELS, DebateRecord
 from easytrade.schemas.decision import Confidence, Decision
@@ -32,6 +37,11 @@ MISSING_LABELS = {
     "horizon": "historique de prix insuffisant",
     "diversification": "apport à la diversification indisponible",
 }
+
+def esg_focused(weights: Mapping[str, float]) -> bool:
+    """Profil qui accorde une grande importance à l'ESG (poids d'au moins `ESG_FOCUS_WEIGHT`)."""
+    return float(weights.get("esg", 0.0)) >= ESG_FOCUS_WEIGHT - 1e-6  # poids arrondis à 6 décimales
+
 
 CONFIDENCE_LOW = 0.40   # poids manquant au-delà duquel la confiance est faible
 CONFIDENCE_MID = 0.20   # ... au-delà duquel elle est moyenne
@@ -69,7 +79,8 @@ def decide(
     as_of_date = to_timestamp(as_of).date()
     weights = profile_weights.weights
     screening = screen_assets(assets, profile_weights.constraints, esg_controversial,
-                              esg_emitters=esg_emitters, risk=risk, risk_level=risk_level)
+                              esg_emitters=esg_emitters, esg_focus=esg_focused(weights),
+                              risk=risk, risk_level=risk_level)
 
     if not screening.eligible:
         return Decision(
@@ -108,23 +119,27 @@ def decide(
     confidence = _confidence(missing_weight)
     missing_info = tuple(MISSING_LABELS.get(c, c) for c in missing_for_all)
 
-    # Critère prioritaire du profil (poids le plus élevé) sans aucune donnée : on ne recommande pas
-    # sans ce que le profil juge le plus important (décision de l'équipe, 2026-11-15 ; ex. Mateo et l'ESG).
+    # Critère prioritaire du profil (poids le plus élevé) sans aucune donnée sur les candidats : avertissement
+    # (décision de l'équipe, 2026-11-15 ; ex. un profil « ESG seulement » sans titre ESG prouvé admissible).
     top_weight = max(float(w) for w in weights.values())
     top_missing = [c for c in missing_for_all if float(weights[c]) == top_weight]
 
     all_scores_null = all(candidate.fit_score == 0.0 for candidate in ranking)
-    no_recommendation = all_scores_null or confidence == "faible" or bool(top_missing)
+    # Critère prioritaire sans donnée : pistes classées sur les autres critères, avec avertissement. Ce n'est
+    # pas la confiance commune « faible » qui doit alors bloquer : elle vient précisément de ce critère.
+    no_recommendation = all_scores_null or (confidence == "faible" and not top_missing)
+    warnings: tuple[str, ...] = ()
+    if top_missing and not all_scores_null:
+        criterion = top_missing[0]
+        warnings = (
+            f"Avertissement : aucune piste admissible n'a de donnée pour le critère le plus important de votre "
+            f"profil ({CRITERION_LABELS.get(criterion, criterion)}, {top_weight * 100:.0f} %) : "
+            f"{MISSING_LABELS.get(criterion, criterion)}. Les pistes sont classées sur vos autres critères : elles "
+            f"ne répondent pas à ce critère et leur confiance est faible.",
+        )
     if all_scores_null:
         reason = "Preuves insuffisantes : aucun critère exploitable sur les actifs admissibles."
-    elif top_missing:
-        criterion = top_missing[0]
-        reason = (
-            f"Aucune recommandation : le critère le plus important de votre profil "
-            f"({CRITERION_LABELS.get(criterion, criterion)}, {top_weight * 100:.0f} %) n'a aucune donnée "
-            f"à cette date ({MISSING_LABELS.get(criterion, criterion)})."
-        )
-    elif confidence == "faible":
+    elif no_recommendation:
         reason = (
             "Confiance trop faible pour recommander : trop de poids de votre profil porte sur "
             "des critères non encore sourcés (" + ", ".join(missing_info) + ")."
@@ -140,6 +155,7 @@ def decide(
         no_recommendation=no_recommendation,
         reason=reason,
         missing_info=missing_info,
+        warnings=warnings,
         confidence=confidence,
     )
 
@@ -201,6 +217,10 @@ def apply_debate(
     for candidate in decision.ranking:
         own_missing = sum(c.weight for c in candidate.criteria if c.missing)
         data_level = min(common_level, _LEVELS.index(_confidence(own_missing)))
+        # Piste sans le critère le plus important du profil : confiance faible (elle ne répond pas à ce critère).
+        top_weight = max((c.weight for c in candidate.criteria), default=0.0)
+        if any(c.missing and c.weight == top_weight for c in candidate.criteria):
+            data_level = 0
         record = by_ticker.get(candidate.ticker)
         level = data_level if record is None else min(data_level, _LEVELS.index(debate_confidence(record)))
         confidence[candidate.ticker] = _LEVELS[level]

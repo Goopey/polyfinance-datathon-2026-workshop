@@ -29,7 +29,7 @@ from typing import Mapping, Optional
 
 import pandas as pd
 
-from easytrade.engine.esg import EMISSIONS_REASON, RULE_EMISSIONS
+from easytrade.engine.esg import EMISSIONS_FOCUS_REASON, EMISSIONS_REASON, RULE_EMISSIONS
 from easytrade.schemas.candidate import Asset, Rejection
 from easytrade.schemas.weights import HardConstraints
 
@@ -156,13 +156,15 @@ def screen_assets(
     esg_controversial: frozenset[str] = frozenset(),
     *,
     esg_emitters: frozenset[str] = frozenset(),
+    esg_focus: bool = False,
     risk: Optional[Mapping[str, tuple[Optional[float], Optional[float]]]] = None,
     risk_level: Optional[str] = None,
 ) -> ScreeningResult:
     """Sépare l'univers en actifs admissibles et actifs écartés (avec motif).
 
     `esg_controversial` / `esg_emitters` : titres avec une controverse documentée / émetteurs majeurs
-    documentés (`engine.esg`), écartés quand le profil a `esg_exclusion`.
+    documentés (`engine.esg`), écartés quand le profil a `esg_exclusion` ; les émetteurs majeurs le sont aussi
+    quand `esg_focus` (poids ESG d'au moins `engine.esg.ESG_FOCUS_WEIGHT`, « grande importance »).
     `risk` (ticker → (volatilité %, perte maximale %)) et `risk_level` activent la règle de tolérance
     au risque. Sans eux, seules les contraintes du profil s'appliquent (tests unitaires historiques).
     """
@@ -198,9 +200,10 @@ def screen_assets(
             ))
             continue
 
-        if constraints.esg_exclusion and asset.ticker in esg_emitters:
+        if (constraints.esg_exclusion or esg_focus) and asset.ticker in esg_emitters:
             rejected.append(Rejection(
-                ticker=asset.ticker, name=asset.name, rule=RULE_EMISSIONS, reason=EMISSIONS_REASON,
+                ticker=asset.ticker, name=asset.name, rule=RULE_EMISSIONS,
+                reason=EMISSIONS_REASON if constraints.esg_exclusion else EMISSIONS_FOCUS_REASON,
             ))
             continue
 

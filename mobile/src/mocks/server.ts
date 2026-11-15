@@ -364,6 +364,7 @@ function computeExplanation(runId: string, req: RunRequest): Explanation {
       : `${items.length} pistes cohérentes avec votre profil, ${rejected.length} écartées`,
     no_recommendation: noReco,
     missing,
+    warnings: [],
     items: noReco ? [] : items,
     rejected,
     coherence,

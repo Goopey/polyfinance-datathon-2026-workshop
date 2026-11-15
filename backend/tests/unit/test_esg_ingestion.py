@@ -300,7 +300,11 @@ def _tools(settings, registry, store, as_of):
 
 def test_preuves_esg_filtrees_par_date_de_publication(settings, registry, store):
     tools, ledger = _tools(settings, registry, store, "2026-11-12")
-    xom = tools.preuves_esg("XOM")
+
+    def from_source(found, book, source_id):
+        return [r for r in found if book.get(r["evidence_id"]).source.source_id == source_id]
+
+    xom = from_source(tools.preuves_esg("XOM"), ledger, "epa_ghgrp")
     assert len(xom) == 1 and xom[0]["document_date"] == "2024-10-15"
     evidence = ledger.get(xom[0]["evidence_id"])
     assert evidence.type == "esg" and evidence.claim_kind == "FAIT" and evidence.source.source_id == "epa_ghgrp"
@@ -312,13 +316,15 @@ def test_preuves_esg_filtrees_par_date_de_publication(settings, registry, store)
     assert early.preuves_esg("XOM") == [] and len(early_ledger) == 0
 
     # Le jeu canadien (HYPOTHESE) n'apparaît qu'à sa date de publication.
-    before, _ = _tools(settings, registry, store, "2026-05-26")
+    before, before_ledger = _tools(settings, registry, store, "2026-05-26")
     after, after_ledger = _tools(settings, registry, store, "2026-05-27")
-    assert before.preuves_esg("ENB.TO") == []
-    enb = after.preuves_esg("ENB.TO")
+    assert from_source(before.preuves_esg("ENB.TO"), before_ledger, "canada_ghgrp") == []
+    enb = from_source(after.preuves_esg("ENB.TO"), after_ledger, "canada_ghgrp")
     assert len(enb) == 1 and after_ledger.get(enb[0]["evidence_id"]).claim_kind == "HYPOTHESE"
 
 
-def test_titre_sans_installation_declarante_n_a_pas_de_preuve(settings, registry, store):
+def test_titre_sans_preuve_publiee_n_a_pas_de_preuve(settings, registry, store):
+    """Aucune ligne publiée à la date d'analyse : aucune preuve (information manquante, jamais « zéro »).
+    CSU.TO : page non datée, datée par prudence du jour de sa consultation (2026-11-15)."""
     tools, ledger = _tools(settings, registry, store, "2026-11-12")
-    assert tools.preuves_esg("AAPL") == [] and len(ledger) == 0
+    assert tools.preuves_esg("CSU.TO") == [] and len(ledger) == 0

@@ -76,10 +76,17 @@ for p in pids:
                             "preferences": [], "exclusions": [], "weights_override": {"croissance": 0.5}})
     walk(pw, "profile"); created.append(pw["profile_id"])
 
+# « ESG seulement » à chaque tolérance : poids ESG relevé, avertissements (aucun titre ESG prouvé admissible).
+esg_only = []
+for tol in ("faible", "moderee", "elevee"):
+    pw = post("/profiles", {"objectif": "equilibre", "horizon": "moyen", "tolerance": tol,
+                            "preferences": ["esg"], "exclusions": []})
+    walk(pw, "profile"); esg_only.append(pw["profile_id"])
+
 assets = get("/assets"); walk(assets, "assets")
 tickers = [a["ticker"] for a in assets]
 
-requests_ = [(p, None) for p in pids + created[:6] + created[-3:]] + [(p, t) for p in pids for t in tickers]
+requests_ = [(p, None) for p in pids + created[:6] + created[-3:] + esg_only] + [(p, t) for p in pids for t in tickers]
 run_ids = []
 for p, t in requests_:
     body = {"profile_id": p, **({"requested_ticker": t} if t else {})}

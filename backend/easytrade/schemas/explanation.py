@@ -101,6 +101,7 @@ class Explanation(BaseModel):
     headline: str
     no_recommendation: bool = False
     missing: tuple[str, ...] = ()
+    warnings: tuple[str, ...] = ()  # avertissements en tête des pistes (ex. critère prioritaire sans donnée)
     items: tuple[ExplanationItem, ...] = ()
     rejected: tuple[RejectedItem, ...] = ()
     coherence: Optional[CoherenceAnalysis] = None

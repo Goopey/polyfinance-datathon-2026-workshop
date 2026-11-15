@@ -51,7 +51,7 @@ describe("traduction des textes du backend", () => {
         if (!NEUTRAL.test(text.trim())) missing.push(`${text}   ← ${paths[0]}`);
         continue;
       }
-      const probe = en.replace(ALLOWED_ACCENTED, "");
+      const probe = en.replace(ALLOWED_ACCENTED, "").replace(/https?:\/\/\S+/g, ""); // adresses : jamais traduites
       if (FRENCH.test(probe)) leftovers.push(`${text}\n   → ${en}`);
     }
     assert.deepEqual(missing, [], `${missing.length} chaîne(s) sans traduction :\n${missing.slice(0, 40).join("\n")}`);

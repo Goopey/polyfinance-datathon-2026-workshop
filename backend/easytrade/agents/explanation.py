@@ -289,6 +289,7 @@ def explain(
         headline=_headline(decision, len(items), len(rejected)),
         no_recommendation=decision.no_recommendation,
         missing=tuple(m for m in missing if is_clean(m, forbidden)),
+        warnings=() if decision.no_recommendation else tuple(w for w in decision.warnings if is_clean(w, forbidden)),
         items=tuple(items),
         rejected=rejected,
         coherence=coherence,

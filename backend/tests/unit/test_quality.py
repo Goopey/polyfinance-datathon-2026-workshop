@@ -116,13 +116,15 @@ def _persona(weights):
         "esg_exclusion": False, "speculatif": "permis"}})
 
 
-def test_critere_prioritaire_sans_donnee_aucune_recommandation():
+def test_critere_prioritaire_sans_donnee_avertissement():
+    """Décision de l'équipe (2026-11-15) : le critère prioritaire sans donnée ne bloque plus ; il est signalé."""
     mateo_like = {"croissance": 0.15, "stabilite": 0.2, "diversification": 0.15, "esg": 0.25, "qualite": 0.15,
                   "horizon": 0.05, "preferences": 0.05}
     signals = {t: {c: (None if c == "esg" else v) for c in CRITERIA} for t, v in (("A", 1.0), ("B", 2.0))}
     evidence = {t: {c: None for c in CRITERIA} for t in signals}
     decision = decide(_universe(), signals, evidence, _persona(mateo_like), "2026-11-12")
-    assert decision.no_recommendation and "ESG" in decision.reason and "25 %" in decision.reason
+    assert not decision.no_recommendation and decision.ranking
+    assert len(decision.warnings) == 1 and "ESG" in decision.warnings[0] and "25 %" in decision.warnings[0]
 
 
 def test_critere_secondaire_manquant_ne_bloque_pas():
@@ -130,6 +132,7 @@ def test_critere_secondaire_manquant_ne_bloque_pas():
     evidence = {t: {c: None for c in CRITERIA} for t in signals}
     decision = decide(_universe(), signals, evidence, _persona(ROBERT_LIKE), "2026-11-12")
     assert not decision.no_recommendation  # ESG à 5 % pour ce profil : affiché comme manquant, sans bloquer
+    assert decision.warnings == ()  # critère secondaire : pas d'avertissement
 
 
 # --- dans le pipeline -----------------------------------------------------------------------------

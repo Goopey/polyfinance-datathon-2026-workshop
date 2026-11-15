@@ -47,13 +47,15 @@ def test_lecture_des_emissions_refuse_les_autres_formes(text):
 def test_constats():
     assets = [{"ticker": t, "sector": s} for t, s in [
         ("BIG", "Energy"), ("EDGE", "Energy"), ("LOW", "Utilities"), ("BAD", "Health Care"),
-        ("FUND", "Broad market (U.S., ESG-screened)"), ("NONE", "Financials"),
+        ("FUND", "Broad market (U.S.)"), ("LABEL", "Broad market (U.S., ESG-screened)"), ("NONE", "Financials"),
     ]]
     rows = {
         "BIG": [_row("E1", "37,88 Mt CO2e déclarées"), _row("E2", "157,0 kt CO2e déclarées")],
         "EDGE": [_row("E3", "10,00 Mt CO2e déclarées")],
         "LOW": [_row("E4", "157,0 kt CO2e déclarées")],
-        "BAD": [_row("E5", "Ligne", "Controverse environnementale"), _row("E6", "15,0 kt CO2e déclarées")],
+        "BAD": [_row("E5", "Ligne", "Controverse environnementale"), _row("E6", "15,0 kt CO2e déclarées"),
+                _row("E8", "Ligne", "Filtrage ESG du portefeuille")],
+        "FUND": [_row("E7", "Le fonds suit un indice filtré ESG.", "Filtrage ESG du portefeuille")],
     }
     found = esg.assess(assets, rows)
     assert found["BIG"].finding == "emetteur_majeur" and found["BIG"].basis_ids == ("E1",)
@@ -61,7 +63,9 @@ def test_constats():
     assert found["EDGE"].finding == "emetteur_majeur"  # seuil inclus
     assert found["LOW"].finding == "non_concluant" and found["LOW"].score is None
     assert found["BAD"].finding == "controverse" and found["BAD"].basis_ids == ("E5",)  # priorité à la controverse
-    assert found["FUND"].finding == "filtre_esg" and found["FUND"].score == 1.0
+    assert found["FUND"].finding == "filtre_esg" and found["FUND"].score == 1.0 and found["FUND"].basis_ids == ("E7",)
+    assert "LABEL" not in found  # la classification de l'univers ne prouve rien : seule une ligne du fichier compte
+    assert esg.proven(found) == ("FUND",)
     assert "NONE" not in found  # aucune preuve : aucun constat (manquant), jamais « zéro »
     assert esg.exclusions(found) == {"BIG": "esg_emissions", "EDGE": "esg_emissions", "BAD": "esg_exclusion"}
 
@@ -78,8 +82,10 @@ def test_fichier_de_reference_constats_attendus(workspace):
                        {t: tools.preuves_esg(t) for t in assets["ticker"]})
     by_kind = {k: sorted(t for t, a in found.items() if a.finding == k)
                for k in ("emetteur_majeur", "filtre_esg", "non_concluant", "controverse")}
-    assert by_kind == {"emetteur_majeur": ["CNQ.TO", "XOM"], "filtre_esg": ["ESGV"],
-                       "non_concluant": ["ENB.TO", "FTS.TO", "GOOGL", "PG", "TSLA"], "controverse": []}
+    assert by_kind["emetteur_majeur"] == ["CNQ.TO", "XOM"] and by_kind["controverse"] == []
+    assert by_kind["filtre_esg"] == ["ESGV"]  # ligne « Filtrage ESG du portefeuille » (document de Vanguard)
+    proof = [r for r in tools.preuves_esg("ESGV") if r["signal_type"].startswith("Filtrage ESG")]
+    assert proof and ledger.get(proof[0]["evidence_id"]).source.source_id == "vanguard_esgv_profile"
 
 
 def _assets(*tickers):
@@ -119,4 +125,31 @@ def test_confiance_par_piste_selon_ses_criteres_manquants():
     signals["WITH"]["esg"], signals["WITHOUT"]["esg"] = 1.0, None
     decision = apply_debate(decide(universe, signals, {}, ProfileWeights.from_persona(MATEO), "2026-11-12"), [])
     assert decision.confidence == "élevé"  # critère couvert pour au moins une piste
-    assert decision.candidate_confidence == {"WITH": "élevé", "WITHOUT": "moyen"}  # ESG à 25 % manquant
+    # ESG (25 %) est le critère le plus important de ce profil : une piste qui n'en a pas est « faible ».
+    assert decision.candidate_confidence == {"WITH": "élevé", "WITHOUT": "faible"}
+    # Critère manquant qui n'est pas le plus important : la confiance suit le poids manquant (20 % → moyen).
+    signals["WITHOUT"]["esg"], signals["WITHOUT"]["stabilite"] = 1.0, None
+    again = apply_debate(decide(universe, signals, {}, ProfileWeights.from_persona(MATEO), "2026-11-12"), [])
+    assert again.candidate_confidence["WITHOUT"] == "moyen"
+
+
+def test_critere_prioritaire_sans_donnee_pistes_et_avertissement():
+    """Aucune piste n'a le critère le plus important du profil : pistes classées, avertissement, pas de blocage."""
+    universe = pd.DataFrame([
+        {"asset_id": f"A{i}", "ticker": t, "name": t, "asset_class": "equity", "market": "X", "currency": "CAD",
+         "sector": s} for i, (t, s) in enumerate([("A", "Energy"), ("B", "Utilities")])
+    ])
+    signals = {t: {c: 1.0 for c in CRITERIA} for t in ("A", "B")}
+    signals["A"]["esg"] = signals["B"]["esg"] = None
+    decision = apply_debate(decide(universe, signals, {}, ProfileWeights.from_persona(MATEO), "2026-11-12"), [])
+    assert not decision.no_recommendation and len(decision.ranking) == 2
+    assert len(decision.warnings) == 1 and "ESG, 25 %" in decision.warnings[0]
+    assert set(decision.candidate_confidence.values()) == {"faible"}
+
+
+def test_avertissement_profil_centre_sur_l_esg():
+    assert esg.focus_warning(("ESGV",), ("ESGV", "JNJ"), {}, ("ESGV", "JNJ")) is None
+    none = esg.focus_warning((), ("JNJ",), {}, ("JNJ",))
+    assert none and "aucun titre de l'univers n'est prouvé ESG" in none
+    out = esg.focus_warning(("ESGV",), ("JNJ",), {"ESGV": "tolerance_risque"}, ("JNJ",))
+    assert "ESGV (écarté par une règle de votre profil)" in out
