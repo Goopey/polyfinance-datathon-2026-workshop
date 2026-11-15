@@ -2,8 +2,8 @@
   "app": "python app.py",
   "context": {
     "region": "us-east-1",
-    "bedrock_model_fast": "",
-    "bedrock_model_strong": "",
+    "bedrock_model_fast": "us.anthropic.claude-haiku-5-5",
+    "bedrock_model_strong": "us.anthropic.claude-sonnet-5-5",
     "bedrock_guardrail_id": ""
   }
 }
