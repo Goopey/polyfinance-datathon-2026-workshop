@@ -1,9 +1,11 @@
 """Point d'entrée CDK : instancie les piles.
 
 Conception : docs/06_AWS.md, infra/README.md
-    python build_lambda.py                      # une fois, puis après chaque changement du backend
-    npx aws-cdk deploy --all -c bedrock_model_fast=<id> -c bedrock_model_strong=<id>
-Région : us-east-1 (compte du datathon). Sans identifiants de modèles, les agents sont simulés.
+    python build_lambda.py      # après chaque changement du backend
+    python build_web.py         # après chaque changement de l'application (URL de l'API figée dedans)
+    npx.cmd aws-cdk deploy --all --require-approval never
+Région : us-east-1 (compte du datathon). Modèles Bedrock : cdk.json. Sans eux, les agents sont simulés.
+Sans `build/web/`, la pile du site (EasyTradeWeb) n'est pas déployée ; les autres le sont.
 """
 from __future__ import annotations
 
@@ -14,6 +16,7 @@ import aws_cdk as cdk
 
 from stacks.api_stack import ApiStack
 from stacks.data_stack import DataStack
+from stacks.frontend_stack import WEB, FrontendStack
 from stacks.pipeline_stack import BUILD, PipelineStack
 
 if not (BUILD / "app" / "easytrade").exists() or not (BUILD / "layer" / "python").exists():
@@ -36,6 +39,11 @@ pipeline = PipelineStack(app, "EasyTradePipeline", data=data, models=models, env
                          description="EasyTrade — pipeline agentique (Lambda, Step Functions, Bedrock)")
 ApiStack(app, "EasyTradeApi", data=data, pipeline=pipeline, models=models, env=env,
          description="EasyTrade — API (API Gateway, Lambda)")
+if (WEB / "index.html").exists():
+    FrontendStack(app, "EasyTradeWeb", env=env, description="EasyTrade — application web (S3, CloudFront)")
+else:
+    print("Site web absent (infra/build/web) : lancer `python build_web.py` pour déployer aussi l'application.",
+          file=sys.stderr)
 
 # Étiquettes de coût sur toutes les ressources (docs/06_AWS.md, bonnes pratiques).
 for key, value in {"projet": "easytrade", "evenement": "datathon-polyfinances-2026", "environnement": "workshop"}.items():

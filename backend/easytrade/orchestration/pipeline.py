@@ -28,7 +28,7 @@ from typing import Any, Callable, Iterable, Optional
 
 import pandas as pd
 
-from easytrade.agents import simulated
+from easytrade.agents import simulated, translation
 from easytrade.agents.debate.protocol import UNANSWERED, run_debate, step_name
 from easytrade.agents.explanation import explain
 from easytrade.agents.llm_client import CallInfo, LLMClient, LLMOutputError, make_client
@@ -630,6 +630,7 @@ class RunContext:
     records: dict = field(default_factory=dict)
     coherence: Optional[CoherenceAnalysis] = None
     finished: bool = False
+    translate: Optional[bool] = None  # traduction anglaise du texte des modèles ; None : automatique
 
     def detach(self) -> "RunContext":
         """Retire le rappel de progression (non sérialisable) avant l'enregistrement."""
@@ -660,6 +661,7 @@ def new_context(
     requested_ticker: Optional[str] = None, profile: Optional[Profile] = None, persona: Optional[dict] = None,
     reading_level: str = "simple", max_candidates: Optional[int] = None,
     on_step: Optional[Callable[[TraceStep], None]] = None, profile_source: str = SOURCE_PROFILE,
+    translate: Optional[bool] = None,
 ) -> RunContext:
     as_of_date = to_timestamp(as_of if as_of is not None else ws.settings.as_of).date()
     requested_ticker = requested_ticker.strip().upper() if requested_ticker else None
@@ -671,7 +673,8 @@ def new_context(
                        trace=trace.to_trace(), ledger=ledger)
     return RunContext(run_id=run_id, as_of=as_of_date, profile_id=profile_id, requested_ticker=requested_ticker,
                       profile_source=profile_source, reading_level=reading_level, max_candidates=max_candidates,
-                      ledger=ledger, trace=trace, result=result, profile=profile, persona=persona)
+                      ledger=ledger, trace=trace, result=result, profile=profile, persona=persona,
+                      translate=translate)
 
 
 # 1. Profil → ProfileWeights
@@ -934,7 +937,35 @@ def stage_explanation(ctx: RunContext, ws: Workspace, client: LLMClient) -> None
             "Explication non affichée : le vérificateur de fidélité relève encore "
             f"{len(report.final_issues)} écart(s) : "
             + " | ".join(f"{i.where} ({', '.join(i.codes)})" for i in report.final_issues[:5]))
+    if _translation_enabled(ctx, client):
+        explanation = _translate_explanation(ctx, explanation, client, ignore)
     ctx.result.explanation, ctx.result.status = explanation, "termine"
+
+
+def _translation_enabled(ctx: RunContext, client: LLMClient) -> bool:
+    """Traduction anglaise du texte des modèles : seulement avec un vrai modèle (les gabarits des agents
+    simulés sont traduits par les règles de l'application). `ctx.translate` force le choix (tests)."""
+    if ctx.translate is not None:
+        return ctx.translate
+    return translation.enabled_for(client)
+
+
+def _translate_explanation(ctx: RunContext, explanation: Explanation, client: LLMClient,
+                           ignore: tuple) -> Explanation:
+    """Joint la version anglaise des phrases au résultat. Un échec n'arrête jamais l'analyse."""
+    started = ctx.trace.now()
+    try:
+        table, infos, refused = translation.translate(translation.explanation_texts(explanation), client,
+                                                      ignore=ignore)
+    except Exception as error:  # modèle indisponible, sortie invalide : le texte reste en français
+        ctx.trace.record("traduction", "llm", "echec", started_at=started,
+                         note=f"Traduction anglaise indisponible ({type(error).__name__}) : l'analyse reste valide ; "
+                              "le texte rédigé par les modèles s'affiche en français.")
+        return explanation
+    ctx.trace.record("traduction", "llm", started_at=started, **_llm_fields(infos),
+                     note=f"{len(table)} phrase(s) traduite(s) en anglais ; {refused} refusée(s) "
+                          "(nombres différents de l'original), laissée(s) en français.")
+    return explanation.model_copy(update={"translations": table})
 
 
 def fail(ctx: RunContext, error: "BaseException | str") -> RunResult:
@@ -964,6 +995,7 @@ def run_pipeline(
     candidate_workers: int = 1,
     on_step: Optional[Callable[[TraceStep], None]] = None,
     profile_source: str = SOURCE_PROFILE,
+    translate: Optional[bool] = None,
 ) -> RunResult:
     """Exécute une analyse complète. Un échec d'étape donne `status = "echec"`, trace à l'appui.
 
@@ -976,7 +1008,7 @@ def run_pipeline(
     client = client or make_client("auto")
     ctx = new_context(ws, client, profile_id, as_of=as_of, requested_ticker=requested_ticker, profile=profile,
                       reading_level=reading_level, max_candidates=max_candidates, on_step=on_step,
-                      profile_source=profile_source)
+                      profile_source=profile_source, translate=translate)
     try:
         stage_profile(ctx, ws, client)
         stage_validation(ctx, ws, client)

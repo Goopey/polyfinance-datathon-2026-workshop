@@ -107,6 +107,9 @@ class Explanation(BaseModel):
     coherence: Optional[CoherenceAnalysis] = None
     unknowns: tuple[str, ...] = ()
     disclaimer: str = DISCLAIMER
+    # Version anglaise des phrases rédigées par les modèles (agents/translation.py), français → anglais.
+    # Vide avec les agents simulés : leurs gabarits sont traduits par les règles de l'application.
+    translations: dict[str, str] = Field(default_factory=dict)
 
 
 # --- sortie brute de l'agent d'explication (avant vérification de fidélité) -------------------

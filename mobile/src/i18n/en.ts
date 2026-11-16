@@ -171,7 +171,8 @@ export const en: Dict = {
     conflictTitle: "Your answers conflict: we apply the more cautious one",
     whyTitle: "Why these values",
     whySummary: (n) => `${n} reason${n > 1 ? "s" : ""} drawn from your profile`,
-    missingTitle: "Missing information",
+    disclaimerTitle: "Disclaimer",
+    disclaimer: "Neither past investment experience nor personal situation (age, family, retirement plans) is taken into account.",
     saving: "Saving…",
     confirmModified: "Confirm adjusted weights",
     confirm: "Confirm and see ideas",
@@ -386,6 +387,7 @@ export const en: Dict = {
       "controle.aucune_recommandation": "\"No recommendation\" check",
       explication: "Explanation",
       "controle.avant_affichage": "Pre-display check",
+      traduction: "English translation",
     },
   },
 

@@ -19,6 +19,7 @@ complète est ensuite recontrôlée (`verify_explanation`).
 """
 from __future__ import annotations
 
+import re
 from typing import Any, Iterable, Mapping, Optional
 
 from easytrade.agents.debate.protocol import evidence_payload, profile_payload
@@ -54,7 +55,7 @@ from easytrade.schemas.weights import CRITERION_LABELS
 STEP = "explanation"
 MAX_WHY = 3
 MAX_NOTES = 2
-MAX_LIMITS = 3
+MAX_LIMITS = 4  # phrases de limite par piste, sans doublon
 CONFIDENCE_LABELS = {"élevé": "élevée", "moyen": "moyenne", "faible": "faible"}
 NO_ARGUMENT = "Aucun argument étayé retenu."
 PAST_ONLY = "Les indicateurs décrivent le passé sur la période disponible : ils ne prévoient rien."
@@ -118,6 +119,23 @@ def _debate_summary(record: Optional[DebateRecord]) -> DebateSummary:
                          dissent=bool(record and record.dissent))
 
 
+_SENTENCE = re.compile(r"(?<=\.)\s+(?=[A-ZÀ-Ý«])")
+# Détail propre à chaque preuve (« 37 séances concernées ») : sans lui, deux limites identiques sur le
+# fond ne s'affichent qu'une fois.
+_PER_EVIDENCE_DETAIL = re.compile(r"\s*\(\d+ séances? concernées? dans la fenêtre\)")
+
+
+def _limit_sentences(texts: Iterable[str]) -> list[str]:
+    """Limites des preuves citées, phrase par phrase, sans doublon de sens, `MAX_LIMITS` au plus."""
+    out: list[str] = []
+    for text in texts:
+        for sentence in _SENTENCE.split(_PER_EVIDENCE_DETAIL.sub("", text or "").strip()):
+            sentence = sentence.strip()
+            if sentence and sentence not in out:
+                out.append(sentence)
+    return out[:MAX_LIMITS]
+
+
 def _item(candidate: ScoredCandidate, why: tuple[Claim, ...], decision: Decision,
           record: Optional[DebateRecord], ledger: EvidenceLedger, forbidden: tuple[str, ...]) -> ExplanationItem:
     positions = tuple(
@@ -131,15 +149,12 @@ def _item(candidate: ScoredCandidate, why: tuple[Claim, ...], decision: Decision
         risks.append("Actif signalé comme hautement spéculatif par une règle de votre profil.")
     if RISK_FLAG in candidate.flags:
         risks.append("Dépasse un repère de risque de votre profil : adéquation plafonnée à « partielle ».")
-    limits: list[str] = []
-    for claim in why:
-        for evidence_id in claim.evidence_ids:
-            text = ledger.get(evidence_id).limits
-            if text and text not in limits:
-                limits.append(text)
+    limits = _limit_sentences(
+        ledger.get(evidence_id).limits for claim in why for evidence_id in claim.evidence_ids)
+    # « Ce que nous ne savons pas » : seulement des faits établis par le code (critères sans donnée pour
+    # cet actif). Les questions ouvertes des agents restent dans le débat : texte libre, parfois hors
+    # sujet (fiscalité, unités…), elles ne décrivent pas une information manquante du projet.
     unknowns = [_capital(MISSING_LABELS.get(c, c)) + "." for c in candidate.missing_criteria]
-    for position in positions:
-        unknowns.extend(q for q in position.open_questions if q not in unknowns)
     return ExplanationItem(
         ticker=candidate.ticker, name=candidate.name, asset_class=candidate.asset_class, sector=candidate.sector,
         fit=fit_level(candidate),
@@ -151,7 +166,7 @@ def _item(candidate: ScoredCandidate, why: tuple[Claim, ...], decision: Decision
         debate=positions,
         debate_summary=_debate_summary(record),
         risks=tuple(r for r in risks if is_clean(r, forbidden)),
-        limits=tuple(limits[:MAX_LIMITS]),
+        limits=tuple(limits),
         unknowns=tuple(u for u in unknowns if is_clean(u, forbidden)),
     )
 
@@ -278,8 +293,10 @@ def explain(
     if coherence is not None and coherence_notes:
         coherence = coherence.model_copy(update={"context": (*coherence.context, *coherence_notes)})
 
+    # Liste générale : faits établis par le code seulement (critères sans donnée, portée des indicateurs).
+    # Les « informations manquantes » de l'agent de pondération (texte libre, différent à chaque exécution)
+    # n'y figurent plus ; l'écran du profil affiche à la place un avertissement fixe.
     unknowns = [_capital(label) + "." for label in decision.missing_info]
-    unknowns.extend(weighting.missing_information)
     unknowns.append(PAST_ONLY)
     unknowns.extend(notes)
     missing = ((decision.reason,) if decision.reason else ()) if decision.no_recommendation else ()

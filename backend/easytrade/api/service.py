@@ -29,6 +29,7 @@ import pandas as pd
 
 from easytrade.agents.llm_client import LLMClient, make_client
 from easytrade.agents.profile_weighting import SOURCE_PROFILE, WeightingResult, weigh_profile
+from easytrade.agents import translation
 from easytrade.agents.simulated import MODEL_ID as SIMULATED_MODEL_ID
 from easytrade.agents.tools import ResearchTools
 from easytrade.data.point_in_time import to_timestamp
@@ -311,6 +312,13 @@ class ApiService:
             ],
             missing_information=list(weighting.missing_information),
         )
+        if translation.enabled_for(self.client):  # motifs rédigés par un vrai modèle : version anglaise
+            try:
+                table, _, _ = translation.translate([r.because for r in view.rationale], self.client,
+                                                    ignore=(*self._names.values(), *self._names))
+                view = view.model_copy(update={"translations": table})
+            except Exception:  # traduction indisponible : la vue reste valide, motifs affichés en français
+                pass
         with self._lock:
             self._profile_views[profile_id] = view
         return view

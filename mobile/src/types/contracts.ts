@@ -117,7 +117,8 @@ export interface ProfileWeights {
   };
   weights: CriterionMap;
   rationale: { field: string; because: string; claim_kind?: ClaimKind }[];
-  missing_information: string[];
+  missing_information: string[]; // plus affiché (avertissement fixe à la place)
+  translations: Record<string, string>; // version anglaise des motifs rédigés par un vrai modèle (vide sinon)
 }
 
 // ---------- Exécution d'une analyse ----------
@@ -213,6 +214,7 @@ export interface Explanation {
   coherence: CoherenceAnalysis | null; // présent si requested_ticker
   unknowns: string[];
   disclaimer: string;
+  translations: Record<string, string>; // français → anglais du texte rédigé par les modèles (vide avec les agents simulés)
 }
 
 // ---------- Trace (docs/05_EXPLICABILITE.md §3) ----------

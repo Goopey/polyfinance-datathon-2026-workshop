@@ -66,6 +66,8 @@ class ProfileWeightsView(BaseModel):
     weights: dict[str, float]
     rationale: list[RationaleView] = Field(default_factory=list)
     missing_information: list[str] = Field(default_factory=list)
+    # Version anglaise des motifs rédigés par l'agent de pondération (agents/translation.py).
+    translations: dict[str, str] = Field(default_factory=dict)
 
 
 # --- exécution --------------------------------------------------------------------------------

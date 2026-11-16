@@ -107,6 +107,7 @@ function personaToProfile(p: Persona): MockProfile {
       weights: normalize(p.poids),
       rationale,
       missing_information: p.id === "mateo" ? ["Données ESG partielles : certains actifs n'ont aucune preuve datée."] : [],
+      translations: {},
     },
   };
 }
@@ -159,6 +160,7 @@ function draftToProfile(d: ProfileDraft, id: string): MockProfile {
         ...(excluded.size ? [{ field: "hard_constraints.excluded_asset_classes", because: "Exclusions choisies dans le questionnaire.", claim_kind: "FAIT" as const }] : []),
       ],
       missing_information: d.base_persona ? base.pw.missing_information : ["Profil composé par questionnaire : aucune préférence en texte libre."],
+      translations: {},
     },
   };
 }
@@ -370,6 +372,7 @@ function computeExplanation(runId: string, req: RunRequest): Explanation {
     coherence,
     unknowns,
     disclaimer: DISCLAIMER,
+    translations: {},
   };
 }
 

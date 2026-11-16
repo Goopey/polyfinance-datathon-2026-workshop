@@ -66,7 +66,11 @@ def test_s11_desaccord_dans_l_explication(run):
         assert item.confidence != "élevée"
         assert {p.agent: p.stance for p in item.debate} == STANCES
         assert item.debate_summary.bear.startswith("Opposition — ")
-        assert item.risks and "Aucune preuve ESG datée disponible." in item.unknowns
+        # La question ouverte d'un agent reste dans le débat, mais n'entre pas dans « ce que nous ne savons
+        # pas » : cette liste ne contient que des faits établis par le code.
+        questions = [q for position in item.debate for q in position.open_questions]
+        assert item.risks and "Aucune preuve ESG datée disponible." in questions
+        assert "Aucune preuve ESG datée disponible." not in item.unknowns
         assert item.to_review  # opposition du Bear appuyée sur un repère du profil
 
 

@@ -480,6 +480,11 @@ export const EN_EXACT: Record<string, string> = {
 const r = (pattern: string, out: string | ((...m: string[]) => string)): Rule => [tpl(pattern), out];
 
 export const EN_RULES: Rule[] = [
+  // Étape « traduction » de la trace (backend/easytrade/orchestration/pipeline.py)
+  r("{n} phrase(s) traduite(s) en anglais ; {n} refusée(s) (nombres différents de l'original), laissée(s) en français.",
+    "$1 sentence(s) translated into English; $2 refused (numbers differ from the original), left in French."),
+  r("Traduction anglaise indisponible ({s}) : l'analyse reste valide ; le texte rédigé par les modèles s'affiche en français.",
+    "English translation unavailable ($1): the analysis remains valid; text written by the models is shown in French."),
   // Correctifs de l'audit
   r("Corrélation moyenne de {n} avec les autres actifs analysés, un repère pour la diversification.",
     "Average correlation of $1 with the other analyzed assets, a diversification benchmark."),
@@ -707,6 +712,9 @@ export const EN_RULES: Rule[] = [
     "Approximation of the diversification contribution (team assumption), to be replaced by correlation with the portfolio. Universe chosen in $1: survivorship bias."),
   r("Converti en CAD au taux USD/CAD de la Banque du Canada ; dernier taux connu les jours sans taux ({n} séances concernées dans la fenêtre).",
     "Converted to CAD at the Bank of Canada USD/CAD rate; last known rate on days without a rate ($1 sessions affected in the window)."),
+  // Même limite, sans le détail propre à chaque preuve (« Ce que nous ne savons pas » la dédoublonne).
+  r("Converti en CAD au taux USD/CAD de la Banque du Canada ; dernier taux connu les jours sans taux.",
+    "Converted to CAD at the Bank of Canada USD/CAD rate; last known rate on days without a rate."),
   r("Jours civils UTC, sans clôture de marché ; annualisé sur {n} jours.", "UTC calendar days, no market close; annualized over $1 days."),
   r("Anomalie de données : « fractionnement » de {s} le {s}, probablement une distribution spéciale ; non appliqué, vérification auprès des relations investisseurs en attente.",
     "Data anomaly: \"split\" of $1 on $2, probably a special distribution; not applied, pending confirmation with investor relations."),

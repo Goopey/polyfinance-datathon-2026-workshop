@@ -174,7 +174,8 @@ export const fr = {
     conflictTitle: "Vos réponses se contredisent : nous retenons la plus prudente",
     whyTitle: "Pourquoi ces valeurs",
     whySummary: (n: number) => `${n} raison${n > 1 ? "s" : ""} tirée${n > 1 ? "s" : ""} de votre profil`,
-    missingTitle: "Informations manquantes",
+    disclaimerTitle: "Avertissement",
+    disclaimer: "Ni l'expérience passée en placement, ni la situation personnelle (âge, famille, projet de retraite) ne sont prises en compte.",
     saving: "Enregistrement…",
     confirmModified: "Confirmer les poids modifiés",
     confirm: "Confirmer et voir les pistes",
@@ -389,6 +390,7 @@ export const fr = {
       "controle.aucune_recommandation": "Contrôle « aucune recommandation »",
       explication: "Explication",
       "controle.avant_affichage": "Contrôle avant l'affichage",
+      traduction: "Traduction anglaise",
     } as Record<string, string>,
   },
 

@@ -624,6 +624,12 @@
         "run_id": {
           "type": "string"
         },
+        "translations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
         "unknowns": {
           "items": {
             "type": "string"
@@ -649,7 +655,8 @@
         "rejected",
         "coherence",
         "unknowns",
-        "disclaimer"
+        "disclaimer",
+        "translations"
       ],
       "type": "object"
     },
@@ -1197,6 +1204,12 @@
         "summary": {
           "type": "string"
         },
+        "translations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object"
+        },
         "weights": {
           "$ref": "#/definitions/CriterionMap"
         }
@@ -1208,7 +1221,8 @@
         "hard_constraints",
         "weights",
         "rationale",
-        "missing_information"
+        "missing_information",
+        "translations"
       ],
       "type": "object"
     },

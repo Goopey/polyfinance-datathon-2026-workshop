@@ -130,15 +130,15 @@ export default function ResumeProfil() {
         </Collapsible>
       ) : null}
 
-      {pw.missing_information.length > 0 ? (
-        <Card style={{ backgroundColor: colors.warnBg, borderColor: alpha(colors.warn, 0.3) }}>
-          <Row>
-            <Icon name="help" size={18} color={colors.warn} />
-            <Text style={[type.h3, { color: colors.warn }]}>{t.resume.missingTitle}</Text>
-          </Row>
-          {pw.missing_information.map((m) => <Text key={m} style={type.body}>{tx(m)}</Text>)}
-        </Card>
-      ) : null}
+      {/* Avertissement fixe (remplace les « informations manquantes » rédigées par l'agent, texte libre
+          différent à chaque exécution) : ce que l'analyse ne prend pas en compte, vrai pour tout profil. */}
+      <Card style={{ backgroundColor: colors.infoBg, borderColor: alpha(colors.info, 0.3) }}>
+        <Row>
+          <Icon name="info" size={18} color={colors.info} />
+          <Text style={[type.h3, { color: colors.info }]}>{t.resume.disclaimerTitle}</Text>
+        </Row>
+        <Text style={type.body}>{t.resume.disclaimer}</Text>
+      </Card>
 
       {confirm.error ? <ErrorState error={confirm.error} /> : null}
       <View style={{ gap: space.sm, marginTop: space.sm }}>

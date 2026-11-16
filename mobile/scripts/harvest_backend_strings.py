@@ -28,6 +28,7 @@ SKIP_KEYS = {"ticker", "run_id", "profile_id", "evidence_id", "evidence_ids", "a
              "source_id", "status", "kind", "claim_kind", "fit", "confidence", "stance", "agent", "verdict", "relation",
              "asset_class", "currency", "label_key", "step", "type", "unit", "metric", "field", "requested_ticker",
              "excluded_asset_classes", "speculatif", "statut", "not_applicable", "started_at", "ended_at", "input_hash",
+             "translations",
              "prompt_version", "model_id", "produced_by", "tools_called", "outputs", "code_version"}
 
 def walk(node, path):

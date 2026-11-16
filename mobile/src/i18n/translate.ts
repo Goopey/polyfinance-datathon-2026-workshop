@@ -8,7 +8,11 @@
  *
  * - Couverture vérifiée par tests/dataTranslation.test.ts sur un corpus collecté sur l'API réelle
  *   (tests/fixtures/backend_strings.json) : toute chaîne non couverte fait échouer le test.
- * - Une chaîne inconnue (nouveau gabarit, texte libre d'un modèle) est affichée telle quelle.
+ * - Texte libre rédigé par un vrai modèle (raisons, débat, motifs du profil) : aucune règle ne peut le
+ *   prévoir. Le backend joint à chaque résultat sa version anglaise (`translations`, étape de traduction
+ *   de backend/easytrade/agents/translation.py) ; l'API l'enregistre ici (`registerTranslations`) et elle
+ *   sert quand les règles ne couvrent pas la phrase.
+ * - Une chaîne inconnue des règles et de ces tables est affichée telle quelle.
  * - Sens inverse : quelques données arrivent en anglais (secteurs) ; en français, on les traduit.
  * - En français, le libellé interne « Profil fictif » (profil du questionnaire) devient « Mon profil ».
  * Le crochet React `useTx()` est dans data.ts.
@@ -72,8 +76,16 @@ export function translateToEnglish(input: string): string | null {
   return null;
 }
 
+/** Version anglaise du texte rédigé par les modèles, reçue avec les résultats (français → anglais). */
+const fromResults = new Map<string, string>();
+
+export function registerTranslations(table: Record<string, string> | null | undefined): void {
+  if (!table) return;
+  for (const [fr, en] of Object.entries(table)) if (fr && en) fromResults.set(fr.trim(), en);
+}
+
 export function translateData(text: string, lang: Lang): string {
   if (!text) return text;
   if (lang === "fr") return applyRules(text.trim(), FR_EXACT, FR_RULES) ?? text;
-  return translateToEnglish(text) ?? text;
+  return translateToEnglish(text) ?? fromResults.get(text.trim()) ?? text;
 }
